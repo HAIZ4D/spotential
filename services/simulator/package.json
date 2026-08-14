@@ -1,0 +1,28 @@
+{
+  "name": "@spotential/simulator-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloud Run service for the What-if Simulator. Authority for AI-driven scenarios; the browser runs the same engine locally for instant recalculation.",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "esbuild src/server.ts --bundle --platform=node --target=node22 --format=esm --jsx=automatic --outfile=dist/server.js --external:@google-cloud/firestore --external:@react-pdf/renderer --external:react --external:react/jsx-runtime --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\" && node -e \"require('fs').cpSync('data','dist/data',{recursive:true})\"",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.2",
+    "@google-cloud/firestore": "^9.0.0",
+    "@react-pdf/renderer": "^4.6.0",
+    "@spotential/sim-engine": "*",
+    "fastify": "^5.2.1",
+    "h3-js": "^4.5.0",
+    "jose": "^6.2.8",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "esbuild": "^0.24.2",
+    "tsx": "^4.19.2"
+  }
+}

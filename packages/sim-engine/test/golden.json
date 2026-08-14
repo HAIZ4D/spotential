@@ -1,0 +1,633 @@
+{
+  "$comment": [
+    "GOLDEN VECTORS — the arithmetic contract for the What-if Simulator.",
+    "",
+    "Every expected value in this file was computed BY HAND from SPEC.md before",
+    "simulate.ts existed. That is the whole point: the engine is validated against",
+    "numbers derived independently of the code, not against its own output.",
+    "",
+    "RULE (SPEC §12): when a vector fails, verify the new number by hand before",
+    "touching this file. Updating vectors to match new output is exactly how a",
+    "financial engine silently becomes wrong.",
+    "",
+    "`expect` keys are dotted paths into SimulationResult. Money is rounded to 2dp",
+    "at result-construction time; internal maths runs at full float precision.",
+    "Derived non-money values are rounded to 4dp."
+  ],
+
+  "vectors": [
+    {
+      "name": "korean-restaurant-spec-example",
+      "description": "SPEC §4.12 in full. Every row of the published table is asserted. If this vector moves, the spec is wrong or the engine is.",
+      "inputs": {
+        "businessCategory": "korean_restaurant",
+        "district": "mont_kiara",
+        "initialInvestment": 150000,
+        "monthlyRent": 12000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 18,
+        "customersPerDay": 180,
+        "seats": 40,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.32,
+        "staffCount": 4,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 6,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "derived.tradingDaysPerMonth": 30,
+        "derived.monthlyTransactions": 5400,
+        "derived.cogsPerUnit": 5.76,
+        "derived.contributionPerTransaction": 12.24,
+
+        "steady.revenue": 97200,
+        "steady.cogs": 31104,
+        "steady.staffCost": 9196,
+        "steady.serviceTax": 0,
+        "steady.fixedMonthlyCosts": 28596,
+        "steady.totalExpenses": 59700,
+        "steady.profit": 37500,
+
+        "breakEven.operatingTransactionsPerDay": 78,
+        "breakEven.paybackMonth": 7,
+        "breakEven.paybackBandLow": 6,
+        "breakEven.paybackBandHigh": 9,
+        "breakEven.cashBreakEvenMonth": 9,
+        "breakEven.neverBreaksEven": false,
+
+        "cash.outlayAtMonth0": 222000,
+        "cash.troughMonth": 1,
+        "cash.troughAmount": -224157.6,
+        "cash.peakCashRequirement": 224157.6,
+
+        "projection.length": 25,
+
+        "projection.0.month": 0,
+        "projection.0.cash": -222000,
+        "projection.0.profit": 0,
+
+        "projection.1.ramp": 0.4,
+        "projection.1.transactionsPerDay": 72,
+        "projection.1.revenue": 38880,
+        "projection.1.cogs": 12441.6,
+        "projection.1.profit": -2157.6,
+        "projection.1.cumulativeProfit": -2157.6,
+        "projection.1.cash": -224157.6,
+
+        "projection.2.ramp": 0.616,
+        "projection.2.revenue": 59875.2,
+        "projection.2.profit": 12119.14,
+        "projection.2.cumulativeProfit": 9961.54,
+
+        "projection.3.ramp": 0.784,
+        "projection.3.revenue": 76204.8,
+        "projection.3.profit": 23223.26,
+        "projection.3.cumulativeProfit": 33184.8,
+
+        "projection.4.ramp": 0.904,
+        "projection.4.revenue": 87868.8,
+        "projection.4.profit": 31154.78,
+        "projection.4.cumulativeProfit": 64339.58,
+
+        "projection.5.ramp": 0.976,
+        "projection.5.revenue": 94867.2,
+        "projection.5.profit": 35913.7,
+        "projection.5.cumulativeProfit": 100253.28,
+
+        "projection.6.ramp": 1,
+        "projection.6.revenue": 97200,
+        "projection.6.profit": 37500,
+        "projection.6.cumulativeProfit": 137753.28,
+        "projection.6.cash": -84246.72,
+
+        "projection.7.cumulativeProfit": 175253.28,
+        "projection.8.cash": -9246.72,
+        "projection.9.cash": 28253.28,
+
+        "sensitivity.0.field": "avgPricePerTransaction",
+        "sensitivity.0.paybackAtMinus20": 12,
+        "sensitivity.0.paybackAtPlus20": 5,
+        "sensitivity.0.spread": 7,
+
+        "sensitivity.1.field": "customersPerDay",
+        "sensitivity.1.paybackAtMinus20": 10,
+        "sensitivity.1.paybackAtPlus20": 6,
+        "sensitivity.1.spread": 4,
+
+        "sensitivity.2.field": "cogsPct",
+        "sensitivity.2.spread": 2,
+
+        "sensitivity.3.field": "monthlyRent",
+        "sensitivity.3.spread": 1
+      }
+    },
+
+    {
+      "name": "epf-tier-boundary-at-5000",
+      "description": "Wage exactly RM5,000 takes the 13% employer EPF tier. Paired with the vector below, which crosses it.",
+      "inputs": {
+        "businessCategory": "other_fnb",
+        "district": "mont_kiara",
+        "initialInvestment": 100000,
+        "monthlyRent": 5000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 20,
+        "customersPerDay": 100,
+        "seats": 30,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.3,
+        "staffCount": 1,
+        "avgMonthlyWage": 5000,
+        "utilities": 1000,
+        "licensingFees": 100,
+        "marketing": 500,
+        "miscMonthly": 500,
+        "monthsToMaturity": 1,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "steady.staffCost": 5747.5
+      }
+    },
+
+    {
+      "name": "epf-tier-boundary-at-5001",
+      "description": "One ringgit over the threshold drops employer EPF to 12%, which makes the employee CHEAPER (RM5,698.64 vs RM5,747.50). A real cliff in the statutory schedule and an obvious place for an off-by-one.",
+      "inputs": {
+        "businessCategory": "other_fnb",
+        "district": "mont_kiara",
+        "initialInvestment": 100000,
+        "monthlyRent": 5000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 20,
+        "customersPerDay": 100,
+        "seats": 30,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.3,
+        "staffCount": 1,
+        "avgMonthlyWage": 5001,
+        "utilities": 1000,
+        "licensingFees": 100,
+        "marketing": 500,
+        "miscMonthly": 500,
+        "monthsToMaturity": 1,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "steady.staffCost": 5698.64
+      }
+    },
+
+    {
+      "name": "socso-eis-ceiling",
+      "description": "Wage RM8,000. SOCSO and EIS contribute on a capped RM6,000 base; EPF stays UNCAPPED at 12% of the full RM8,000 (RM960, not RM720). The two behave differently and must not be collapsed into one blended rate.",
+      "inputs": {
+        "businessCategory": "other_fnb",
+        "district": "mont_kiara",
+        "initialInvestment": 100000,
+        "monthlyRent": 5000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 20,
+        "customersPerDay": 100,
+        "seats": 30,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.3,
+        "staffCount": 1,
+        "avgMonthlyWage": 8000,
+        "utilities": 1000,
+        "licensingFees": 100,
+        "marketing": 500,
+        "miscMonthly": 500,
+        "monthsToMaturity": 1,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "steady.staffCost": 9077
+      }
+    },
+
+    {
+      "name": "six-day-trading-week",
+      "description": "No override, six days open. 365 x (6/7) / 12 = 26.0714 trading days, not 30. A restaurant closed Mondays loses ~14% of revenue and a flat 30 hides it entirely.",
+      "inputs": {
+        "businessCategory": "other_fnb",
+        "district": "mont_kiara",
+        "initialInvestment": 100000,
+        "monthlyRent": 5000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 20,
+        "customersPerDay": 100,
+        "seats": 30,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 6,
+        "cogsPct": 0.3,
+        "staffCount": 1,
+        "avgMonthlyWage": 2000,
+        "utilities": 1000,
+        "licensingFees": 100,
+        "marketing": 500,
+        "miscMonthly": 500,
+        "monthsToMaturity": 1,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "derived.tradingDaysPerMonth": 26.0714,
+        "derived.monthlyTransactions": 2607.14,
+        "steady.revenue": 52142.86
+      }
+    },
+
+    {
+      "name": "seven-day-trading-week",
+      "description": "Same shop open seven days. 365/12 = 30.4167 trading days. Paired with the vector above to pin the conversion in both directions.",
+      "inputs": {
+        "businessCategory": "other_fnb",
+        "district": "mont_kiara",
+        "initialInvestment": 100000,
+        "monthlyRent": 5000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 20,
+        "customersPerDay": 100,
+        "seats": 30,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "cogsPct": 0.3,
+        "staffCount": 1,
+        "avgMonthlyWage": 2000,
+        "utilities": 1000,
+        "licensingFees": 100,
+        "marketing": 500,
+        "miscMonthly": 500,
+        "monthsToMaturity": 1,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "derived.tradingDaysPerMonth": 30.4167,
+        "derived.monthlyTransactions": 3041.67,
+        "steady.revenue": 60833.33
+      }
+    },
+
+    {
+      "name": "sst-below-threshold-does-not-apply",
+      "description": "Registered but projecting RM1,166,400 a year, under the RM1,500,000 threshold. Service tax is zero. Guards against the toggle silently taxing a business that is not liable.",
+      "inputs": {
+        "businessCategory": "korean_restaurant",
+        "district": "mont_kiara",
+        "initialInvestment": 150000,
+        "monthlyRent": 12000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 18,
+        "customersPerDay": 180,
+        "seats": 40,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.32,
+        "staffCount": 4,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 6,
+        "serviceChargePct": 0,
+        "sstRegistered": true,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "steady.revenue": 97200,
+        "steady.annualRevenue": 1166400,
+        "steady.sstApplies": false,
+        "steady.serviceTax": 0,
+        "steady.profit": 37500
+      }
+    },
+
+    {
+      "name": "sst-dine-in-heavy",
+      "description": "Above the threshold with 85% dine-in. Service tax is 6% of the DINE-IN portion only: 180,000 x 0.85 x 0.06 = RM9,180.",
+      "inputs": {
+        "businessCategory": "casual_dining",
+        "district": "mont_kiara",
+        "initialInvestment": 150000,
+        "monthlyRent": 12000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 20,
+        "customersPerDay": 300,
+        "seats": 60,
+        "openHoursPerDay": 12,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.35,
+        "staffCount": 6,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 1,
+        "serviceChargePct": 0,
+        "sstRegistered": true,
+        "dineInSharePct": 0.85
+      },
+      "expect": {
+        "steady.revenue": 180000,
+        "steady.annualRevenue": 2160000,
+        "steady.sstApplies": true,
+        "steady.serviceTax": 9180
+      }
+    },
+
+    {
+      "name": "sst-takeaway-light",
+      "description": "Identical revenue, 10% dine-in. Tax falls to RM1,080 — one eighth and a half of the dine-in-heavy case. Charging 6% on total revenue would overstate the liability by 8.5x for exactly the category where it matters most.",
+      "inputs": {
+        "businessCategory": "fast_casual_takeaway",
+        "district": "mont_kiara",
+        "initialInvestment": 150000,
+        "monthlyRent": 12000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 20,
+        "customersPerDay": 300,
+        "seats": 8,
+        "openHoursPerDay": 12,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.33,
+        "staffCount": 3,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 1,
+        "serviceChargePct": 0,
+        "sstRegistered": true,
+        "dineInSharePct": 0.1
+      },
+      "expect": {
+        "steady.revenue": 180000,
+        "steady.sstApplies": true,
+        "steady.serviceTax": 1080
+      }
+    },
+
+    {
+      "name": "service-charge-does-not-inflate-profit",
+      "description": "10% service charge on the spec example. Gross revenue rises to RM106,920 and RM9,720 is collected, but it is passed to staff so PROFIT IS UNCHANGED at RM37,500. Modelling it as revenue without the matching payout is the exact failure this vector exists to catch.",
+      "inputs": {
+        "businessCategory": "korean_restaurant",
+        "district": "mont_kiara",
+        "initialInvestment": 150000,
+        "monthlyRent": 12000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 18,
+        "customersPerDay": 180,
+        "seats": 40,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.32,
+        "staffCount": 4,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 6,
+        "serviceChargePct": 0.1,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "steady.revenue": 97200,
+        "steady.serviceChargeCollected": 9720,
+        "steady.serviceChargePayout": 9720,
+        "steady.grossRevenue": 106920,
+        "steady.profit": 37500,
+        "breakEven.paybackMonth": 7
+      }
+    },
+
+    {
+      "name": "instant-maturity",
+      "description": "monthsToMaturity = 1. Ramp is 1.0 from month one — no divide-by-zero in the (m-1)/(M-1) term. Payback lands on month 4 (4 x 37,500 = exactly 150,000) and the cash trough sits at month 0, not month 1, because there is no loss-making ramp.",
+      "inputs": {
+        "businessCategory": "korean_restaurant",
+        "district": "mont_kiara",
+        "initialInvestment": 150000,
+        "monthlyRent": 12000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 18,
+        "customersPerDay": 180,
+        "seats": 40,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.32,
+        "staffCount": 4,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 1,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "projection.1.ramp": 1,
+        "projection.1.profit": 37500,
+        "projection.1.cumulativeProfit": 37500,
+        "breakEven.paybackMonth": 4,
+        "breakEven.cashBreakEvenMonth": 6,
+        "cash.troughMonth": 0,
+        "cash.troughAmount": -222000
+      }
+    },
+
+    {
+      "name": "deposit-dominates",
+      "description": "RM50,000 investment but RM20,000 rent, so the six-month deposit is RM120,000 — more than twice the investment. Payback lands month 1, cash break-even not until month 3. The gap is the whole reason cash is tracked separately from profit.",
+      "inputs": {
+        "businessCategory": "casual_dining",
+        "district": "mont_kiara",
+        "initialInvestment": 50000,
+        "monthlyRent": 20000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 25,
+        "customersPerDay": 200,
+        "seats": 60,
+        "openHoursPerDay": 12,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.3,
+        "staffCount": 4,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 1,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.85
+      },
+      "expect": {
+        "steady.revenue": 150000,
+        "steady.fixedMonthlyCosts": 36596,
+        "steady.profit": 68404,
+        "cash.outlayAtMonth0": 170000,
+        "breakEven.paybackMonth": 1,
+        "breakEven.cashBreakEvenMonth": 3
+      }
+    },
+
+    {
+      "name": "never-breaks-even",
+      "description": "Losing RM12,276 a month at maturity. Payback and cash break-even are null, never Infinity. Recovery solves each lever: volume needs 141/day and price needs RM15.12, but rent CANNOT fix it (it would have to go negative) and neither can COGS. A lever that cannot solve it must report null, not nonsense.",
+      "inputs": {
+        "businessCategory": "korean_restaurant",
+        "district": "mont_kiara",
+        "initialInvestment": 150000,
+        "monthlyRent": 12000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 10,
+        "customersPerDay": 80,
+        "seats": 40,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.32,
+        "staffCount": 4,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 6,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "derived.cogsPerUnit": 3.2,
+        "derived.contributionPerTransaction": 6.8,
+        "steady.revenue": 24000,
+        "steady.profit": -12276,
+        "breakEven.neverBreaksEven": true,
+        "breakEven.paybackMonth": null,
+        "breakEven.cashBreakEvenMonth": null,
+        "breakEven.paybackBandLow": null,
+        "breakEven.paybackBandHigh": null,
+        "recovery.customersPerDay": 141,
+        "recovery.avgPricePerTransaction": 15.12,
+        "recovery.monthlyRent": null,
+        "recovery.cogsPct": null,
+        "recovery.closestLever": "avgPricePerTransaction"
+      }
+    },
+
+    {
+      "name": "zero-customers",
+      "description": "No transactions at all. Revenue is zero, the loss equals fixed costs exactly, and nothing divides by zero. Contribution per transaction stays defined because it depends on price, not volume.",
+      "inputs": {
+        "businessCategory": "korean_restaurant",
+        "district": "mont_kiara",
+        "initialInvestment": 150000,
+        "monthlyRent": 12000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 18,
+        "customersPerDay": 0,
+        "seats": 40,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.32,
+        "staffCount": 4,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 6,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "steady.revenue": 0,
+        "steady.cogs": 0,
+        "steady.profit": -28596,
+        "derived.contributionPerTransaction": 12.24,
+        "breakEven.operatingTransactionsPerDay": 78,
+        "breakEven.neverBreaksEven": true,
+        "breakEven.paybackMonth": null
+      }
+    },
+
+    {
+      "name": "zero-price",
+      "description": "Giving the product away. Contribution per transaction is zero, so operating break-even is unreachable at any volume and must be null — NOT Infinity, which would render as a garbage figure in the UI.",
+      "inputs": {
+        "businessCategory": "korean_restaurant",
+        "district": "mont_kiara",
+        "initialInvestment": 150000,
+        "monthlyRent": 12000,
+        "securityDepositMonths": 6,
+        "avgPricePerTransaction": 0,
+        "customersPerDay": 180,
+        "seats": 40,
+        "openHoursPerDay": 10,
+        "daysOpenPerWeek": 7,
+        "tradingDaysPerMonthOverride": 30,
+        "cogsPct": 0.32,
+        "staffCount": 4,
+        "avgMonthlyWage": 2000,
+        "utilities": 3500,
+        "licensingFees": 400,
+        "marketing": 2000,
+        "miscMonthly": 1500,
+        "monthsToMaturity": 6,
+        "serviceChargePct": 0,
+        "sstRegistered": false,
+        "dineInSharePct": 0.8
+      },
+      "expect": {
+        "derived.cogsPerUnit": 0,
+        "derived.contributionPerTransaction": 0,
+        "steady.revenue": 0,
+        "steady.profit": -28596,
+        "breakEven.operatingTransactionsPerDay": null,
+        "breakEven.neverBreaksEven": true
+      }
+    }
+  ]
+}

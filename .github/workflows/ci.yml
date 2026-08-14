@@ -1,0 +1,199 @@
+name: CI
+
+# Job order is the point of this file (SPEC §12, plan Checkpoint 2):
+#
+#   test    golden vectors + property tests   <- GATES the deploy
+#   deploy  --no-traffic --tag=candidate      <- live but receiving nobody
+#   parity  candidate URL vs local engine     <- acceptance criterion #3
+#   promote route 100% traffic                <- only if parity passed
+#
+# Deploying with --no-traffic means a client/server mismatch is caught on a
+# revision no real user can reach. Cleaner than deploy-then-roll-back.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "22"
+  REGION: asia-southeast1
+  SERVICE: simulator
+
+jobs:
+  test:
+    name: Tests (gates the deploy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Typecheck (strict)
+        run: npm run typecheck
+      - name: Golden vectors, property tests, schema and API tests
+        run: npm test
+      - name: Verify the service bundles
+        run: npm run build --workspace @spotential/simulator-service
+
+      # Runs against a real production build with the real service alongside.
+      # The Gemini call is intercepted in the browser: paying for a model call
+      # on every CI run would buy flakiness rather than confidence.
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  deploy:
+    name: Deploy candidate revision
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Workload Identity Federation — no long-lived JSON key
+    outputs:
+      candidate_url: ${{ steps.deploy.outputs.candidate_url }}
+      revision: ${{ steps.deploy.outputs.revision }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # NOT `gcloud run deploy --source .`. The Dockerfile lives in
+      # services/simulator/ but needs the repo root as build context, and
+      # --source only looks for a Dockerfile at the root of the upload.
+      - name: Build image via Cloud Build
+        run: |
+          set -euo pipefail
+          gcloud builds submit \
+            --config cloudbuild.yaml \
+            --substitutions "SHORT_SHA=${GITHUB_SHA::7}"
+
+      - name: Deploy with no traffic
+        id: deploy
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${GITHUB_SHA::7}"
+          REVISION_TAG="candidate-${SHORT_SHA}"
+          IMAGE="${REGION}-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/spotential/${SERVICE}:${SHORT_SHA}"
+
+          # --update-env-vars needs a custom delimiter because the origin list
+          # itself contains commas.
+          gcloud run deploy "$SERVICE" \
+            --image "$IMAGE" \
+            --region "$REGION" \
+            --platform managed \
+            --allow-unauthenticated \
+            --min-instances 0 \
+            --max-instances 10 \
+            --memory 512Mi \
+            --cpu 1 \
+            --concurrency 80 \
+            --update-env-vars "^|^ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}|APP_CHECK_PROJECT_NUMBER=388936868171" \
+            --update-secrets "SMOKE_KEY=smoke-key:latest" \
+            --tag "$REVISION_TAG" \
+            --no-traffic
+
+          CANDIDATE_URL=$(gcloud run services describe "$SERVICE" \
+            --region "$REGION" \
+            --format="value(status.traffic.filter(tag:'$REVISION_TAG').url)" | head -n1)
+
+          echo "candidate_url=$CANDIDATE_URL" >> "$GITHUB_OUTPUT"
+          echo "revision=$REVISION_TAG" >> "$GITHUB_OUTPUT"
+          echo "Candidate live (no traffic) at $CANDIDATE_URL"
+
+  parity:
+    name: Client/server parity against the candidate
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      # SMOKE_KEY bypasses App Check ONLY — never the quota or the spend
+      # ceiling. CI is not a browser on an allowed domain, so it cannot satisfy
+      # App Check, but the deployed cache assertions are worth keeping.
+      - name: Every golden vector must match the deployed service exactly
+        env:
+          SIMULATOR_URL: ${{ needs.deploy.outputs.candidate_url }}
+          SMOKE_KEY: ${{ secrets.SMOKE_KEY }}
+        run: npm run test:parity
+
+  promote:
+    name: Promote candidate to 100% traffic
+    needs: [deploy, parity]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Route all traffic to the verified revision
+        run: |
+          gcloud run services update-traffic "$SERVICE" \
+            --region "$REGION" \
+            --to-tags "${{ needs.deploy.outputs.revision }}=100"
+
+  hosting:
+    name: Deploy web app to Firebase Hosting
+    needs: promote
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      # Vite inlines these at build time, so they must be set before the build,
+      # not at runtime. The Maps key is a VARIABLE, not a secret: it is a
+      # browser key that ships in the bundle by design, and the referrer
+      # restriction is what protects it.
+      - name: Build with the deployed API URL
+        env:
+          VITE_SIMULATOR_URL: ${{ vars.SIMULATOR_URL }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ vars.GOOGLE_MAPS_API_KEY }}
+          # All public, like the Maps key: they ship in the bundle and are
+          # protected by domain restriction plus server-side verification.
+          VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+          VITE_FIREBASE_SENDER_ID: ${{ vars.FIREBASE_SENDER_ID }}
+          VITE_RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
+        run: npm run build --workspace @spotential/web
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - name: Deploy hosting
+        run: npx firebase deploy --only hosting --project spotential-app --non-interactive

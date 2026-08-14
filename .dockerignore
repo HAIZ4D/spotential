@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.github
+.firebase
+apps
+coverage
+playwright-report
+test-results
+*.md
+!SPEC.md
+.env
+.env.*

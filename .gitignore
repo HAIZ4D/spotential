@@ -1,0 +1,42 @@
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+
+# Secrets — never commit. Gemini AI Studio key lives here locally,
+# Secret Manager in deployed environments.
+.env
+.env.*
+!.env.example
+
+# Claude Code — local working context, deliberately not published.
+#
+# These stay on disk and keep working locally; git simply never sees them.
+# CLAUDE.md pulls in the two spec docs via @-imports, so they travel together
+# or not at all. A fresh clone therefore has NO project context or spec —
+# copy this set across by hand when moving machines.
+.claude/
+CLAUDE.md
+SPEC.md
+spotential-feature-spec.md
+spotential-tech-stack.md
+
+# Firebase
+.firebase/
+firebase-debug.log
+*-debug.log
+
+# Playwright
+playwright-report/
+test-results/
+.playwright/
+blob-report/
+.cache/ms-playwright/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

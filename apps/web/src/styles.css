@@ -1,0 +1,1900 @@
+/* Design tokens — CLAUDE.md.
+   Gold is light, so it ALWAYS pairs with dark text. Never white on gold. */
+:root {
+  --bg: #ffffff;
+  --navy: #003087;
+  --navy-soft: #e8edf7;
+  --gold: #f2a900;
+  --gold-soft: #fdf3dc;
+  --green: #16a34a;
+  --green-soft: #e7f6ed;
+  --red: #dc2626;
+  --red-soft: #fdeaea;
+
+  --ink: #101828;
+  --ink-2: #475467;
+  --ink-3: #98a2b3;
+  --line: #e4e7ec;
+  --surface: #f9fafb;
+
+  /* Derived from the four brand colours above — no new hues, only deeper and
+     softer variants, so tinting a surface never drifts off-palette. */
+  --navy-deep: #00205c;
+  --navy-tint: #f4f7fd;
+  --amber: #b45309;
+  --amber-soft: #fef3c7;
+
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
+  --shadow-lift: 0 4px 12px rgba(0, 48, 135, 0.08), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- App shell ---------- */
+.masthead {
+  background: var(--navy);
+  color: #fff;
+  padding: 12px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  /* Wrap rather than overflow: without this the actions get pushed off a
+     narrow screen and become unreachable. */
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+.mast-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.masthead h1 {
+  font-size: 17px;
+  margin: 0;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.masthead .sub {
+  font-size: 13px;
+  opacity: 0.75;
+}
+.mast-nav {
+  display: flex;
+  gap: 4px;
+  margin-left: 14px;
+}
+.mast-nav a {
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 550;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.mast-nav a:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.mast-nav a.active {
+  /* Gold is light, so the text on it is dark — CLAUDE.md. */
+  background: var(--gold);
+  color: #3d2b00;
+}
+
+/* ---------- Sticky headline strip ----------
+   The whole reason for this layout: whatever the user is editing, the number
+   that matters is never off-screen. */
+.headline {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background-color: var(--line);
+}
+.headline .cell {
+  background: var(--bg);
+  padding: 12px 16px;
+  min-width: 0;
+  /* One cell carries a sparkline. Without a shared floor it grows taller than
+     its three siblings and the strip reads as misaligned. */
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+.headline .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.headline .value {
+  font-size: 24px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  transition: color 180ms ease;
+}
+.headline .value.good {
+  color: var(--green);
+}
+.headline .value.bad {
+  color: var(--red);
+}
+.headline .value.navy {
+  color: var(--navy);
+}
+.headline .delta {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  min-height: 18px;
+}
+.headline .delta.up {
+  color: var(--green);
+}
+.headline .delta.down {
+  color: var(--red);
+}
+
+/* ---------- Two-column body ---------- */
+.layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+}
+.col-inputs {
+  border-right: 1px solid var(--line);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.col-detail {
+  padding: 16px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  overflow: hidden;
+}
+.card > header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.card > header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+}
+.card .body {
+  padding: 14px;
+}
+
+/* ---------- Fields ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.field + .field {
+  margin-top: 12px;
+}
+.field .row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.field label {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-weight: 550;
+}
+.field .source {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.field input[type="number"],
+.field input[type="text"],
+.field select {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--bg);
+}
+.field input:focus,
+.field select:focus {
+  outline: 2px solid var(--navy);
+  outline-offset: -1px;
+}
+.field input.ai-touched {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
+.field input[type="range"] {
+  width: 100%;
+  accent-color: var(--navy);
+  margin: 2px 0 0;
+}
+.field .with-prefix {
+  position: relative;
+}
+.field .with-prefix .prefix {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.field .with-prefix input {
+  padding-left: 32px;
+}
+
+.sparkline {
+  display: block;
+  margin-top: 4px;
+}
+
+/* ---------- Tables ---------- */
+.table-scroll {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+th,
+td {
+  padding: 6px 10px;
+  text-align: right;
+  white-space: nowrap;
+}
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+thead th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+}
+tbody tr + tr td {
+  border-top: 1px solid var(--line);
+}
+tbody tr.total td {
+  font-weight: 680;
+  border-top: 2px solid var(--ink);
+}
+td.neg {
+  color: var(--red);
+}
+
+/* ---------- Traffic light ---------- */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.dot.green {
+  background: var(--green);
+}
+.dot.amber {
+  background: var(--gold);
+}
+.dot.red {
+  background: var(--red);
+}
+
+/* ---------- Pills / badges ---------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pill.green {
+  background: var(--green-soft);
+  color: #0f7a37;
+}
+.pill.amber {
+  /* Gold is light — dark text, per CLAUDE.md. */
+  background: var(--gold-soft);
+  color: #7a5600;
+}
+.pill.red {
+  background: var(--red-soft);
+  color: #a81c1c;
+}
+.pill.navy {
+  background: var(--navy-soft);
+  color: var(--navy);
+}
+.pill.muted {
+  background: var(--surface);
+  color: var(--ink-2);
+}
+
+/* ---------- Notices ---------- */
+.notice {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  align-items: flex-start;
+  border: 1px solid transparent;
+}
+.notice + .notice {
+  margin-top: 8px;
+}
+.notice.info {
+  background: var(--navy-soft);
+  border-color: #cbd8ef;
+  color: #16336b;
+}
+.notice.warn {
+  background: var(--gold-soft);
+  border-color: #f0dcae;
+  color: #7a5600;
+}
+.notice.danger {
+  background: var(--red-soft);
+  border-color: #f5c6c6;
+  color: #a81c1c;
+}
+.notice .fix {
+  margin-left: auto;
+  flex: none;
+}
+
+/* ---------- Buttons ---------- */
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  padding: 5px 10px;
+  font-size: 13px;
+  font-weight: 550;
+}
+button:hover {
+  background: var(--surface);
+}
+button.primary {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+button.primary:hover {
+  background: #002569;
+}
+button.cta {
+  /* Gold CTA, dark text. */
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #3d2b00;
+}
+button.cta:hover {
+  background: #dd9c00;
+}
+button.tiny {
+  padding: 2px 7px;
+  font-size: 11px;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Recovery ---------- */
+.recovery-lever {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.recovery-lever + .recovery-lever {
+  border-top: 1px solid var(--line);
+}
+.recovery-lever .name {
+  flex: 1;
+  color: var(--ink-2);
+}
+.recovery-lever .arrow {
+  color: var(--ink-3);
+}
+.recovery-lever .unreachable {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+/* ---------- Sensitivity bars ---------- */
+.sens-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 92px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.sens-row + .sens-row {
+  border-top: 1px solid var(--line);
+}
+.sens-bar {
+  height: 8px;
+  background: var(--surface);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.sens-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--navy);
+  border-radius: 999px;
+}
+.sens-row .months {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.muted {
+  color: var(--ink-2);
+}
+.small {
+  font-size: 12px;
+}
+.tiny {
+  font-size: 11px;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ---------- Mobile ----------
+   Single column, strip stays pinned, charts scroll inside their own box. */
+@media (max-width: 720px) {
+  /* On a phone the actions get their own full-width row, so nothing is
+     pushed off-screen and every control stays tappable. */
+  .mast-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .masthead h1 {
+    font-size: 16px;
+  }
+  .mast-nav {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .col-inputs {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .headline {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .headline .value {
+    font-size: 19px;
+  }
+}
+
+/* ==========================================================================
+   SIMULATOR
+   --------------------------------------------------------------------------
+   Scoped to .sim-*, .lever, .runway, .composition and .kpi-spark so the other
+   routes keep the styles they were built against.
+   ========================================================================== */
+
+/* ---------- Key levers ---------- */
+.sim-levers {
+  border-color: var(--navy);
+  box-shadow: var(--shadow-lift);
+}
+.sim-levers > header {
+  background: var(--navy);
+}
+.sim-levers > header h2 {
+  color: #fff;
+}
+.sim-levers > header .pill.navy {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.lever + .lever {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.lever-rank {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.lever-rank.top {
+  /* Gold is light: this is text on white, not white on gold. */
+  color: #8a6200;
+}
+.lever-rank.flat {
+  font-weight: 500;
+  font-style: italic;
+}
+
+/* ---------- Collapsible groups ---------- */
+.sim-group > .body {
+  padding-top: 12px;
+}
+.sim-group-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.sim-group-head:hover {
+  background: var(--navy-tint);
+}
+.sim-group-title {
+  font-size: 13px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+  flex: 1;
+  min-width: 0;
+}
+.sim-group-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.sim-chevron {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ink-3);
+  transition: transform 160ms ease-out;
+}
+.sim-chevron.open {
+  transform: rotate(90deg);
+}
+
+/* ---------- KPI sparkline ---------- */
+.kpi-spark {
+  display: block;
+  width: 100%;
+  height: 22px;
+  margin-top: 4px;
+}
+
+/* ---------- Runway timeline ---------- */
+.runway {
+  margin-bottom: 4px;
+}
+.runway-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  margin: 6px 0 14px;
+}
+.runway-underwater {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--red-soft);
+}
+.runway-band {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  background: var(--gold);
+  opacity: 0.28;
+  border-radius: 3px;
+}
+.runway-mark {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.runway-dot {
+  display: block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.runway-dot.navy { background: var(--navy); }
+.runway-dot.red { background: var(--red); }
+.runway-dot.amber { background: var(--gold); }
+.runway-dot.green { background: var(--green); }
+
+.runway-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.runway-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+}
+.runway-item .runway-dot {
+  margin-top: 3px;
+  flex: none;
+}
+.runway-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  font-weight: 650;
+}
+.runway-value {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* ---------- Cost composition ---------- */
+.composition {
+  margin-bottom: 14px;
+}
+.composition-bar {
+  display: flex;
+  height: 26px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.composition-seg {
+  min-width: 2px;
+  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.composition-seg.profit {
+  background: var(--green);
+}
+.composition-loss {
+  margin-top: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+}
+.composition-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 9px;
+}
+.composition-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.composition-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex: none;
+}
+.composition-swatch.profit {
+  background: var(--green);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composition-seg,
+  .sim-chevron {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   LOCATION PAGE — the cockpit layout
+   --------------------------------------------------------------------------
+   Scoped to .cockpit so /simulator, /compare and /heatmap keep the document
+   layout they were designed for. Nothing here overrides .card, .notice or
+   .pill, which the other routes depend on.
+   ========================================================================== */
+
+/* ---------- Sticky toolbar ---------- */
+.cockpit-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.cockpit-toolbar .grow {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+.cockpit-toolbar select {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--ink);
+  font-weight: 550;
+}
+.cockpit-toolbar select:focus {
+  outline: 2px solid var(--navy);
+  outline-offset: -1px;
+}
+.toolbar-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+/* ---------- Two panes ---------- */
+.cockpit {
+  display: grid;
+  /* The map gets the wider share as well as the height — the brief asked for
+     bigger, and a map is the one panel that gains from both dimensions. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+  gap: 20px;
+  padding: 18px 20px 64px;
+  align-items: start;
+}
+.cockpit-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.cockpit-map {
+  position: sticky;
+  /* Clears the toolbar. */
+  top: 68px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--navy-tint) 0%, var(--bg) 62%);
+  padding: 18px;
+  box-shadow: var(--shadow-lift);
+}
+.hero-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+.hero-place {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-3);
+  font-weight: 700;
+}
+.hero-name {
+  font-size: 20px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  margin: 2px 0 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.hero-verdict {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin-top: 8px;
+}
+.hero-verdict strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+/* ---------- Score ring ---------- */
+.ring-wrap {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  flex: none;
+}
+.ring-wrap svg {
+  display: block;
+  transform: rotate(-90deg);
+}
+.ring-arc {
+  transition: stroke-dashoffset 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ring-centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+.ring-score {
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.ring-out-of {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 650;
+  margin-top: 3px;
+}
+.ring-band {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+
+/* ---------- Stat chips ---------- */
+.chips {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+.chip {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 9px 10px;
+  min-width: 0;
+  /* A left rule carries the state colour without tinting the whole chip,
+     which would compete with the ring. */
+  border-left: 3px solid var(--ink-3);
+  animation: chip-in 420ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.chip.navy { border-left-color: var(--navy); }
+.chip.green { border-left-color: var(--green); }
+.chip.amber { border-left-color: var(--gold); }
+.chip.red { border-left-color: var(--red); }
+.chip-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip-value {
+  font-size: 17px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  color: var(--ink);
+}
+.chip-note {
+  font-size: 10px;
+  color: var(--ink-3);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes chip-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Announced, never shown. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Section tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 140ms, color 140ms, border-color 140ms;
+}
+.tab:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+.tab[aria-selected="true"] {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.tab-badge {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--navy-soft);
+  color: var(--navy);
+}
+.tab[aria-selected="true"] .tab-badge {
+  /* Gold is light, so this pairs with dark text — never white on gold. */
+  background: var(--gold);
+  color: #3d2b00;
+}
+/* Data missing or degraded, visible without opening the section. */
+.tab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.tab-dot.warn { background: var(--gold); }
+.tab-dot.none {
+  background: transparent;
+  border: 1.5px solid var(--ink-3);
+}
+
+.section-body {
+  animation: section-in 260ms ease-out;
+}
+@keyframes section-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- Map pane ---------- */
+.mappane {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg);
+  box-shadow: var(--shadow-lift);
+}
+.mappane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.mappane-frame {
+  /* The brief: bigger. Tall rather than wide, and sticky, so it stays put
+     while the information column scrolls past it. */
+  height: min(66vh, 640px);
+  min-height: 380px;
+  position: relative;
+}
+.mappane-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  font-size: 11px;
+  color: var(--ink-3);
+  border-top: 1px solid var(--line);
+}
+.mappane-foot .coords {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+/* ---------- Available properties ---------- */
+.properties {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.properties-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 9px;
+}
+.properties-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+}
+/* ---------- Real listings ---------- */
+
+/* These are somebody else's units, hotlinked and linked back to. They sit
+   above the portal links, which stay put as the fallback and the "see all". */
+.plist {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.plist-item {
+  margin: 0;
+}
+.plist-card {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 140ms, background 140ms, transform 140ms;
+}
+.plist-card:hover {
+  border-color: var(--navy);
+  background: var(--navy-tint);
+  transform: translateY(-1px);
+}
+.plist-card:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+.plist-thumb {
+  width: 72px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--navy-soft);
+  display: block;
+}
+/* Same device as the competitor list's initial tile, for a listing whose
+   photo 404s — a broken-image icon would look like our bug, not their gap. */
+.plist-thumb-fallback {
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.plist-body {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.plist-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.plist-type {
+  flex: none;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--navy);
+  background: var(--navy-soft);
+  border-radius: 3px;
+  padding: 2px 5px;
+}
+.plist-address {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.plist-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.plist-rent {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+/* Gold on its soft tint, never white on gold — gold is a light colour. */
+.plist-psf {
+  font-size: 10.5px;
+  font-weight: 650;
+  color: #7a5600;
+  background: var(--gold-soft);
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-variant-numeric: tabular-nums;
+}
+.plist-meta {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.plist-go {
+  font-size: 14px;
+  color: var(--ink-3);
+  padding-right: 4px;
+}
+.plist-card:hover .plist-go {
+  color: var(--navy);
+}
+
+.plist-skeleton {
+  pointer-events: none;
+}
+.skeleton-line {
+  display: block;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--navy-soft);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+.skeleton-line.short {
+  width: 45%;
+}
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+  }
+  .plist-card:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .plist-card {
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    gap: 9px;
+  }
+  .plist-thumb {
+    width: 56px;
+    height: 48px;
+  }
+}
+
+.properties-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+/* Deliberately uniform: these are two routes to the same thing, and styling
+   one more prominently would read as a recommendation we have no basis for. */
+.portal-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  text-decoration: none;
+  transition: border-color 140ms, background 140ms;
+}
+.portal-link:hover {
+  border-color: var(--navy);
+  background: var(--navy-tint);
+}
+.portal-name {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--navy);
+}
+.portal-what {
+  grid-column: 1;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.portal-arrow {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.properties-note {
+  margin: 8px 0 0;
+  line-height: 1.45;
+}
+
+/* ---------- Competitor list ---------- */
+.clist-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.clist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.clist-row {
+  display: grid;
+  grid-template-columns: 22px 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  transition: background 120ms ease-out;
+}
+.clist-row + .clist-row {
+  border-top: 1px solid var(--line);
+}
+.clist-row:hover,
+.clist-row.hovered {
+  background: var(--navy-tint);
+}
+.clist-row.closed {
+  opacity: 0.62;
+}
+
+.clist-rank {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The visual anchor a photo would give, for nothing. One tint for every tile:
+   colouring them per outlet looks livelier but implies a grouping that does
+   not exist, and in this app colour carries state. */
+.clist-tile {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--navy-soft);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 15px;
+}
+.clist-row.hovered .clist-tile {
+  background: var(--navy);
+  color: #fff;
+}
+
+.clist-main {
+  min-width: 0;
+}
+.clist-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.clist-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.clist-rating,
+.clist-reviews {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+.clist-star.green { color: var(--green); }
+.clist-star.amber { color: var(--gold); }
+.clist-star.red { color: var(--red); }
+.clist-unrated {
+  font-style: italic;
+  color: var(--ink-3);
+}
+.clist-price {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+}
+.clist-type {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* Bars encode a figure printed right beside them, never a number of their
+   own — so they can be read as weight without implying precision. */
+.clist-bar {
+  display: inline-block;
+  width: 42px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.clist-bar.wide {
+  width: 56px;
+}
+.clist-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+}
+.clist-bar i.green { background: var(--green); }
+.clist-bar i.amber { background: var(--gold); }
+.clist-bar i.red { background: var(--red); }
+.clist-bar i.navy { background: var(--navy); }
+.clist-bar i.gold { background: var(--gold); }
+
+.clist-distance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+.clist-metres {
+  font-size: 12.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clist-row {
+    transition: none;
+  }
+}
+
+/* ---------- Map legend ---------- */
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.map-legend-note {
+  flex-basis: 100%;
+  color: var(--ink-3);
+  font-weight: 400;
+  line-height: 1.45;
+}
+.map-key {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+}
+.map-key.pin {
+  background: var(--gold);
+  border: 1.5px solid #b57f00;
+}
+.map-key.complete {
+  background: rgba(22, 163, 74, 0.14);
+  border: 2px solid var(--green);
+}
+.map-key.radius {
+  background: rgba(0, 48, 135, 0.05);
+  border: 1.5px solid rgba(0, 48, 135, 0.6);
+}
+
+/* Compact segmented control, shared by the map pane header. */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.segmented button {
+  border: 0;
+  border-radius: 0;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.segmented button + button {
+  border-left: 1px solid var(--line);
+}
+.segmented button[aria-pressed="true"] {
+  background: var(--navy);
+  color: #fff;
+}
+
+/* ---------- City demand heatmap ---------- */
+
+/* The map is the page here, more so than on Analysis: there is no Street View
+   to share the frame and the left column is all short cards. */
+.cockpit.heat {
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+}
+.heat-map-frame {
+  height: calc(100vh - 96px);
+  min-height: 460px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.city-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+.small-figure {
+  font-size: 17px;
+}
+
+.legend {
+  display: grid;
+  gap: 5px;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.legend-swatch {
+  width: 22px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(16, 24, 40, 0.12);
+  flex: none;
+}
+
+.top-areas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  counter-reset: none;
+}
+.top-area {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: background 140ms, border-color 140ms;
+}
+.top-area:hover {
+  background: var(--navy-tint);
+  border-color: var(--line);
+}
+.top-area:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+}
+.top-area-rank {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.top-area-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top-area-figure {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  cursor: pointer;
+  font: inherit;
+  transition: background 140ms, border-color 140ms;
+}
+.layer-toggle:hover:not(:disabled) {
+  border-color: var(--navy);
+}
+.layer-toggle:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+}
+.layer-toggle.on {
+  background: var(--navy-soft);
+  border-color: var(--navy);
+}
+/* Counted but never drawn. Reads as information, not as a broken control. */
+.layer-toggle.count-only {
+  cursor: default;
+  opacity: 0.72;
+  border-style: dashed;
+}
+.layer-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.layer-count {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-nearby {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.cell-chip {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--navy);
+  background: var(--navy-soft);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  .cockpit.heat {
+    grid-template-columns: 1fr;
+  }
+  .heat-map-frame {
+    height: 55vh;
+    min-height: 340px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .cockpit {
+    grid-template-columns: 1fr;
+  }
+  .cockpit-map {
+    /* Sticky inside a single column fights the page scroll. */
+    position: static;
+    order: -1;
+  }
+  .mappane-frame {
+    height: 45vh;
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 720px) {
+  .cockpit {
+    padding: 14px 12px 56px;
+  }
+  .hero {
+    padding: 14px;
+  }
+  .hero-top {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cockpit-toolbar {
+    padding: 10px 12px;
+  }
+}
+
+/* Motion is decoration here; the layout must not depend on it. */
+@media (prefers-reduced-motion: reduce) {
+  .ring-arc,
+  .chip,
+  .section-body {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* ---------- Location chat (Feature 3) ---------- */
+.chat-log {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 4px;
+}
+.chat-turn p {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.chat-turn.user p {
+  color: var(--ink-2);
+}
+.chat-turn.model {
+  border-left: 2px solid var(--navy);
+  padding-left: 10px;
+}
+.chat-form {
+  display: flex;
+  gap: 8px;
+}
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+}
+.chat-form input:focus {
+  outline: 2px solid var(--navy);
+  outline-offset: -1px;
+}
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---------- Rent panel (Feature 1e) ---------- */
+.figure-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.figure {
+  font-size: 24px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.field-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field-row input[type="number"] {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--bg);
+}
+.field-row input:focus {
+  outline: 2px solid var(--navy);
+  outline-offset: -1px;
+}
+
+@media (max-width: 560px) {
+  .figure-row,
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Print (SPEC §7.8) ----------
+   Browser "save as PDF" should produce something presentable for a bank. */
+@media print {
+  .masthead,
+  .col-inputs,
+  .no-print {
+    display: none !important;
+  }
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .headline {
+    position: static;
+    border: 1px solid #000;
+  }
+  .card {
+    break-inside: avoid;
+    border-color: #999;
+  }
+  body {
+    font-size: 11px;
+  }
+  .col-detail {
+    padding: 0;
+    gap: 10px;
+  }
+}

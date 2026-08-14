@@ -1,0 +1,33 @@
+{
+  "name": "spotential",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:parity": "vitest run --config vitest.parity.config.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:service": "npm run dev --workspace @spotential/simulator-service",
+    "build:service": "npm run build --workspace @spotential/simulator-service",
+    "refresh:demographics": "node scripts/refresh-demographics.mjs",
+    "refresh:population": "node scripts/refresh-population.mjs",
+    "refresh:amenities": "node scripts/refresh-amenities.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.10.2",
+    "fast-check": "^3.23.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
