@@ -13,6 +13,10 @@ import { useEffect, useRef, useState } from "react";
  *
  * Returns the target immediately when the user has asked for reduced motion,
  * and whenever the change is tiny enough that animating it would be noise.
+ *
+ * The duration is overridable for the one case that is NOT a continuously
+ * firing control: a figure that counts once on arrival can afford to be slower,
+ * because nothing is waiting on it. The 200ms default stays where it was tuned.
  */
 const DURATION_MS = 200;
 
@@ -21,7 +25,7 @@ const MIN_DELTA = 0.5;
 
 const easeOut = (t: number): number => 1 - (1 - t) ** 3;
 
-export function useCountUp(target: number): number {
+export function useCountUp(target: number, durationMs: number = DURATION_MS): number {
   const prefersReduced =
     typeof window !== "undefined" &&
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -41,7 +45,7 @@ export function useCountUp(target: number): number {
     const origin = from.current;
 
     const step = (now: number) => {
-      const t = Math.min(1, (now - start) / DURATION_MS);
+      const t = Math.min(1, (now - start) / durationMs);
       const value = origin + (target - origin) * easeOut(t);
 
       setShown(value);
@@ -57,7 +61,7 @@ export function useCountUp(target: number): number {
 
     frame.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame.current);
-  }, [target, prefersReduced]);
+  }, [target, prefersReduced, durationMs]);
 
   return shown;
 }

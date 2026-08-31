@@ -99,8 +99,12 @@ test("states that it is a comparison score and not a forecast", async ({ page })
   await stub(page);
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
 
-  await expect(page.getByText(/comparison score, not a forecast/)).toBeVisible();
-  await expect(page.getByText(/validated against real business outcomes/)).toBeVisible();
+  // The footer repeats this caveat site-wide, so both assertions name the
+  // panel. The panel's wording is its own — "comparison score" against the
+  // footer's "comparison aid" — and it is the one that has to be here.
+  const panel = page.locator(".notice.info").first();
+  await expect(panel.getByText(/comparison score, not a forecast/)).toBeVisible();
+  await expect(panel.getByText(/validated against real business outcomes/)).toBeVisible();
 });
 
 test("labels every dimension as measured or inferred", async ({ page }) => {
@@ -141,7 +145,7 @@ test("an empty area is not presented as a perfect one", async ({ page }) => {
   });
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
 
-  await expect(page.getByText(/unproven rather than open/)).toBeVisible();
+  await expect(page.getByText(/unproven rather than open/i)).toBeVisible();
 });
 
 test("scores a capped search on density rather than the capped count", async ({ page }) => {

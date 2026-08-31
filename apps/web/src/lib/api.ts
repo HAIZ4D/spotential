@@ -7,6 +7,7 @@ import type {
   ScenarioInputs,
   SimulationResult,
 } from "@spotential/sim-engine";
+import type { EventListing, EventScore, VendorProfile } from "@spotential/sim-engine";
 import { authHeaders } from "./firebase.js";
 
 /**
@@ -141,6 +142,8 @@ export async function postCompetitors(
 
 export interface GapsResponse {
   ranked: CategoryGap[];
+  /** Which sector was compared, so the panel can say so. */
+  sector?: "fnb" | "retail" | "services";
   noPresence: CategoryGap[];
   topOpportunity: CategoryGap | null;
   narrative: string;
@@ -153,7 +156,9 @@ export interface GapsResponse {
 }
 
 export async function postOpportunityGaps(
-  body: { lat: number; lng: number; radiusMetres: number },
+  // `category` selects the SECTOR to compare within. One Places call per
+  // category searched, so this is the spend control as much as a filter.
+  body: { lat: number; lng: number; radiusMetres: number; category?: BusinessCategory },
   signal?: AbortSignal,
 ): Promise<GapsResponse> {
   const response = await fetch(`${SIMULATOR_URL}/v1/opportunity-gaps`, {
@@ -516,4 +521,161 @@ export async function getHealth(signal?: AbortSignal): Promise<{
   const response = await fetch(`${SIMULATOR_URL}/health`, signal ? { signal } : {});
   if (!response.ok) throw new ApiError("Health check failed", response.status);
   return (await response.json()) as { status: string; engineVersion: string; presetVersion: string };
+}
+
+/**
+ * Events — the opportunity marketplace.
+ *
+ * Browsing, filtering and ranking are FREE to serve: the catalogue is a file
+ * in the Cloud Run image and the score is arithmetic in the shared engine, so
+ * none of these calls touch Places or Gemini. They send App Check headers
+ * anyway (harmless, and consistent), but the routes do not require them —
+ * which means discovery keeps working even where reCAPTCHA is blocked.
+ */
+
+export interface EventsResponse {
+  events: EventListing[];
+  total: number;
+  matched: number;
+  vintage: string;
+}
+
+export async function getEvents(
+  filters: Record<string, string> = {},
+  signal?: AbortSignal,
+): Promise<EventsResponse> {
+  const params = new URLSearchParams(filters);
+  const query = params.toString();
+
+  const response = await fetch(
+    `${SIMULATOR_URL}/v1/events${query ? `?${query}` : ""}`,
+    signal ? { signal } : {},
+  );
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new ApiError(payload.message ?? "Could not load events.", response.status);
+  }
+
+  return (await response.json()) as EventsResponse;
+}
+
+export interface EventDetailResponse {
+  event: EventListing;
+  days: number;
+  entryPriceRm: number | null;
+  /** Null means the population grid has no coverage — NOT zero residents. */
+  venueCatchment: number | null;
+  catchmentRadiusMetres: number;
+}
+
+export async function getEvent(id: string, signal?: AbortSignal): Promise<EventDetailResponse> {
+  const response = await fetch(
+    `${SIMULATOR_URL}/v1/events/${encodeURIComponent(id)}`,
+    signal ? { signal } : {},
+  );
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new ApiError(payload.message ?? "Could not load that event.", response.status);
+  }
+
+  return (await response.json()) as EventDetailResponse;
+}
+
+export interface RankedEvent {
+  eventId: string;
+  score: EventScore;
+}
+
+export async function rankEventsFor(
+  vendor: VendorProfile,
+  filters: Record<string, unknown> = {},
+  signal?: AbortSignal,
+): Promise<{ ranked: RankedEvent[]; matched: number }> {
+  const response = await fetch(`${SIMULATOR_URL}/v1/events/rank`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ vendor, filters }),
+    ...(signal ? { signal } : {}),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new ApiError(payload.message ?? "Could not rank events.", response.status);
+  }
+
+  return (await response.json()) as { ranked: RankedEvent[]; matched: number };
+}
+
+export interface ApplyPayload {
+  packageId: string | null;
+  businessName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  productDescription: string;
+  consentToShare: boolean;
+}
+
+export type ApplyResult =
+  | { kind: "applied"; applicationId: string }
+  | { kind: "sample"; message: string }
+  | { kind: "signin"; message: string }
+  | { kind: "invalid"; errors: string[] };
+
+/**
+ * Apply for a booth.
+ *
+ * Sends BOTH header sets: App Check ("is this our app?") and the account
+ * bearer token ("who is this?"). The server needs both and they are not
+ * interchangeable.
+ *
+ * Outcomes are modelled rather than thrown, because three of the four are
+ * things the form should explain rather than errors — a sample listing, a
+ * missing sign-in and a validation failure all have a sensible next step.
+ */
+export async function applyForBooth(
+  eventId: string,
+  payload: ApplyPayload,
+  signal?: AbortSignal,
+): Promise<ApplyResult> {
+  const { accountHeaders } = await import("./firebase.js");
+
+  const response = await fetch(
+    `${SIMULATOR_URL}/v1/events/${encodeURIComponent(eventId)}/apply`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(await authHeaders()),
+        ...(await accountHeaders()),
+      },
+      body: JSON.stringify({ eventId, ...payload }),
+      ...(signal ? { signal } : {}),
+    },
+  );
+
+  const body = (await response.json().catch(() => ({}))) as {
+    message?: string;
+    details?: string[];
+    application?: { id: string };
+    error?: string;
+  };
+
+  if (response.ok && body.application) {
+    return { kind: "applied", applicationId: body.application.id };
+  }
+
+  if (body.error === "sample_event") {
+    return { kind: "sample", message: body.message ?? "This is a sample listing." };
+  }
+  if (response.status === 401 || response.status === 403) {
+    return { kind: "signin", message: body.message ?? "Sign in to apply." };
+  }
+  if (response.status === 400) {
+    return { kind: "invalid", errors: body.details ?? ["The application was not accepted."] };
+  }
+
+  throw new ApiError(body.message ?? "Could not send that application.", response.status);
 }

@@ -59,7 +59,10 @@ test.describe("with Firebase and reCAPTCHA blocked", () => {
     await expect(page.getByRole("heading", { name: "KL" })).toBeVisible();
     await expect(page.getByText("3.14780, 101.69530")).toBeVisible();
     await expect(page.getByRole("tab", { name: /^Overview/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Simulator", exact: true })).toBeVisible();
+    // Viewport-agnostic: on mobile the links sit behind the menu button, so the
+  // claim being made here — navigation survived the failure — is asserted on
+  // the nav landmark rather than on one link that is desktop-only.
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
   });
 });
 

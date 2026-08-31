@@ -1,4 +1,6 @@
-import { RADIUS_BUCKETS, listCategories, type BusinessCategory } from "@spotential/sim-engine";
+import { RADIUS_BUCKETS, SECTORS,
+  SECTOR_LABELS,
+  listCategoriesBySector, type BusinessCategory } from "@spotential/sim-engine";
 import type { ReactNode } from "react";
 
 /**
@@ -35,10 +37,14 @@ export function Toolbar({
         value={category}
         onChange={(e) => onCategory(e.target.value as BusinessCategory)}
       >
-        {listCategories().map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.label}
-          </option>
+                {SECTORS.map((sector) => (
+          <optgroup key={sector} label={SECTOR_LABELS[sector]}>
+            {listCategoriesBySector(sector).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
 

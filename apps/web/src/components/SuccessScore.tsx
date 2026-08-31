@@ -7,6 +7,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { formatPercent, type LocationScore, type ScoreKind } from "@spotential/sim-engine";
+import { bandFor } from "./analysis/ScoreRing.js";
 
 /**
  * The Overall Success Score — Feature 1d.
@@ -38,7 +39,7 @@ function band(score: number): { cls: string; label: string } {
  * as one figure. The dimension table below stays with the panel — the chart is
  * the headline, the table is the evidence.
  */
-export function ScoreRadar({ score, height = 210 }: { score: LocationScore; height?: number }) {
+export function ScoreRadar({ score, height = 200 }: { score: LocationScore; height?: number }) {
   const chartData = score.dimensions.map((d) => ({
     axis: d.label,
     // Unavailable axes stay ON the chart at zero so the missing side of the
@@ -49,7 +50,10 @@ export function ScoreRadar({ score, height = 210 }: { score: LocationScore; heig
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer>
-        <RadarChart data={chartData} outerRadius="70%">
+        {/* 70% left a visible band of empty space inside the container and a
+            gap under the hero. 78% fills the box and enlarges the labels,
+            which are what make the shape readable. */}
+        <RadarChart data={chartData} outerRadius="78%">
           <PolarGrid stroke="var(--line)" />
           <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10, fill: "var(--ink-2)" }} />
           <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
@@ -93,6 +97,35 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
             Kept here for any caller rendering the full card on its own. */}
         {!bare && <ScoreRadar score={score} height={280} />}
 
+        {/* The ranking, before the table.
+
+            Five numbers in a column make you compare them yourself; a bar
+            shows which axis is carrying the score and which is dragging it
+            down at a glance. Same device as the PDF and /compare, so all
+            three surfaces read alike. The table below still holds every
+            figure, weight and basis. */}
+        <div className="dim-bars">
+          {score.dimensions.map((d) => {
+            const measured = d.kind !== "unavailable";
+            return (
+              <div className="dim-bar" key={d.key}>
+                <span className="dim-bar-label">{d.label}</span>
+                <span className="dim-bar-track">
+                  {measured && (
+                    <i
+                      className={`dim-bar-fill ${bandFor(Math.round(d.score)).cls}`}
+                      style={{ width: `${Math.max(1.5, Math.min(100, d.score))}%` }}
+                    />
+                  )}
+                </span>
+                <span className={`dim-bar-value ${measured ? "" : "muted"}`}>
+                  {measured ? `${d.isFloor ? "≤" : ""}${Math.round(d.score)}` : "not scored"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
         <div className="table-scroll" style={{ marginTop: 8 }}>
           <table>
             <thead>
@@ -110,13 +143,11 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
                   <tr key={d.key}>
                     <td>
                       <div>{d.label}</div>
-                      <div className="tiny muted" style={{ whiteSpace: "normal", maxWidth: 340 }}>
-                        {d.note}
-                      </div>
+                      <div className="dim-note">{d.note}</div>
                     </td>
                     <td>
                       {d.kind === "unavailable" ? (
-                        "—"
+                        "not scored"
                       ) : (
                         <>
                           {/* A capped competitor search means the true score
@@ -126,7 +157,7 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
                         </>
                       )}
                     </td>
-                    <td>{d.weight > 0 ? formatPercent(d.weight, 0) : "—"}</td>
+                    <td>{d.weight > 0 ? formatPercent(d.weight, 0) : "excluded"}</td>
                     <td>
                       <span className={`pill ${kind.cls}`}>{kind.text}</span>
                     </td>

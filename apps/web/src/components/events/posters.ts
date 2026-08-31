@@ -1,0 +1,81 @@
+import type { EventListing } from "@spotential/sim-engine";
+import hariSukan from "../../../img/hari-sukan-negara.webp";
+import lapanPagi from "../../../img/lapan-pagi.webp";
+import lotusPopFest from "../../../img/lotus-pop-fest.webp";
+import heritage from "../../../img/malaysia-food-heritage.webp";
+import pestaTempatan from "../../../img/pesta-tempatan-4x4.webp";
+import retroBazaar from "../../../img/retro-bazaar.webp";
+import temuJanji from "../../../img/temu-janji-market.webp";
+import wanitaMendunia from "../../../img/karnival-wanita-mendunia.webp";
+
+/**
+ * Event posters.
+ *
+ * EVERY seeded listing now has one, and that is deliberate: the catalogue was
+ * cut from fourteen to eight rather than padding it with listings that had no
+ * artwork behind them. Where a poster states a fact — dates, venue, opening
+ * hours, who is being recruited — the listing was edited to match the poster
+ * rather than the other way round.
+ *
+ * They are the organizers' own artwork, shown whole. Most are portrait by
+ * design and the card is built around that shape rather than cropping them to
+ * a landscape strip, which would cut off the title: the one part a vendor
+ * scans for.
+ *
+ * The generated cover below is now the ORGANIZER-SUBMISSION path rather than a
+ * seed fallback. It stays because an organizer can publish an event without
+ * artwork, and the honest answer to that is still not a stock photo: a generic
+ * crowd shot would imply we know what the event looks like, on a page whose
+ * whole argument is that its figures came from somewhere checkable.
+ */
+
+const POSTERS: Record<string, string> = {
+  "evt-hari-sukan-negara": hariSukan,
+  "evt-heritage-matic": heritage,
+  "evt-johor-lotus": lotusPopFest,
+  "evt-lapan-pagi": lapanPagi,
+  "evt-pesta-tempatan": pestaTempatan,
+  "evt-retro-bazaar": retroBazaar,
+  "evt-tjm-bayuemas": temuJanji,
+  "evt-wanita-mendunia": wanitaMendunia,
+};
+
+export function posterFor(event: EventListing): string | null {
+  return POSTERS[event.id] ?? null;
+}
+
+/**
+ * A stable colour pair per event, drawn only from the brand palette.
+ *
+ * Hashed from the id so a given event always looks the same — a cover that
+ * changed between renders would read as a loading glitch. Every pair is navy
+ * or gold at varying depth; no new hues enter the product through the back
+ * door of a placeholder.
+ */
+const COVERS: [string, string][] = [
+  ["#003087", "#0a4bb5"],
+  ["#00205c", "#1466c4"],
+  ["#0a4bb5", "#3b82d9"],
+  ["#00205c", "#003087"],
+  ["#8a5a00", "#f2a900"],
+  ["#003087", "#1466c4"],
+];
+
+export function coverFor(event: EventListing): { from: string; to: string; initials: string } {
+  let hash = 0;
+  for (let i = 0; i < event.id.length; i += 1) {
+    hash = (hash * 31 + event.id.charCodeAt(i)) >>> 0;
+  }
+  const [from, to] = COVERS[hash % COVERS.length] as [string, string];
+
+  // Up to two initials from the event name, which is more recognisable at a
+  // glance than a generic icon and needs no extra asset.
+  const initials = event.name
+    .split(/\s+/)
+    .filter((w) => /^[A-Za-z]/.test(w))
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return { from, to, initials };
+}

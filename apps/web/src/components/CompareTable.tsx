@@ -58,7 +58,7 @@ export function CompareTable({
                     {/* Null, not zero: "no data" and "scored zero" are
                         different claims and must not look the same. */}
                     {cell.score === null ? (
-                      <span className="muted">—</span>
+                      <span className="muted">no data</span>
                     ) : (
                       <span style={{ fontWeight: isWinner ? 680 : 400 }}>
                         {Math.round(cell.score)}

@@ -2,7 +2,11 @@ export { STATUTORY, STATUTORY_REVIEWED } from "./statutory.js";
 export { PRESET_VERSION, ENGINE_VERSION } from "./version.js";
 export {
   CATEGORY_PRESETS,
+  SECTORS,
+  SECTOR_LABELS,
   listCategories,
+  listCategoriesBySector,
+  sectorOf,
   categoryDefaults,
   type CategoryPreset,
 } from "./categories.js";

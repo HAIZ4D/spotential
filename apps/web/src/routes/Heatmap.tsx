@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatNumber, listDistricts } from "@spotential/sim-engine";
 import { Masthead } from "../components/Masthead.js";
 import { getAmenities, getHeatmap, type HeatmapCell } from "../lib/api.js";
+import { HeatLayer } from "../components/heatmap/HeatLayer.js";
 import { HexLayer } from "../components/heatmap/HexLayer.js";
 import { AmenityPins, RentPins } from "../components/heatmap/AmenityPins.js";
 import { CellInspector } from "../components/heatmap/CellInspector.js";
@@ -49,6 +50,20 @@ const CITIES = [
 /** Roughly a 12km box, which is one city core and comfortably under the cap. */
 const HALF_SPAN = 0.055;
 
+/**
+ * How far PAST the visible frame the grid is fetched.
+ *
+ * The surface is a blur, so wherever the cells stop it ends on a dead straight
+ * line — and a ruler-straight edge through the middle of a city reads as a
+ * broken render rather than as the edge of the data. Fetching a margin beyond
+ * the frame pushes that boundary off screen at the default zoom, so the
+ * gradient runs to the edges the way a heat surface should.
+ *
+ * Only the SURFACE uses these wider bounds. Every figure on the left still
+ * describes the visible box, because "in view" has to mean in view.
+ */
+const GRID_PAD = 1.7;
+
 /** Recentres the map when a top area or rent pin is chosen. */
 function FlyTo({ target }: { target: { lat: number; lng: number; zoom?: number } | null }) {
   const map = useMap();
@@ -76,9 +91,17 @@ export default function Heatmap() {
     north: city.lat + HALF_SPAN,
   };
 
+  /** Padded, so the blur does not end on a straight line inside the frame. */
+  const gridBounds = {
+    west: city.lng - HALF_SPAN * GRID_PAD,
+    east: city.lng + HALF_SPAN * GRID_PAD,
+    south: city.lat - HALF_SPAN * GRID_PAD,
+    north: city.lat + HALF_SPAN * GRID_PAD,
+  };
+
   const heatmap = useQuery({
     queryKey: ["heatmap", city.label],
-    queryFn: ({ signal }) => getHeatmap(bounds, signal),
+    queryFn: ({ signal }) => getHeatmap(gridBounds, signal),
     staleTime: 60 * 60 * 1000,
     retry: 1,
   });
@@ -95,11 +118,29 @@ export default function Heatmap() {
     retry: 1,
   });
 
+  /** Everything fetched — this is what the surface is drawn from. */
   const cells = heatmap.data?.cells ?? [];
   const layers = amenities.data?.layers ?? [];
   const places = amenities.data?.places ?? [];
 
-  const areas = useMemo(() => rankAreas(cells, places), [cells, places]);
+  /**
+   * Only what is actually on screen. The surface deliberately overruns the
+   * frame, but the totals, the median, the densest cell and the ranked areas
+   * all claim to describe the view, so they are computed from the view.
+   */
+  const cellsInView = useMemo(
+    () =>
+      cells.filter(
+        (c) =>
+          c.lat >= bounds.south &&
+          c.lat <= bounds.north &&
+          c.lng >= bounds.west &&
+          c.lng <= bounds.east,
+      ),
+    [cells, bounds.south, bounds.north, bounds.west, bounds.east],
+  );
+
+  const areas = useMemo(() => rankAreas(cellsInView, places), [cellsInView, places]);
 
   /** Only benchmarks inside the current view — the rest are another city's. */
   const districts = useMemo(
@@ -170,7 +211,7 @@ export default function Heatmap() {
             </div>
           )}
 
-          <CitySummary cells={cells} />
+          <CitySummary cells={cellsInView} />
 
           <CellInspector
             cell={selected}
@@ -200,24 +241,34 @@ export default function Heatmap() {
                 {LEGEND.map((row) => (
                   <div className="legend-row" key={row.label}>
                     <span className="legend-swatch" style={{ background: row.colour }} />
-                    <span className="tiny">{row.label}</span>
+                    <span className="tiny">
+                      <strong>{row.label}</strong> <span className="muted">{row.note}</span>
+                    </span>
                   </div>
                 ))}
               </div>
 
-              {/* The single most important thing on this page. */}
+              {/* The single most important thing on this page, and more so
+                  now that the ramp runs green to red: the one misreading a
+                  familiar heat gradient invites is that green looks like room
+                  to trade, when it means the opposite. */}
               <div className="notice warn">
                 <span>
-                  This maps <strong>where people live</strong>, not where to open. It knows nothing
-                  about competition — that data is the part that costs money, so it is left out
-                  rather than guessed. A dense cell may already be saturated; check it on the
-                  location page.
+                  <strong>Green does not mean space to open.</strong> It means almost nobody lives
+                  there. Red is the hottest end of the scale, so red is where the most people are.
+                  This maps <strong>where people live</strong>, not where to open: it knows nothing
+                  about competition, because that data is the part that costs money and is left out
+                  rather than guessed. A red area may already be saturated with rivals; check it on
+                  the location page.
                 </span>
               </div>
 
               <div className="tiny muted">
-                Colour is a national percentile, not a local one, so a shade means the same thing in
-                every city.
+                The surface is smoothed from 400m cells, so it shows the shape of where people
+                live rather than a value at any exact point — click a spot for the real figure.
+                Colour is pinned to a national scale, not to what is on screen, so the same shade
+                means the same density in every city. The grid covers Malaysia only, so land
+                across a border is left unshaded: no colour means not measured, not empty.
                 {heatmap.data && ` ${heatmap.data.attribution}, ${heatmap.data.vintage}.`}
                 {amenities.data?.attribution && ` Nearby places ${amenities.data.attribution}.`}
               </div>
@@ -236,7 +287,7 @@ export default function Heatmap() {
             </div>
           ) : (
             <div className="heat-map-frame">
-              <APIProvider apiKey={MAPS_API_KEY}>
+              <APIProvider apiKey={MAPS_API_KEY} libraries={["geometry"]}>
                 <GoogleMap
                   defaultCenter={{ lat: city.lat, lng: city.lng }}
                   defaultZoom={13}
@@ -245,6 +296,8 @@ export default function Heatmap() {
                   zoomControl
                   mapId="spotential-heatmap"
                 >
+                  {/* Surface first, then the invisible hit targets over it. */}
+                  <HeatLayer cells={cells} />
                   <HexLayer cells={cells} selectedId={selectedId} onSelect={onSelectCell} />
                   <AmenityPins layers={layers} active={activeLayers} />
                   <RentPins

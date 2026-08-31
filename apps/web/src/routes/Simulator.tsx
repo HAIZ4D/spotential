@@ -49,9 +49,15 @@ export default function Simulator() {
         </div>
       )}
 
-      {!fromLink.ok && window.location.search.includes("s=") && (
+      {/* `supplied`, not a substring test on the query string. The old check
+          fired on any parameter ending in s. */}
+      {!fromLink.ok && fromLink.supplied && (
         <div className="notice danger no-print" style={{ margin: 0, borderRadius: 0 }}>
-          That shared link could not be read ({fromLink.reason}). Starting from defaults instead.
+          <span>
+            <strong>That shared link could not be read</strong> &mdash; {fromLink.reason}. Starting
+            from the defaults instead, so nothing here reflects what the sender saw. Ask them to
+            resend the link, or set the figures yourself below.
+          </span>
         </div>
       )}
 

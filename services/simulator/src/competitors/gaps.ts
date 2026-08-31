@@ -2,6 +2,7 @@ import {
   CATEGORY_PRESETS,
   analyseOpportunity,
   type BusinessCategory,
+  type BusinessSector,
   type CategorySupply,
   type LatLng,
   type OpportunityAnalysis,
@@ -25,25 +26,47 @@ export interface GapResult extends OpportunityAnalysis {
   fromCache: boolean;
   /** How many categories needed a live Places call. Zero is the good case. */
   categoriesFetched: number;
+  /** Which sector was compared. Shown on the panel so the scope is visible. */
+  sector: BusinessSector;
   fetchedAt: number;
 }
 
-const ALL_CATEGORIES = Object.keys(CATEGORY_PRESETS) as BusinessCategory[];
+/**
+ * SCOPED TO ONE SECTOR, and this is a cost decision as much as a product one.
+ *
+ * Every category searched is one Places call, and Places is on the Enterprise
+ * SKU: $35/1,000 with 1,000 free a month. Searching all fifteen categories
+ * would cut free gap analyses from about 166 a month to 66 and take the cost
+ * of each one beyond that from roughly RM 0.99 to RM 2.47 — against a MYR 45
+ * budget that is already the binding constraint on this project.
+ *
+ * It is also the better ranking. A Korean restaurant competes with other
+ * F&B for the same lunch spend; it does not compete with a barbershop, and
+ * putting the two in one league table was never meaningful.
+ */
+export function categoriesFor(sector: BusinessSector): BusinessCategory[] {
+  return (Object.keys(CATEGORY_PRESETS) as BusinessCategory[]).filter(
+    (id) => CATEGORY_PRESETS[id].sector === sector,
+  );
+}
 
 export async function detectGaps(
   store: CompetitorStore,
   fetchPlaces: FetchPlaces,
   centre: LatLng,
   radiusMetres: number,
-  options: { allowFetch?: boolean } = {},
+  options: { allowFetch?: boolean; sector?: BusinessSector } = {},
 ): Promise<GapResult> {
   const supplies: CategorySupply[] = [];
   let categoriesFetched = 0;
 
-  // Sequential, not parallel. Six concurrent Places calls would race past the
+  const sector = options.sector ?? "fnb";
+  const categories = categoriesFor(sector);
+
+  // Sequential, not parallel. Concurrent Places calls would race past the
   // spend ceiling before any of them recorded against it, and the cache reads
   // are fast enough that the latency saving is not worth that.
-  for (const category of ALL_CATEGORIES) {
+  for (const category of categories) {
     const result = await findCompetitors(
       store,
       fetchPlaces,
@@ -66,6 +89,7 @@ export async function detectGaps(
   return {
     ...analyseOpportunity(supplies),
     radiusMetres,
+    sector,
     fromCache: categoriesFetched === 0,
     categoriesFetched,
     fetchedAt: Date.now(),

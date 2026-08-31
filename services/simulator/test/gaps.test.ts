@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
 import { detectGaps } from "../src/competitors/gaps.js";
+import { CATEGORY_PRESETS } from "@spotential/sim-engine";
 import { InMemoryCompetitorStore } from "../src/competitors/store.js";
 import { QuotaTracker } from "../src/quota.js";
 import type { BusinessCategory, Competitor, LatLng } from "@spotential/sim-engine";
@@ -177,5 +178,80 @@ describe("the write-up never blocks the analysis", () => {
     // The table is the product; losing the prose must not lose the analysis.
     expect(res.json()).toHaveProperty("ranked");
     await app.close();
+  });
+});
+
+/**
+ * The spend guard.
+ *
+ * Every category searched is one Places call, on the Enterprise SKU: $35 per
+ * 1,000 with 1,000 free a month. Searching all fifteen categories rather than
+ * one sector's five or six would cut free gap analyses from roughly 166 a
+ * month to 66, and take each one beyond that from about RM 0.99 to RM 2.47 —
+ * against a MYR 45 budget that is already the binding constraint here.
+ *
+ * So this is asserted by COUNTING CALLS, not by reading the code.
+ */
+describe("gap detection is scoped to one sector", () => {
+  it("searches only the sector asked for", async () => {
+    const store = new InMemoryCompetitorStore();
+    const fetchPlaces = vi.fn(byCategory({}));
+
+    const searched: BusinessCategory[] = [];
+    const spy = vi.fn(async (c: LatLng, r: number, category: BusinessCategory) => {
+      searched.push(category);
+      return fetchPlaces(c, r, category);
+    });
+
+    const result = await detectGaps(store, spy, CENTRE, 500, { sector: "retail" });
+
+    expect(result.sector).toBe("retail");
+    expect(searched.length).toBeGreaterThan(0);
+    for (const category of searched) {
+      expect(CATEGORY_PRESETS[category].sector).toBe("retail");
+    }
+  });
+
+  it("never issues an F&B call for a retail question", async () => {
+    const store = new InMemoryCompetitorStore();
+    const searched: BusinessCategory[] = [];
+    const spy = vi.fn(async (_c: LatLng, _r: number, category: BusinessCategory) => {
+      searched.push(category);
+      return [];
+    });
+
+    await detectGaps(store, spy, CENTRE, 500, { sector: "retail" });
+
+    // The specific waste this exists to prevent: paying Places to tell a shop
+    // owner how many Korean restaurants are nearby.
+    expect(searched).not.toContain("korean_restaurant");
+    expect(searched).not.toContain("cafe_coffee_shop");
+  });
+
+  it("costs no more per analysis than the six F&B categories did", async () => {
+    const calls: Record<string, number> = {};
+
+    for (const sector of ["fnb", "retail", "services"] as const) {
+      const store = new InMemoryCompetitorStore();
+      const spy = vi.fn(async () => []);
+      await detectGaps(store, spy, CENTRE, 500, { sector });
+      calls[sector] = spy.mock.calls.length;
+    }
+
+    // Six was the figure the free tier was budgeted around.
+    for (const [sector, n] of Object.entries(calls)) {
+      expect(n, `${sector} issued ${n} Places calls`).toBeLessThanOrEqual(6);
+      expect(n).toBeGreaterThan(0);
+    }
+  });
+
+  it("defaults to F&B, so existing callers are unchanged", async () => {
+    const store = new InMemoryCompetitorStore();
+    const spy = vi.fn(async () => []);
+
+    const result = await detectGaps(store, spy, CENTRE, 500);
+
+    expect(result.sector).toBe("fnb");
+    expect(spy).toHaveBeenCalledTimes(6);
   });
 });

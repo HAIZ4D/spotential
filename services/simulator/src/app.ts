@@ -9,7 +9,20 @@ import {
   simulate,
   validateOperations,
 } from "@spotential/sim-engine";
-import { CATEGORY_PRESETS, isValidLatLng } from "@spotential/sim-engine";
+import { CATEGORY_PRESETS, isValidLatLng, sectorOf } from "@spotential/sim-engine";
+import {
+  byStartDate,
+  entryPrice,
+  eventDays,
+  filterEvents,
+  isPast,
+  rankEvents,
+  type EventFilters,
+  type EventListing,
+  type EventType,
+  type MalaysianState,
+  type VendorProfile,
+} from "@spotential/sim-engine";
 import type { BusinessCategory } from "@spotential/sim-engine";
 import { extractPatch, narrate, narrateGaps, type GeminiConfig } from "./gemini.js";
 import { QuotaTracker } from "./quota.js";
@@ -43,6 +56,14 @@ import { InMemoryAmenitiesStore, loadAmenities, type AmenitiesStore } from "./am
 import type { AmenitiesSeed } from "./amenities/seed.js";
 import { MAX_LISTINGS, type FetchOutcome } from "./properties/propertyguru.js";
 import { InMemoryListingsStore, loadListings, type ListingsStore } from "./properties/store.js";
+import { AuthVerifier, userOf, type AuthConfig } from "./auth.js";
+import type { EventCatalogue } from "./events/catalogue.js";
+import { parseApplyRequest } from "./events/apply.js";
+import {
+  applicationId,
+  type ApplicationStore,
+  type BoothApplication,
+} from "./events/store.js";
 
 /**
  * The simulator service.
@@ -116,6 +137,20 @@ export interface AppOptions {
    * Overpass at all, which is both reliable and the polite default.
    */
   amenitiesSeed?: AmenitiesSeed | undefined;
+  /**
+   * The bundled event catalogue. Omitted means /v1/events reports itself
+   * unavailable rather than serving an empty list that looks like a filter
+   * matching nothing.
+   */
+  events?: EventCatalogue | undefined;
+  /**
+   * Omitted means applying is refused outright. There is deliberately no
+   * ungated fallback: an application route without identity verification
+   * would write records owned by nobody.
+   */
+  auth?: AuthConfig | undefined;
+  /** Defaults to in-memory, which is correct for tests only. */
+  applicationStore?: ApplicationStore | undefined;
 }
 
 const MAX_SEARCH_RADIUS_METRES = 2_000;
@@ -164,6 +199,9 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       amenitiesCache: options.amenitiesStore ? "provided" : "in-memory",
       amenities: options.amenitiesFetcher ? "overpass" : "none",
       amenitiesSeed: options.amenitiesSeed ? `cities:${options.amenitiesSeed.cityCount}` : "none",
+      events: options.events ? `seed:${options.events.size}` : "none",
+      auth: options.auth ? "firebase" : "off",
+      applications: options.applicationStore ? "provided" : "in-memory",
     },
   }));
 
@@ -394,7 +432,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
    */
   app.post("/v1/opportunity-gaps", paidRoute, async (request, reply) => {
     const body = request.body as
-      | { lat?: unknown; lng?: unknown; radiusMetres?: unknown }
+      | { lat?: unknown; lng?: unknown; radiusMetres?: unknown; category?: unknown }
       | undefined;
 
     const lat = Number(body?.lat);
@@ -417,6 +455,19 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       });
     }
 
+    /**
+     * The sector to compare within, derived from the caller's category.
+     *
+     * This is the spend control: one Places call per category searched, so
+     * scoping to a sector is what stops fifteen categories costing 2.5x what
+     * six did. Defaults to F&B, which is what every existing caller means.
+     */
+    const gapCategory = body?.category;
+    const sector =
+      typeof gapCategory === "string" && gapCategory in CATEGORY_PRESETS
+        ? sectorOf(gapCategory as BusinessCategory)
+        : "fnb";
+
     const callerId = callerIdOf(request);
     const allowFetch = Boolean(options.places?.apiKey) && placesQuota.check(callerId).allowed;
 
@@ -429,7 +480,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
         },
         { lat, lng },
         radiusMetres,
-        { allowFetch },
+        { allowFetch, sector },
       );
 
       // Only worth a Pro call if there is actually something to write about.
@@ -877,9 +928,332 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     }
   });
 
+
+  /**
+   * Events — the opportunity marketplace.
+   *
+   * NOT App Check'd, and that is a cost decision as much as a policy one:
+   * browsing and scoring touch neither Places nor Gemini. The catalogue is a
+   * file in the image and the score is pure arithmetic in the shared engine,
+   * so the entire discovery experience — list, filter, rank, ROI — costs
+   * exactly nothing to serve. Gating it would only make it fail for anyone
+   * whose reCAPTCHA is blocked, for no saving at all.
+   *
+   * Applying IS gated, by authentication rather than App Check, because that
+   * is where a person's contact details start existing.
+   */
+  const events = options.events;
+
+  /** Query strings arrive as strings; only pass through what the engine knows. */
+  function parseFilters(query: Record<string, string | undefined>): EventFilters {
+    const filters: EventFilters = {};
+
+    const q = query["q"]?.trim();
+    if (q) filters.query = q;
+
+    if (query["state"]) filters.state = query["state"] as MalaysianState;
+    if (query["type"]) filters.eventType = query["type"] as EventType;
+    if (query["category"]) filters.category = query["category"] as BusinessCategory;
+    if (query["sectorMatch"] === "true") filters.sectorMatch = true;
+    if (query["availableOnly"] === "true") filters.availableOnly = true;
+    if (query["startsAfter"]) filters.startsAfter = query["startsAfter"];
+    if (query["endsBefore"]) filters.endsBefore = query["endsBefore"];
+
+    /**
+     * An explicit empty/undefined check, never a falsy one: `maxPrice=0` is a
+     * real request for free booths, and treating it as "no filter" is the same
+     * class of bug as `Number("")` being 0 in the share URLs.
+     */
+    const maxPrice = query["maxPrice"];
+    if (maxPrice !== undefined && maxPrice.trim() !== "") {
+      const parsed = Number(maxPrice);
+      if (Number.isFinite(parsed) && parsed >= 0) filters.maxBoothPriceRm = parsed;
+    }
+
+    return filters;
+  }
+
+  /**
+   * Residents around a venue, from the free 400m grid.
+   *
+   * The same grid and the same function the Success Score uses. Fixed at 500m
+   * here because an event has no radius control, so it matches /analysis at
+   * that page's default; a user who widens the analysis radius is asking a
+   * different question and correctly gets a different number.
+   */
+  const CATCHMENT_RADIUS_M = 500;
+  function venueCatchment(event: EventListing): number | null {
+    if (!options.population) return null;
+    const result = options.population.catchment(event.point, CATCHMENT_RADIUS_M);
+    return result?.population ?? null;
+  }
+
+  app.get("/v1/events", async (request, reply) => {
+    if (!events) {
+      return reply.status(503).send({
+        error: "events_unavailable",
+        message: "The event catalogue is not loaded on this deployment.",
+      });
+    }
+
+    const query = request.query as Record<string, string | undefined>;
+    const filtered = filterEvents(events.all(), parseFilters(query));
+
+    /**
+     * `total` counts what is LISTED, which is not the size of the catalogue.
+     *
+     * It was `events.size`, so an event whose run had finished still counted
+     * toward it while being correctly dropped from the array — the route
+     * answered `total: 8` beside seven events the day after one ended. Every
+     * consumer reads it as "listed": the hero says "8 events listed right
+     * now", and the empty state says "the cheapest booth in the 8 listed
+     * events", both of which were then wrong by one and unfalsifiable from
+     * the page. Filters stay out of it — that is what `matched` is for.
+     */
+    const listable = events.all().filter((event) => !isPast(event));
+
+    return {
+      events: byStartDate(filtered),
+      total: listable.length,
+      matched: filtered.length,
+      vintage: events.vintage,
+    };
+  });
+
+  /**
+   * Rank the catalogue for one vendor.
+   *
+   * A POST because a vendor profile is a structured object rather than a
+   * handful of query parameters — but it is still free, still deterministic,
+   * and still makes no external call.
+   */
+  app.post("/v1/events/rank", async (request, reply) => {
+    if (!events) {
+      return reply.status(503).send({
+        error: "events_unavailable",
+        message: "The event catalogue is not loaded on this deployment.",
+      });
+    }
+
+    const body = request.body as { vendor?: unknown; filters?: EventFilters } | undefined;
+    const vendor = parseVendorProfile(body?.vendor);
+
+    if (!vendor) {
+      return reply.status(400).send({
+        error: "invalid_vendor",
+        message: "A vendor profile needs at least a known business category.",
+      });
+    }
+
+    const filtered = filterEvents(events.all(), body?.filters ?? {});
+
+    // Catchments come from the in-image grid, so scoring the whole list is a
+    // few hundred arithmetic operations rather than a paid lookup per venue.
+    const catchments = new Map<string, number>();
+    for (const event of filtered) {
+      const population = venueCatchment(event);
+      if (population !== null) catchments.set(event.id, population);
+    }
+
+    return {
+      ranked: rankEvents(filtered, vendor, catchments).map(({ event, score }) => ({
+        eventId: event.id,
+        score,
+      })),
+      matched: filtered.length,
+    };
+  });
+
+  app.get("/v1/events/:id", async (request, reply) => {
+    if (!events) {
+      return reply.status(503).send({
+        error: "events_unavailable",
+        message: "The event catalogue is not loaded on this deployment.",
+      });
+    }
+
+    const { id } = request.params as { id: string };
+    const event = events.byId(id);
+
+    if (!event) {
+      return reply.status(404).send({ error: "event_not_found", message: "No such event." });
+    }
+
+    const catchment = venueCatchment(event);
+
+    return {
+      event,
+      days: eventDays(event),
+      entryPriceRm: entryPrice(event),
+      /**
+       * Location intelligence, free of charge. Null where the grid has no
+       * coverage — which is honest, and different from zero residents.
+       */
+      venueCatchment: catchment,
+      catchmentRadiusMetres: CATCHMENT_RADIUS_M,
+    };
+  });
+
+  /**
+   * Apply for a booth.
+   *
+   * Two independent gates, answering two different questions: App Check asks
+   * whether this came from our app, and auth asks who is asking. The uid is
+   * taken from the verified token and NEVER from the body — accepting a
+   * client-supplied uid would let anyone write a record owned by someone else.
+   */
+  const auth = options.auth ? new AuthVerifier(options.auth) : null;
+
+  /**
+   * NO in-memory default, unlike every cache in this service.
+   *
+   * A cache that silently downgrades to memory costs money — that already
+   * happened here and is why backends are reported on /health. An APPLICATION
+   * that silently downgrades to memory is worse than expensive: the vendor
+   * sees a confirmation, the record dies with the instance, and the organizer
+   * never learns they applied. So an absent store makes the route refuse
+   * rather than accept something it cannot keep.
+   */
+  const applications = options.applicationStore ?? null;
+
+  app.post(
+    "/v1/events/:id/apply",
+    auth ? { preHandler: auth.guard() } : {},
+    async (request, reply) => {
+      if (!auth || !applications) {
+        // No ungated fallback and no volatile one. A route without identity
+        // would write records owned by nobody; a route without durable storage
+        // would lose them. Either way, being down is the honest outcome.
+        return reply.status(503).send({
+          error: "applications_unavailable",
+          message: "Applications are not available on this deployment.",
+        });
+      }
+      if (!events) {
+        return reply.status(503).send({
+          error: "events_unavailable",
+          message: "The event catalogue is not loaded on this deployment.",
+        });
+      }
+
+      const user = userOf(request);
+      if (!user) {
+        return reply.status(401).send({ error: "sign_in_required", message: "Sign in to apply." });
+      }
+
+      const parsed = parseApplyRequest(request.body);
+      if (!parsed.ok) {
+        return reply.status(400).send({
+          error: "invalid_application",
+          message: "The application did not pass validation.",
+          details: parsed.errors,
+        });
+      }
+
+      const { id } = request.params as { id: string };
+      const event = events.byId(id);
+      if (!event) {
+        return reply.status(404).send({ error: "event_not_found", message: "No such event." });
+      }
+
+      /**
+       * A sample listing is not a real booking, and must never behave like
+       * one. Letting a vendor believe they applied to an event that does not
+       * exist is the single most harmful thing this feature could do, so it is
+       * refused at the route rather than merely discouraged in the UI.
+       */
+      if (event.source === "seed") {
+        return reply.status(409).send({
+          error: "sample_event",
+          message:
+            "This is a sample listing used to demonstrate scoring, not a live booking. " +
+            "Applications open when a real organizer publishes an event.",
+        });
+      }
+
+      const application: BoothApplication = {
+        id: applicationId(user.uid, event.id),
+        uid: user.uid,
+        eventId: event.id,
+        eventName: event.name,
+        packageId: parsed.value.packageId,
+        businessName: parsed.value.businessName,
+        contactName: parsed.value.contactName,
+        contactEmail: parsed.value.contactEmail,
+        contactPhone: parsed.value.contactPhone,
+        productDescription: parsed.value.productDescription,
+        status: "submitted",
+        submittedAt: Date.now(),
+      };
+
+      await applications.save(application);
+
+      return { application, applied: true };
+    },
+  );
+
+  /** A vendor's own applications, and only ever their own. */
+  app.get(
+    "/v1/events/applications",
+    auth ? { preHandler: auth.guard() } : {},
+    async (request, reply) => {
+      if (!auth || !applications) {
+        return reply.status(503).send({
+          error: "applications_unavailable",
+          message: "Applications are not available on this deployment.",
+        });
+      }
+
+      const user = userOf(request);
+      if (!user) {
+        return reply.status(401).send({ error: "sign_in_required", message: "Sign in first." });
+      }
+
+      // Scoped by the VERIFIED uid, so there is no filter a client could widen.
+      return { applications: await applications.listForUser(user.uid) };
+    },
+  );
+
   app.setNotFoundHandler(async (_request, reply) =>
     reply.status(404).send({ error: "not_found" }),
   );
 
   return app;
+}
+
+/**
+ * A vendor profile off the wire.
+ *
+ * Everything except the category is optional, and an absent field stays null
+ * rather than being defaulted — a vendor who has not said their budget must
+ * see that axis go unavailable, not have a number invented for them.
+ */
+function parseVendorProfile(value: unknown): VendorProfile | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+
+  const category = raw["category"];
+  if (typeof category !== "string" || !(category in CATEGORY_PRESETS)) return null;
+
+  const base = isValidLatLng(raw["base"]) ? raw["base"] : null;
+
+  /**
+   * `Number("")` is 0, and a booth budget of 0 is not "no budget" — it is a
+   * vendor who will only take free stalls. Both are legitimate and they score
+   * completely differently, so an empty field must become null, not zero.
+   */
+  const budget = raw["boothBudgetRm"];
+  const boothBudgetRm =
+    typeof budget === "number" && Number.isFinite(budget) && budget >= 0 ? budget : null;
+
+  const travel = raw["maxTravelKm"];
+  const maxTravelKm =
+    typeof travel === "number" && Number.isFinite(travel) && travel > 0 ? travel : null;
+
+  return {
+    category: category as BusinessCategory,
+    base,
+    boothBudgetRm,
+    maxTravelKm,
+  };
 }

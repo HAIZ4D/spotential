@@ -6,6 +6,7 @@ import {
   resolveRent,
   roundForCache,
   scoreLocation,
+  sectorOf,
   type BusinessCategory,
 } from "@spotential/sim-engine";
 import { Masthead } from "../components/Masthead.js";
@@ -150,12 +151,25 @@ export default function Analysis() {
     retry: 1,
   });
 
-  // Independent of the category selector: gap detection looks at all six.
-  // Same rounded key, so it rides the same server-side cache.
+  /**
+   * Gap detection, scoped to the selected category's SECTOR.
+   *
+   * It used to look at all six F&B categories regardless. With fifteen
+   * categories that would be fifteen Places calls per location — 2.5x the
+   * cost on the most expensive route in the app. The sector is part of the
+   * query key so switching between F&B and retail refetches rather than
+   * showing the wrong league table.
+   */
   const gaps = useQuery({
-    queryKey: ["gaps", roundForCache(settled.lat), roundForCache(settled.lng), radiusMetres],
+    queryKey: [
+      "gaps",
+      roundForCache(settled.lat),
+      roundForCache(settled.lng),
+      radiusMetres,
+      sectorOf(category),
+    ],
     queryFn: ({ signal }) =>
-      postOpportunityGaps({ lat: settled.lat, lng: settled.lng, radiusMetres }, signal),
+      postOpportunityGaps({ lat: settled.lat, lng: settled.lng, radiusMetres, category }, signal),
     staleTime: 10 * 60 * 1000,
     retry: 1,
   });
@@ -280,7 +294,16 @@ export default function Analysis() {
     return `/simulator?${params.toString()}`;
   }, [rent, category]);
 
-  const linkWasBad = !fromLink.ok && window.location.search.includes("lat=");
+  /**
+   * The link carried location parameters and they did not parse.
+   *
+   * NOT a substring test on the query string, which is what this used to be:
+   * `search.includes("lat=")` also matches `?flat=1200`, so a URL that never
+   * offered a location at all got a red banner apologising for one. The
+   * parser already distinguishes "nothing was supplied" from "what was
+   * supplied is broken", so use that instead of guessing from the raw text.
+   */
+  const linkWasBad = !fromLink.ok && fromLink.reason !== "no location in the link";
 
   /**
    * The four figures worth seeing before any tab is opened.
@@ -295,7 +318,7 @@ export default function Analysis() {
         ? competitors.data.truncated
           ? "20+"
           : String(competitors.data.summary.total)
-        : "—",
+        : "not yet",
       note: `within ${radiusMetres}m`,
       tone: "navy",
     },
@@ -303,19 +326,19 @@ export default function Analysis() {
       label: `People within ${radiusMetres}m`,
       value: demographics.data?.catchment
         ? demographics.data.catchment.population.toLocaleString("en-MY")
-        : "—",
+        : "no data",
       note: demographics.data?.catchment ? "400m population grid" : "no grid coverage",
       tone: "navy",
     },
     {
       label: "Monthly rent",
-      value: rent ? `RM ${Math.round(rent.monthlyRent).toLocaleString("en-MY")}` : "—",
+      value: rent ? `RM ${Math.round(rent.monthlyRent).toLocaleString("en-MY")}` : "no benchmark",
       note: rent ? (rent.kind === "direct" ? "your figure" : "inferred benchmark") : "no benchmark",
       tone: rent ? (rent.kind === "direct" ? "green" : "amber") : undefined,
     },
     {
       label: "Break-even",
-      value: breakEvenPerDay === null ? "—" : `${breakEvenPerDay}/day`,
+      value: breakEvenPerDay === null ? "not available" : `${breakEvenPerDay}/day`,
       note: "to cover fixed costs",
       tone: rentLight,
     },
@@ -493,7 +516,11 @@ export default function Analysis() {
 
       {linkWasBad && (
         <div className="notice danger no-print" style={{ margin: 0, borderRadius: 0 }}>
-          That location link could not be read ({fromLink.reason}). Showing Kuala Lumpur instead.
+          <span>
+            <strong>That link&rsquo;s location could not be read</strong> &mdash;{" "}
+            {fromLink.reason}. Showing Kuala Lumpur instead. Search for an address above, or drag
+            the pin, to analyse the spot you meant.
+          </span>
         </div>
       )}
 

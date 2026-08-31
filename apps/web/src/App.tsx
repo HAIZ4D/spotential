@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Simulator from "./routes/Simulator.js";
+import { Footer } from "./components/Footer.js";
 
 /**
  * The analysis route is lazy-loaded, and that is a COST decision as much as a
@@ -11,6 +12,9 @@ import Simulator from "./routes/Simulator.js";
 const Analysis = lazy(() => import("./routes/Analysis.js"));
 const Compare = lazy(() => import("./routes/Compare.js"));
 const Heatmap = lazy(() => import("./routes/Heatmap.js"));
+/** Events never loads the Maps bundle, so it stays out of the main chunk too. */
+const Events = lazy(() => import("./routes/Events.js"));
+const EventDetail = lazy(() => import("./routes/EventDetail.js"));
 
 /**
  * Redirect to the simulator KEEPING the query string.
@@ -27,34 +31,57 @@ function RedirectToSimulator() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<RedirectToSimulator />} />
-      <Route path="/simulator" element={<Simulator />} />
-      <Route
-        path="/analysis"
-        element={
-          <Suspense fallback={<div style={{ padding: 24 }}>Loading location analysis…</div>}>
-            <Analysis />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/compare"
-        element={
-          <Suspense fallback={<div style={{ padding: 24 }}>Loading comparison…</div>}>
-            <Compare />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/heatmap"
-        element={
-          <Suspense fallback={<div style={{ padding: 24 }}>Loading city demand…</div>}>
-            <Heatmap />
-          </Suspense>
-        }
-      />
-      <Route path="*" element={<RedirectToSimulator />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<RedirectToSimulator />} />
+        <Route path="/simulator" element={<Simulator />} />
+        <Route
+          path="/analysis"
+          element={
+            <Suspense fallback={<div style={{ padding: 24 }}>Loading location analysis…</div>}>
+              <Analysis />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/compare"
+          element={
+            <Suspense fallback={<div style={{ padding: 24 }}>Loading comparison…</div>}>
+              <Compare />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/heatmap"
+          element={
+            <Suspense fallback={<div style={{ padding: 24 }}>Loading city demand…</div>}>
+              <Heatmap />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/events"
+          element={
+            <Suspense fallback={<div style={{ padding: 24 }}>Loading events…</div>}>
+              <Events />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/events/:slug"
+          element={
+            <Suspense fallback={<div style={{ padding: 24 }}>Loading event…</div>}>
+              <EventDetail />
+            </Suspense>
+          }
+        />
+          <Route path="*" element={<RedirectToSimulator />} />
+      </Routes>
+
+      {/* One footer for every route. It carries the CC BY 4.0 and ODbL
+          attributions, which have to appear wherever that data is shown —
+          not only on the page that introduced it. */}
+      <Footer />
+    </>
   );
 }

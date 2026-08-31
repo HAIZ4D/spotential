@@ -84,8 +84,8 @@ export function OpportunityGaps({ data }: { data: GapsResponse }) {
                     {/* A capped search is a floor, never an exact count. */}
                     {row.outletsAreMinimum ? `${row.outlets}+` : row.outlets}
                   </td>
-                  <td>{row.reviewsPerOutlet === null ? "—" : formatNumber(row.reviewsPerOutlet)}</td>
-                  <td>{row.averageRating ?? "—"}</td>
+                  <td>{row.reviewsPerOutlet === null ? "no data" : formatNumber(row.reviewsPerOutlet)}</td>
+                  <td>{row.averageRating ?? "unrated"}</td>
                   <td>
                     <GapBar row={row} best={best} />
                   </td>

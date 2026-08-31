@@ -42,16 +42,17 @@ A forecast. The Success Score is a **comparison aid** — nothing in it has been
 | ⚖️ | **Comparison** | Two or three sites side by side on an overlaid radar, with per-dimension verdicts that say "too close to call" when they are |
 | 💬 | **AI Chatbot** | Ask questions about the location in plain language, grounded on a deterministic fact sheet |
 | 📄 | **PDF Report** | A six-page typeset document to take to a landlord or a bank |
+| 🎪 | **Events Marketplace** | Browse bazaars, expos and markets ranked by an **Event Opportunity Score** for your business — with booth ROI answered as *what share of the crowd must buy before you break even* |
 
 ### Add-ons
 
 | | Feature | What you get |
 |---|---|---|
 | 🔍 | **Opportunity Gap Detection** | Cross-references competitor saturation against demand per category to surface underserved niches — and returns *nothing* when everything is saturated |
-| 🔥 | **City Demand Heatmap** | Population density across four cities as true H3 hexagons, with click-to-inspect cells, ranked neighbourhoods, transit/mall/campus overlays and rent benchmarks on one map |
+| 🔥 | **City Demand Heatmap** | Population density across four cities as a real kernel-density heat surface, calibrated to a national scale so a shade means the same thing in every city — with click-to-inspect cells, ranked neighbourhoods, transit/mall/campus overlays and rent benchmarks on one map |
 | 📊 | **What-if Simulator** | Editable inputs → instant revenue, expenses, profit, three break-evens, a 24-month cash curve and the cash trough you must fund before opening. Ask it *"what if demand drops 20%?"* in plain English |
 
-**Business categories supported:** Korean restaurant · Café / coffee shop · Casual dining · Bubble tea & dessert · Fast casual / takeaway · Other F&B
+**Fifteen business categories across three sectors.** *F&B* — Korean restaurant · Café / coffee shop · Casual dining · Bubble tea & dessert · Fast casual / takeaway · Other F&B. *Retail* — Clothing & fashion · Convenience store · Pharmacy & health · Phone & electronics · Other retail. *Services* — Salon & barber · Laundry · Fitness studio · Other services. Each sector carries its own cost norms, Places types and tax treatment: service tax follows dine-in, so it is correctly zero for a shop.
 
 ---
 
@@ -66,6 +67,7 @@ A forecast. The Success Score is a **comparison aid** — nothing in it has been
 | **React Router 7** | Routing across Analysis, Comparison, Heatmap and Simulator |
 | **TanStack Query 5** | Server state, caching and request de-duplication |
 | **Recharts 2** | Competitor scatter plot and the on-screen radar |
+| **GSAP 3 + @gsap/react** | Navigation motion — entrance, hover feedback and the pill that slides between active links. `useGSAP` scopes every tween to the component and reverts it on unmount |
 | **@vis.gl/react-google-maps** | Google's own React wrapper for the Maps JavaScript API — maps, pins, radius circles, hexagon overlays |
 | **Plain CSS** | Design tokens and hand-written CSS. No framework, no runtime styling cost |
 | **Firebase JS SDK** | Anonymous auth and App Check attestation |
@@ -165,7 +167,7 @@ flowchart TB
     User(("SME owner"))
 
     subgraph Client["BROWSER — Firebase Hosting"]
-        Web["<b>React 18 + Vite</b><br/>Router · TanStack Query · Recharts<br/>vis.gl maps · Firebase SDK"]
+        Web["<b>React 18 + Vite</b><br/>Router · TanStack Query · Recharts<br/>vis.gl maps · GSAP · Firebase SDK"]
         EngineA["<b>sim-engine</b><br/>all maths, in the browser"]
     end
 

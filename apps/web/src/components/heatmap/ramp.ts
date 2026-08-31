@@ -3,10 +3,17 @@ import { catchmentPercentile } from "@spotential/sim-engine";
 /**
  * The heatmap's colour scale.
  *
- * NOT a green-to-red "good to bad" ramp, and that is a deliberate refusal.
- * Green would read as "open here", and this map knows nothing about
- * competition — it maps where people live, which is a different claim. So it
- * looks like what it is: a density scale, running cool to hot.
+ * GREEN THROUGH YELLOW TO RED, the familiar heat ramp, chosen by the product
+ * owner over the earlier navy-to-red scale after the trade-off was put to
+ * them. It is worth being precise about what that trade-off is, because the
+ * legend copy is what pays for it:
+ *
+ *   Red is the HOTTEST end, so red means the MOST residents and green the
+ *   fewest. The hazard is not that anyone reads red as "crowded with rivals"
+ *   — it is that a green area looks like room to open, when it actually means
+ *   almost nobody lives there. This map still knows nothing about
+ *   competition. The legend therefore runs hottest-first and says so in
+ *   words, rather than leaving swatches to speak.
  *
  * CALIBRATED NATIONALLY, not to the view. Colouring against the densest cell
  * on screen would make suburban Petaling Jaya's busiest hexagon glow exactly
@@ -32,14 +39,20 @@ export function percentileFor(population: number): number {
   return catchmentPercentile(population, EQUIVALENT_RADIUS_M);
 }
 
-/** Stops on the ramp, cool to hot. The app's navy and gold, then red for risk. */
+/**
+ * Stops on the ramp, coldest to hottest.
+ *
+ * Order is load-bearing and a test pins it: reversing these would silently
+ * invert what the whole map claims, and nothing else in the code would
+ * complain.
+ */
 const STOPS: { at: number; rgb: [number, number, number] }[] = [
-  { at: 0, rgb: [232, 237, 247] },
-  { at: 0.35, rgb: [145, 170, 216] },
-  { at: 0.6, rgb: [0, 48, 135] },
-  { at: 0.8, rgb: [242, 169, 0] },
-  { at: 0.92, rgb: [224, 123, 0] },
-  { at: 1, rgb: [220, 38, 38] },
+  { at: 0, rgb: [ 34, 139,  84] },
+  { at: 0.35, rgb: [124, 190,  75] },
+  { at: 0.55, rgb: [214, 222,  62] },
+  { at: 0.72, rgb: [250, 204,  21] },
+  { at: 0.86, rgb: [244, 133,  25] },
+  { at: 1, rgb: [214,  35,  35] },
 ];
 
 const mix = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
@@ -66,14 +79,40 @@ export function colourAt(percentile: number): string {
 export const colourForPopulation = (population: number) => colourAt(percentileFor(population));
 
 /**
- * Legend rows, labelled by what the percentile MEANS rather than by a raw
- * population range — the whole point of calibrating nationally.
+ * Legend rows, HOTTEST FIRST and labelled in plain words.
+ *
+ * Order and wording are the safety mechanism for the green-to-red ramp. Read
+ * top-down, the first thing anyone sees is that red means the most people; the
+ * green row says explicitly that it means few residents, not room to trade.
+ * Percentiles stay because they are checkable and mean the same in every city.
  */
 export const LEGEND = [
-  { percentile: 0.95, label: "Top 5% nationally" },
-  { percentile: 0.85, label: "Top 15%" },
-  { percentile: 0.7, label: "Top 30%" },
-  { percentile: 0.5, label: "Median" },
-  { percentile: 0.25, label: "Bottom 25%" },
-  { percentile: 0.05, label: "Sparse" },
+  { percentile: 0.95, label: "Most people", note: "top 5% nationally" },
+  { percentile: 0.86, label: "Busy", note: "top 15%" },
+  { percentile: 0.72, label: "Above average", note: "top 30%" },
+  { percentile: 0.5, label: "Typical", note: "national median" },
+  { percentile: 0.25, label: "Quiet", note: "bottom 25%" },
+  { percentile: 0.03, label: "Few people", note: "almost nobody lives here" },
 ].map((row) => ({ ...row, colour: colourAt(row.percentile) }));
+
+/**
+ * How much weight one cell contributes before the surface saturates.
+ *
+ * THE NATIONAL CALIBRATION, and the single most important constant here.
+ * A heat surface normalises to the busiest thing in view unless you stop it,
+ * which would paint suburban Petaling Jaya's densest patch exactly as red as
+ * central Kuala Lumpur's and make the two cities incomparable. That is the
+ * relative-normalisation trap that has already inverted this project's
+ * scoring twice.
+ *
+ * Fixed instead to the 90th percentile of the national distribution — 7,213
+ * residents in a 500m catchment, straight out of the engine's measured
+ * deciles. A cell at that density contributes full weight on its own;
+ * anything denser, or several dense cells overlapping, saturates to red.
+ */
+export const SATURATION_POPULATION = 7_213;
+
+/** A cell's contribution to the surface, 0..1, on the national scale. */
+export function weightFor(population: number): number {
+  return Math.max(0, Math.min(1, population / SATURATION_POPULATION));
+}

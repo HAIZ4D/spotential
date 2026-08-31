@@ -5,7 +5,18 @@ import {
   ReCaptchaEnterpriseProvider,
   type AppCheck,
 } from "firebase/app-check";
-import { getAuth, signInAnonymously, type Auth } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  getAuth,
+  onAuthStateChanged,
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  type Auth,
+  type User,
+} from "firebase/auth";
 
 /**
  * Firebase App Check and anonymous sign-in.
@@ -35,6 +46,17 @@ let app: FirebaseApp | null = null;
 let appCheck: AppCheck | null = null;
 let auth: Auth | null = null;
 let uid: string | null = null;
+
+/**
+ * The signed-in user, which is a DIFFERENT thing from `uid` above.
+ *
+ * `uid` is the anonymous quota hint every visitor gets. This is a real account,
+ * and only ever set by an explicit sign-in. Keeping them apart matters: the
+ * server rejects anonymous ID tokens for applications precisely so that a
+ * visitor is never handed an "account" that evaporates when they clear storage.
+ */
+let account: User | null = null;
+const accountListeners = new Set<(user: User | null) => void>();
 
 /** Set once so a failed init is not retried on every request. */
 let initialised = false;
@@ -70,6 +92,15 @@ export function initFirebase(): void {
     });
 
     auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+      // Anonymous sessions are not accounts. Treating them as one here would
+      // show a signed-in header to every visitor and let them start an
+      // application the server would then refuse.
+      account = user && !user.isAnonymous ? user : null;
+      for (const listener of accountListeners) listener(account);
+    });
+
     void signInAnonymously(auth)
       .then((credential) => {
         uid = credential.user.uid;
@@ -110,4 +141,70 @@ export async function authHeaders(): Promise<Record<string, string>> {
 /** For the health/debug surface, so a misconfigured build is visible. */
 export function appCheckReady(): boolean {
   return appCheck !== null;
+}
+
+/**
+ * Real accounts, used only by the Events feature.
+ *
+ * Everything else in Spotential is a shareable URL with nothing persisted per
+ * person. Applying for a booth is the one action that needs to know who is
+ * asking, because an organizer will act on it and it carries contact details.
+ */
+
+export function currentAccount(): User | null {
+  return account;
+}
+
+/** Subscribe to sign-in changes. Returns an unsubscribe. */
+export function onAccountChange(listener: (user: User | null) => void): () => void {
+  accountListeners.add(listener);
+  listener(account);
+  return () => accountListeners.delete(listener);
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  if (!auth) throw new Error("Sign-in is not configured in this build.");
+  await signInWithPopup(auth, new GoogleAuthProvider());
+}
+
+export async function signInWithEmail(email: string, password: string): Promise<void> {
+  if (!auth) throw new Error("Sign-in is not configured in this build.");
+  await signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function registerWithEmail(email: string, password: string): Promise<void> {
+  if (!auth) throw new Error("Sign-in is not configured in this build.");
+  await createUserWithEmailAndPassword(auth, email, password);
+}
+
+/**
+ * Sign out, then return to an anonymous session.
+ *
+ * Without the second step the visitor would be left with no session at all and
+ * the quota hint would fall back to a shared IP bucket — signing out of an
+ * account should not quietly change how the rest of the app is rate-limited.
+ */
+export async function signOutAccount(): Promise<void> {
+  if (!auth) return;
+  await signOut(auth);
+  await signInAnonymously(auth).catch(() => undefined);
+}
+
+/**
+ * Bearer token for a route that needs a real identity.
+ *
+ * Separate from `authHeaders()`, which carries App Check and the quota hint.
+ * The two answer different questions — "is this our app?" and "who is this?" —
+ * and the apply route asks both.
+ */
+export async function accountHeaders(): Promise<Record<string, string>> {
+  if (!account) return {};
+  try {
+    const token = await account.getIdToken();
+    return { Authorization: `Bearer ${token}` };
+  } catch {
+    // Expired and unrefreshable. The server will answer 401 and the form shows
+    // its sign-in prompt, which is the honest outcome.
+    return {};
+  }
 }

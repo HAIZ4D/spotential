@@ -183,7 +183,7 @@ export function rentSensitivity(
     return {
       score: 0,
       kind: rent.kind,
-      note: "Each sale loses money before rent is even counted — no volume fixes this.",
+      note: "Each sale loses money before rent is even counted. No volume fixes this.",
       breakEvenPerDay: null,
       shareOfTypicalTrade: null,
       light: "red",
@@ -200,7 +200,7 @@ export function rentSensitivity(
   const pct = Math.round(share * 100);
   const note =
     share >= NO_MARGIN_SHARE
-      ? `Break-even needs ${breakEvenPerDay}/day — at or beyond the ${preset.customersPerDay}/day this format typically does.`
+      ? `Break-even needs ${breakEvenPerDay}/day, at or beyond the ${preset.customersPerDay}/day this format typically does.`
       : `Break-even needs ${breakEvenPerDay}/day, ${pct}% of the ${preset.customersPerDay}/day typical for this format.`;
 
   return {

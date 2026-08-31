@@ -119,3 +119,47 @@ export {
   type RentSensitivity,
   type ResolvedRent,
 } from './rent.js';
+
+export {
+  EVENT_TYPES,
+  EVENT_TYPE_LABELS,
+  MALAYSIAN_STATES,
+  type BoothPackage,
+  type EventListing,
+  type EventSource,
+  type EventType,
+  type MalaysianState,
+  type VendorProfile,
+} from './events/types.js';
+
+export {
+  EVENT_SCORE_WEIGHTS,
+  entryPrice,
+  eventDays,
+  rankEvents,
+  scoreEvent,
+  type EventScore,
+  type EventScoreInputs,
+} from './events/score.js';
+
+export {
+  CAPTURE_RATE_SWEEP,
+  eventRoi,
+  roiDefaults,
+  roiSweep,
+  type EventRoi,
+  type EventRoiAtCapture,
+  type EventRoiInputs,
+  type RoiVerdict,
+} from './events/roi.js';
+
+export {
+  byStartDate,
+  filterEvents,
+  hasAvailability,
+  isPast,
+  matchesFilters,
+  type EventFilters,
+} from './events/filter.js';
+
+export { matchInsight, type MatchInsight } from './events/insight.js';

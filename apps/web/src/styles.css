@@ -36,9 +36,23 @@
   box-sizing: border-box;
 }
 html,
-body,
-#root {
+body {
   height: 100%;
+}
+/**
+ * MIN-height, not height.
+ *
+ * `position: sticky` only sticks within its containing block, and the navbar
+ * shell's is `#root`. At a flat `height: 100%` that box is exactly one
+ * viewport tall while the document scrolls far past it — so the navbar pinned
+ * for the first screenful and then scrolled away with the box, which read as
+ * the header simply not being sticky at all. Growing to content makes it
+ * follow the whole way. Nothing chains a percentage height off `#root`; the
+ * `height: 100%` rules elsewhere all sit on bars, images and the nav pill,
+ * whose parents carry their own definite heights.
+ */
+#root {
+  min-height: 100%;
 }
 body {
   margin: 0;
@@ -50,58 +64,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---------- App shell ---------- */
-.masthead {
-  background: var(--navy);
-  color: #fff;
-  padding: 12px 20px;
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  /* Wrap rather than overflow: without this the actions get pushed off a
-     narrow screen and become unreachable. */
-  flex-wrap: wrap;
-  row-gap: 10px;
-}
-.mast-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.masthead h1 {
-  font-size: 17px;
-  margin: 0;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-.masthead .sub {
-  font-size: 13px;
-  opacity: 0.75;
-}
-.mast-nav {
-  display: flex;
-  gap: 4px;
-  margin-left: 14px;
-}
-.mast-nav a {
-  color: rgba(255, 255, 255, 0.78);
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 550;
-  padding: 4px 10px;
-  border-radius: 999px;
-}
-.mast-nav a:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-.mast-nav a.active {
-  /* Gold is light, so the text on it is dark — CLAUDE.md. */
-  background: var(--gold);
-  color: #3d2b00;
-}
+
+
+
+
+
+
+
+
+
+
 
 /* ---------- Sticky headline strip ----------
    The whole reason for this layout: whatever the user is editing, the number
@@ -413,7 +385,29 @@ td.neg {
   flex: none;
 }
 
-/* ---------- Buttons ---------- */
+/* ---------- Controls ---------- */
+
+/**
+ * ONE SCALE, three sizes.
+ *
+ * Measured before this existed, interactive elements landed at seven
+ * different heights — 16, 20, 25, 27, 28, 31, 33px — with no system behind
+ * it, which is most of why the app read as slightly unfinished. Every
+ * clickable thing now picks one of these and sets `min-height`, so a row of
+ * mixed controls lines up whatever is in it.
+ */
+:root {
+  --control-sm: 28px;
+  --control-md: 36px;
+  --control-lg: 44px;
+}
+
+button,
+select,
+.control {
+  min-height: var(--control-md);
+}
+
 button {
   font: inherit;
   cursor: pointer;
@@ -421,12 +415,21 @@ button {
   border: 1px solid var(--line);
   background: var(--bg);
   color: var(--ink);
-  padding: 5px 10px;
+  padding: 6px 12px;
   font-size: 13px;
   font-weight: 550;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 140ms, border-color 140ms;
 }
 button:hover {
   background: var(--surface);
+}
+button:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
 }
 button.primary {
   background: var(--navy);
@@ -445,14 +448,22 @@ button.cta {
 button.cta:hover {
   background: #dd9c00;
 }
+/**
+ * Keeps its lighter visual weight, but stops being a 20px tap target.
+ *
+ * Used in 67 places, so the type stays small and the border stays quiet —
+ * only the hit area grows. Nothing on screen looks heavier than it did.
+ */
 button.tiny {
-  padding: 2px 7px;
+  min-height: var(--control-sm);
+  padding: 4px 9px;
   font-size: 11px;
 }
 button:disabled {
   opacity: 0.5;
   cursor: default;
 }
+
 
 /* ---------- Recovery ---------- */
 .recovery-lever {
@@ -534,16 +545,9 @@ button:disabled {
 @media (max-width: 720px) {
   /* On a phone the actions get their own full-width row, so nothing is
      pushed off-screen and every control stays tappable. */
-  .mast-actions {
-    margin-left: 0;
-    width: 100%;
-  }
-  .masthead h1 {
-    font-size: 16px;
-  }
-  .mast-nav {
-    margin-left: auto;
-  }
+
+
+
 }
 
 @media (max-width: 900px) {
@@ -870,8 +874,11 @@ button:disabled {
 .hero-top {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 18px;
-  align-items: center;
+  gap: 20px;
+  /* Was `center`, which left a band of dead space beneath the ring because
+     the radar beside it is much taller. Top-aligned, the verdict tucks in
+     directly under the ring where the eye already is. */
+  align-items: start;
 }
 .hero-place {
   font-size: 11px;
@@ -892,7 +899,79 @@ button:disabled {
   font-size: 14px;
   line-height: 1.5;
   color: var(--ink-2);
-  margin-top: 8px;
+  margin-top: 10px;
+}
+
+/* ---------- Score dimension bars ----------
+   The ranking, ahead of the table. Colours come from bandFor(), the same
+   function the score ring uses, so a green bar and a green ring mean the
+   same thing. */
+.dim-bars {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+}
+.dim-bar {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 10px;
+}
+.dim-bar-label {
+  font-size: 12px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dim-bar-track {
+  height: 10px;
+  border-radius: 3px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.dim-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 300ms ease-out;
+}
+.dim-bar-fill.green { background: var(--green); }
+.dim-bar-fill.amber { background: var(--gold); }
+.dim-bar-fill.red { background: var(--red); }
+.dim-bar-value {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.dim-bar-value.muted {
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+/* The notes ARE the content of this panel, so they stop being the smallest
+   grey type on the page. */
+.dim-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  white-space: normal;
+  max-width: 340px;
+  margin-top: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dim-bar-fill {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .dim-bar {
+    grid-template-columns: 96px minmax(0, 1fr) 40px;
+  }
 }
 .hero-verdict strong {
   color: var(--ink);
@@ -1020,11 +1099,21 @@ button:disabled {
   padding-bottom: 2px;
   scrollbar-width: thin;
 }
+/**
+ * Uniform whatever is inside it.
+ *
+ * A tab carrying a figure badge and one without used to be visibly different
+ * shapes, so the bar read as ragged. A shared min-height and min-width makes
+ * the row regular while the badge still earns its space.
+ */
 .tab {
+  min-height: var(--control-md);
+  min-width: 92px;
+  justify-content: center;
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 13px;
+  padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--bg);
@@ -1309,6 +1398,7 @@ button:disabled {
 /* Deliberately uniform: these are two routes to the same thing, and styling
    one more prominently would read as a recommendation we have no basis for. */
 .portal-link {
+  min-height: var(--control-lg);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -1560,6 +1650,7 @@ button:disabled {
   background: var(--bg);
 }
 .segmented button {
+  min-height: var(--control-sm);
   border: 0;
   border-radius: 0;
   padding: 5px 12px;
@@ -1575,6 +1666,239 @@ button:disabled {
 .segmented button[aria-pressed="true"] {
   background: var(--navy);
   color: #fff;
+}
+
+/* ---------- Comparison ---------- */
+
+/* Scoped under .compare, exactly as .heat is, so the other three routes are
+   untouched by anything in this block. */
+.cockpit.compare {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+}
+.cmp-aside {
+  gap: 14px;
+}
+
+/* The verdict. Full width above the split, because it is the answer the page
+   exists to give and it used to arrive as a pill in a card header. */
+.cmp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  margin: 18px 20px 0;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--navy-tint) 0%, var(--bg) 70%);
+}
+.cmp-verdict-title {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.cmp-verdict-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 62ch;
+}
+
+.cmp-rings {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.cmp-ring {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.cmp-ring-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  max-width: 130px;
+  text-align: center;
+}
+
+/* Toolbar chips — one per location, colour-keyed to the radar series. */
+.cmp-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.cmp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 12px;
+}
+.cmp-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.cmp-chip-label {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmp-chip-remove {
+  min-height: var(--control-sm);
+  min-width: var(--control-sm);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  color: var(--ink-3);
+  border-radius: 4px;
+}
+.cmp-chip-remove:hover {
+  color: #dc2626;
+}
+.cmp-chip-remove:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+}
+.cmp-add {
+  min-height: var(--control-sm);
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+  text-decoration: none;
+  padding: 4px 8px;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+}
+.cmp-add:hover {
+  border-color: var(--navy);
+  background: var(--navy-tint);
+}
+
+/* Per-dimension bars — the comparison the table made you compute yourself. */
+.cmp-dims {
+  display: grid;
+  gap: 14px;
+}
+.cmp-dim-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.cmp-dim-label {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.cmp-bars {
+  display: grid;
+  gap: 4px;
+}
+.cmp-bar-row {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr) 46px;
+  align-items: center;
+  gap: 8px;
+}
+.cmp-bar-name {
+  font-size: 11px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmp-bar-track {
+  height: 12px;
+  border-radius: 3px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.cmp-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 260ms ease-out;
+}
+.cmp-bar-value {
+  font-size: 12px;
+  color: var(--ink-2);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cmp-bar-value.leads {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* An empty track and words, never two zero-length bars — a tie at zero and
+   an absence of data must not look the same. */
+.cmp-empty {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+  padding: 9px 10px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmp-bar-fill {
+    transition: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .cockpit.compare {
+    grid-template-columns: 1fr;
+  }
+  /**
+   * Cancel the map column's `order: -1`.
+   *
+   * On /analysis the map genuinely is the main content on a phone, so it is
+   * hoisted above the panels. Here the right column is a supporting radar and
+   * a caveat, and the dimension bars are what the reader came for — so the
+   * order has to be undone rather than inherited. Needs the compound selector
+   * to outrank `.cockpit-map`, which is defined later in the file.
+   */
+  .cockpit.compare .cmp-aside {
+    order: 1;
+  }
+}
+
+@media (max-width: 720px) {
+  .cmp-hero {
+    grid-template-columns: 1fr;
+    margin: 14px 12px 0;
+    padding: 16px;
+  }
+  .cmp-rings {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .cmp-bar-row {
+    grid-template-columns: 76px minmax(0, 1fr) 40px;
+  }
 }
 
 /* ---------- City demand heatmap ---------- */
@@ -1628,6 +1952,7 @@ button:disabled {
   counter-reset: none;
 }
 .top-area {
+  min-height: var(--control-md);
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr) auto;
   align-items: center;
@@ -1670,6 +1995,7 @@ button:disabled {
 }
 
 .layer-toggle {
+  min-height: var(--control-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1874,7 +2200,7 @@ button:disabled {
 /* ---------- Print (SPEC §7.8) ----------
    Browser "save as PDF" should produce something presentable for a bank. */
 @media print {
-  .masthead,
+  .navbar-shell,
   .col-inputs,
   .no-print {
     display: none !important;
@@ -1896,5 +2222,2115 @@ button:disabled {
   .col-detail {
     padding: 0;
     gap: 10px;
+  }
+
+
+}
+
+/* ---------- Floating capsule navigation ----------
+   Only the four brand colours plus the existing neutral tokens. The gold CTA
+   carries dark text, never white, per CLAUDE.md. */
+
+.navbar-shell {
+  /* STICKY, NOT FIXED. The shell keeps its place in normal flow, so every page
+     below lays out exactly as it did before this redesign and no route needed
+     a padding change. Fixed would have punched a hole in the document. */
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  padding: 14px 20px 6px;
+  /* The capsule floats over content as it scrolls past; this keeps the edges
+     from showing a hard cut without hiding what is underneath. */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 58%, rgba(255, 255, 255, 0));
+  backdrop-filter: blur(2px);
+}
+
+.navbar {
+  /* 1fr auto 1fr puts the links in the TRUE centre of the bar regardless of how
+     wide the logo or the actions turn out to be. Flex with margin auto would
+     centre them between the two, which drifts as either side changes. */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 8px 10px 8px 14px;
+
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  /* Navy, with a slight lift towards the light source at top-left so the
+     capsule reads as a solid object rather than a flat band. */
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 42%),
+    linear-gradient(180deg, var(--navy), var(--navy-deep));
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow:
+    0 1px 2px rgba(0, 32, 92, 0.24),
+    0 12px 30px -10px rgba(0, 32, 92, 0.55);
+}
+
+/* ---- Logo ---- */
+.nav-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+  justify-self: start;
+  min-height: var(--control-md);
+}
+.nav-logo img {
+  display: block;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+/* A light chip behind the mark. Its darkest navy is the same family as the
+   capsule, so on navy the S loses its edge — the chip guarantees the logo
+   reads at any size without touching the artwork itself. */
+.nav-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 16, 48, 0.35);
+  flex: none;
+}
+.nav-wordmark {
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  /* White where the lockup uses navy — navy on navy would vanish — with the
+     gold half unchanged, which carries 5.9:1 against this ground. */
+  color: #fff;
+  white-space: nowrap;
+}
+.nav-wordmark b {
+  font-weight: 750;
+  color: var(--gold);
+}
+.nav-logo:hover .nav-wordmark {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* ---- Centre links ---- */
+.nav-links {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* The shared sliding capsule. One element behind all the links, moved with
+   GSAP, rather than a background toggled on each link. */
+.nav-pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+  /* White, not gold: gold is the CTA colour and Sign up already owns it.
+     Using it for the current page too would leave two golds competing. */
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 16, 48, 0.4);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 0;
+}
+
+.nav-link {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-md);
+  padding: 0 15px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  /* 0.78 white on navy is 7.7:1 — comfortably past AA at this size. */
+  color: rgba(255, 255, 255, 0.78);
+  /* Colour only — position is GSAP's job, and transitioning both would fight. */
+  transition: color 0.18s ease;
+}
+.nav-link:hover {
+  color: #fff;
+}
+.nav-link[data-active="true"] {
+  color: var(--navy);
+}
+
+/* ---- Right-hand actions ---- */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+}
+
+.navbar .nav-login {
+  min-height: var(--control-md);
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.navbar .nav-login:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* The single primary CTA on the bar. Gold is light, so the text is dark. */
+.navbar .nav-signup {
+  min-height: var(--control-md);
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--gold);
+  color: #3d2b00;
+  font-size: 13.5px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(242, 169, 0, 0.32);
+}
+.navbar .nav-signup:hover {
+  background: #ffb800;
+  box-shadow: 0 4px 14px rgba(242, 169, 0, 0.42);
+}
+.navbar .nav-signup:active {
+  /* Press feedback inside the 0.95-1.05 band the design rules call for. */
+  transform: scale(0.97);
+}
+
+.nav-account {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 700;
+}
+/* Matched against `button:hover` for the same reason as the burger: unmatched,
+   the chip greys to `--surface` the moment the pointer touches it. */
+.navbar .nav-account:hover {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.nav-auth-error {
+  max-width: 1180px;
+  margin: 8px auto 0;
+  padding: 0 14px;
+  font-size: 12px;
+  color: var(--red);
+}
+
+/* ---- Burger ---- */
+.nav-burger {
+  display: none;
+  justify-self: end;
+  width: var(--control-lg);
+  min-height: var(--control-lg);
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+}
+/* SPECIFICITY-MATCHED against the app-wide `button:hover` (0,1,1), which
+   otherwise beats a bare `.nav-burger` (0,1,0) and paints the near-white
+   `--surface` behind three white bars — a close affordance at 1.02:1. On a
+   phone the hover state also STICKS after the tap that opens the drawer, so
+   this is the state the control spends most of its visible life in. */
+.navbar .nav-burger:hover,
+.navbar .nav-burger:focus {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+.burger-box {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+.burger-box i {
+  display: block;
+  width: 17px;
+  height: 2px;
+  border-radius: 2px;
+  background: #fff;
+  transition: transform 0.22s ease, opacity 0.18s ease;
+}
+/* Morphs into a cross so the control states what it will do next. */
+.burger-box.is-open i:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+.burger-box.is-open i:nth-child(2) {
+  opacity: 0;
+}
+.burger-box.is-open i:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* ---- Collapse container ----
+   Desktop: `display: contents` removes this element's own box, so .nav-links
+   and .nav-actions become direct children of the navbar grid and the links stay
+   in the true centre. Mobile: it becomes the dropdown panel. One DOM, two
+   layouts — no duplicated links and no duplicated accessibility nodes. */
+.nav-collapse {
+  display: contents;
+}
+
+/* ---- Page actions ----
+   The row the routes fill via children: parity badge, share bar, print, report.
+   Kept out of the capsule so the bar stays the shape it is meant to be, and
+   absent entirely on pages that pass none. */
+.page-actions {
+  max-width: 1180px;
+  margin: 10px auto 0;
+  padding: 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Keyboard focus must stay obvious on a translucent surface. */
+.navbar-shell a:focus-visible,
+.navbar-shell button:focus-visible {
+  /* Gold, because a navy ring on a navy capsule is invisible. */
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.page-actions a:focus-visible,
+.page-actions button:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .navbar {
+    /* Logo and burger only; the collapse panel drops below the capsule. */
+    grid-template-columns: 1fr auto;
+    padding: 7px 8px 7px 12px;
+    position: relative;
+  }
+
+  .nav-collapse {
+    display: grid;
+    gap: 4px;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    padding: 8px;
+    border-radius: 22px;
+    border: 1px solid rgba(0, 48, 135, 0.12);
+    /* SOLID, not glass — deliberately different from the capsule above it.
+       The capsule floats over the top of a page where there is little behind
+       it, so translucency reads as depth. This panel covers dense form content,
+       and a translucent surface there puts page text directly behind menu
+       labels. Glass is worth having only where it does not cost legibility. */
+    background: var(--bg);
+    box-shadow: 0 12px 34px rgba(0, 48, 135, 0.18);
+    overflow: hidden;
+    /* Closed by default so a cold load never flashes the panel open; the GSAP
+       timeline owns these three properties from then on. Hidden rather than
+       transparent so the links leave the tab order while collapsed. */
+    height: 0;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+  /* The sliding pill is a desktop affordance: in a vertical stack it would have
+     to jump rather than slide, and the active row already reads as selected. */
+  .nav-pill {
+    display: none;
+  }
+  .nav-link {
+    min-height: var(--control-lg);
+    padding: 0 14px;
+    border-radius: 14px;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .nav-link[data-active="true"] {
+    background: var(--navy);
+    color: #fff;
+  }
+
+  /* The capsule is navy; this panel is white. Anything the capsule paints
+     white has to come back to ink here, or it disappears entirely — Log in
+     shipped at 1:1 on white before this rule existed. Three classes deep so
+     it wins on specificity rather than on source order: a media query adds
+     none, and this block being further down the file is not a guarantee. */
+  .navbar .nav-collapse .nav-login {
+    color: var(--ink-2);
+  }
+  .navbar .nav-collapse .nav-login:hover {
+    background: var(--navy-tint);
+    color: var(--navy);
+    border-color: rgba(0, 48, 135, 0.12);
+  }
+  .navbar .nav-collapse .nav-account {
+    background: var(--navy);
+    color: #fff;
+  }
+
+  .nav-actions {
+    justify-self: stretch;
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  .nav-actions .nav-login,
+  .nav-actions .nav-signup {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .nav-burger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .navbar-shell {
+    padding: 10px 12px 6px;
+  }
+  .page-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 400px) {
+  .nav-wordmark {
+    font-size: 17px;
+  }
+  .nav-logo img {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* The capsule is decoration for a printed page; the shell is already .no-print,
+   this simply stops the blur being rasterised if that ever changes. */
+@media print {
+  .navbar-shell {
+    display: none !important;
+  }
+}
+
+/* ---------- Events: hero ----------
+   Navy and gold only, at varying depth. The skill's glassmorphism profile
+   warns "ensure 4.5:1" — so every piece of text here sits on an opaque token
+   colour, and the glass is confined to surfaces that carry no body copy. */
+
+.events-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  /* Copy left, bento right, both given a real share of the width. The old
+     `1fr auto` let the stats shrink to their content and left a corridor of
+     dead space down the middle of the widest element on the page. */
+  grid-template-columns: minmax(0, 1.06fr) minmax(320px, 0.94fr);
+  align-items: center;
+  gap: 30px 36px;
+  padding: 38px 34px;
+  margin: 10px 0 20px;
+  border-radius: 26px;
+  border: 1px solid rgba(0, 48, 135, 0.09);
+  background:
+    radial-gradient(120% 140% at 8% 0%, rgba(0, 48, 135, 0.055), transparent 58%),
+    radial-gradient(90% 120% at 100% 10%, rgba(242, 169, 0, 0.09), transparent 60%),
+    var(--bg);
+  box-shadow: 0 1px 2px rgba(0, 48, 135, 0.04), 0 18px 44px -28px rgba(0, 48, 135, 0.35);
+}
+
+/**
+ * A drifting map grid.
+ *
+ * Oversized well past the hero on every side, because the tween moves it a
+ * full cell in both axes and a tight box would show its edge sweeping through.
+ * Masked to fade out before it reaches the rounded border, so the lines never
+ * collide with the corner radius. Transform-animated, so it stays on the
+ * compositor and costs nothing per frame.
+ */
+.hero-grid-bg {
+  position: absolute;
+  inset: -60px;
+  background-image:
+    linear-gradient(rgba(0, 48, 135, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 48, 135, 0.06) 1px, transparent 1px);
+  /* 34px, and `HERO_GRID_CELL` in Events.tsx must match it. */
+  background-size: 34px 34px;
+  mask-image: radial-gradient(120% 100% at 30% 40%, #000 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 100% at 30% 40%, #000 30%, transparent 78%);
+  pointer-events: none;
+}
+
+/* A soft gold bloom behind the tiles. Decorative only — nothing reads on it. */
+.hero-glow {
+  position: absolute;
+  top: -160px;
+  right: -120px;
+  width: 460px;
+  height: 460px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(242, 169, 0, 0.22), transparent 68%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.hero-copy {
+  position: relative;
+  min-width: 0;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 48, 135, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--navy);
+}
+.hero-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgba(242, 169, 0, 0.22);
+}
+
+.events-hero h1 {
+  margin: 14px 0 10px;
+  font-size: 40px;
+  line-height: 1.08;
+  letter-spacing: -0.032em;
+  color: var(--navy);
+  max-width: 16ch;
+}
+.events-hero h1 em {
+  font-style: normal;
+  /* Gold on white is too light for large text to carry alone, so the emphasis
+     is an underline rather than a colour swap. */
+  background: linear-gradient(transparent 66%, rgba(242, 169, 0, 0.42) 66%);
+}
+.events-hero p {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* ---- Hero bento ----
+   Two equal columns with one tile spanning both, which is what makes it a
+   bento rather than a row of three: the figure that carries the most weight
+   for a stallholder — what it costs to get in — gets the wide cell. */
+.hero-bento {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.hb-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 48, 135, 0.1);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: 0 1px 2px rgba(0, 48, 135, 0.04), 0 10px 26px -16px rgba(0, 48, 135, 0.42);
+  transition: box-shadow 0.22s ease;
+}
+
+/**
+ * The hover transform waits for `is-ready`, and that is not a nicety.
+ *
+ * GSAP and CSS must never both own `transform`. A `transition: transform` here
+ * smoothed every frame GSAP wrote during the entrance, so the tile eased
+ * BACKWARDS into the `from` values and stopped there — rendering at
+ * scale(0.97) translateY(14px) forever. And a GSAP `from` leaves an inline
+ * transform behind, which a stylesheet `:hover` can never outrank anyway.
+ *
+ * So the entrance clears the inline transform when it finishes and marks the
+ * hero ready; only then does CSS take the property over. Same rule as the
+ * events card hover plate, which cost a debugging session to learn.
+ */
+.events-hero.is-ready .hb-tile {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease;
+}
+@media (hover: hover) {
+  .events-hero.is-ready .hb-tile:hover {
+    transform: translateY(-2px) scale(1.015);
+    box-shadow: 0 2px 4px rgba(0, 48, 135, 0.05), 0 16px 34px -16px rgba(0, 48, 135, 0.5);
+  }
+}
+.hb-wide {
+  grid-column: 1 / -1;
+}
+
+/* The one tile carrying money wears the accent, and gold is light, so the
+   figure on it stays navy rather than going white. */
+.hb-accent {
+  border-color: rgba(242, 169, 0, 0.42);
+  background: linear-gradient(135deg, rgba(242, 169, 0, 0.16), rgba(255, 255, 255, 0.86) 62%);
+}
+
+/* `--ink-2`, not `--ink-3`. Measured on the rendered tile, `#98a2b3` is
+   2.58:1 on this ground — below AA for anything that is not large text, and
+   10px uppercase is a long way from large. `--ink-2` is 7.69:1. */
+.hb-tile dt {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.hb-tile dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.hb-value {
+  font-size: 27px;
+  font-weight: 780;
+  line-height: 1.05;
+  letter-spacing: -0.028em;
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+.hb-accent .hb-value {
+  font-size: 30px;
+}
+/* An absent figure reads as words, never as a dash and never as a zero. */
+.hb-absent {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink-2);
+}
+.hb-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  opacity: 0.86;
+}
+
+/* Holds the figure's place while the catalogue loads, so the tile does not
+   resize under the reader when the number lands. */
+.hb-skel {
+  display: block;
+  width: 58px;
+  height: 21px;
+  margin: 3px 0;
+  border-radius: 7px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 48, 135, 0.07) 25%,
+    rgba(0, 48, 135, 0.13) 37%,
+    rgba(0, 48, 135, 0.07) 63%
+  );
+  background-size: 300% 100%;
+  animation: hb-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes hb-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-skel {
+    animation: none;
+  }
+  .events-hero.is-ready .hb-tile {
+    transition: none;
+  }
+}
+
+/* ---------- Events: control band ---------- */
+.filterbar {
+  /* Scrolls away with the page rather than pinning under the navbar: the
+     header is the thing that follows you, and two stacked bars competing for
+     the top of the screen cost the results the room they are there to show.
+     Still POSITIONED, because the z-index below is load-bearing — it lifts the
+     bar and its open dropdown above the cards that come after it in the DOM. */
+  position: relative;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 48, 135, 0.09);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(1.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  box-shadow: 0 1px 2px rgba(0, 48, 135, 0.05), 0 12px 30px -16px rgba(0, 48, 135, 0.32);
+  margin-bottom: 26px;
+}
+
+.fb-group {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+.fb-find {
+  flex: 1 1 420px;
+}
+/* The caption that says which half of the bar you are in — profile inputs
+   re-score the page, find inputs only narrow it. */
+.fb-group-label {
+  position: absolute;
+  top: -22px;
+  left: 2px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.fb-divider {
+  align-self: stretch;
+  width: 1px;
+  background: linear-gradient(transparent, var(--line) 22%, var(--line) 78%, transparent);
+}
+
+.fb-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.fb-search-cell {
+  flex: 1 1 220px;
+}
+/* Grid/flex items paint in DOM order, so a later control would cover an
+   earlier one's open panel. Reverse-stack them, then lift whichever is open. */
+.fb-cell:nth-child(2) { z-index: 4; }
+.fb-cell:nth-child(3) { z-index: 3; }
+.fb-cell:nth-child(4) { z-index: 2; }
+.fb-cell:has(.sel.is-open) { z-index: 10; }
+.fb-group:has(.sel.is-open) { z-index: 10; }
+
+/* ---------- Events: the controls themselves ----------
+   Shared by the native inputs and the custom listbox, so the whole bar reads
+   as one set of controls rather than two. */
+
+.sel-label,
+.filterbar label {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-left: 2px;
+}
+
+.fb-search,
+.fb-money {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--control-lg);
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-3);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.fb-search:focus-within,
+.fb-money:focus-within {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.11);
+}
+.fb-search input,
+.fb-money input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--ink);
+}
+.fb-search input:focus-visible,
+.fb-money input:focus-visible {
+  outline: none;
+}
+.fb-prefix {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.fb-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.fb-clear:hover {
+  background: var(--navy-tint);
+  color: var(--navy);
+}
+
+/* ---- Custom listbox ---- */
+.sel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+/* An OPEN control outranks its siblings, not just its own panel: the parent
+   cell is a flex item, and flex items paint in DOM order regardless of what
+   z-index the popup inside them carries. */
+.sel.is-open {
+  z-index: 60;
+}
+
+.sel-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--control-lg);
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.sel-trigger:hover {
+  border-color: rgba(0, 48, 135, 0.28);
+}
+.sel.is-open .sel-trigger {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.11);
+}
+.sel-icon {
+  display: inline-flex;
+  color: var(--ink-3);
+  flex: none;
+}
+.sel-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sel-caret {
+  flex: none;
+  color: var(--ink-3);
+  transition: transform 0.22s ease;
+}
+.sel.is-open .sel-caret {
+  transform: rotate(180deg);
+}
+
+/* The business selector is the one control that re-scores the whole page, so
+   it carries the accent. Gold is light: dark text on it, always. */
+.sel-accent .sel-trigger {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: #3d2b00;
+  font-weight: 700;
+  box-shadow: 0 3px 12px -3px rgba(242, 169, 0, 0.55);
+}
+.sel-accent .sel-icon,
+.sel-accent .sel-caret {
+  color: rgba(61, 43, 0, 0.7);
+}
+.sel-accent .sel-trigger:hover {
+  background: #ffb800;
+  border-color: #ffb800;
+}
+
+.sel-panel {
+  position: absolute;
+  top: calc(100% + 7px);
+  /**
+   * Anchored RIGHT so it grows inward, and capped to the viewport.
+   *
+   * With `left: 0` plus a 210px minimum, a narrow control near the right edge
+   * pushed its panel 7px past the screen and the whole page scrolled
+   * sideways. Growing leftward from the trigger's right edge keeps a readable
+   * panel inside the viewport whatever the control's own width is.
+   */
+  right: 0;
+  left: auto;
+  z-index: 50;
+  min-width: max(100%, 210px);
+  max-width: calc(100vw - 28px);
+  opacity: 0;
+  visibility: hidden;
+  transform-origin: top center;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 48, 135, 0.1);
+  background: var(--bg);
+  box-shadow:
+    0 2px 6px rgba(0, 48, 135, 0.06),
+    0 18px 40px -12px rgba(0, 48, 135, 0.32);
+  overflow: hidden;
+}
+
+.sel-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 288px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sel-list::-webkit-scrollbar {
+  width: 10px;
+}
+.sel-list::-webkit-scrollbar-thumb {
+  border: 3px solid var(--bg);
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.sel-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.sel-opt-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sel-opt-hint {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+/* Pointer highlight is CSS; `is-active` is the keyboard's cursor. Only one of
+   them can trigger a React render, which is what stopped the hover/scroll
+   feedback loop that once made options unclickable. */
+.sel-opt:hover,
+.sel-opt.is-active {
+  background: var(--navy-tint);
+  color: var(--navy);
+}
+.sel-opt.is-selected {
+  font-weight: 650;
+}
+.sel-tick {
+  flex: none;
+  color: var(--navy);
+  opacity: 0;
+}
+.sel-opt.is-selected .sel-tick {
+  opacity: 1;
+}
+
+/* ---------- Events: the card grid ---------- */
+.evc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(286px, 1fr));
+  gap: 20px;
+}
+
+.evc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  overflow: hidden;
+  /* Shadow and border in CSS; POSITION is GSAP's. Both owning transform would
+     make them fight on every hover. */
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.evc:hover {
+  border-color: rgba(0, 48, 135, 0.2);
+  box-shadow: 0 20px 44px -18px rgba(0, 48, 135, 0.4);
+}
+.evc.is-full {
+  background: var(--surface);
+}
+
+/* One anchor over the whole card, beneath the content. The hover plate can
+   then be pure decoration and a keyboard user gets a single ordinary stop. */
+.evc-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+}
+.evc:focus-within {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.16);
+}
+
+.evc-media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--navy-tint);
+}
+.evc-img {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+.evc-img img {
+  width: 100%;
+  height: 100%;
+  /* Posters are portrait; anchoring high keeps the title in frame rather than
+     centring on the artwork and cropping the name away. */
+  object-fit: cover;
+  object-position: center 18%;
+  display: block;
+}
+.evc-cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  color: #fff;
+}
+.evc-cover b {
+  font-size: 40px;
+  font-weight: 780;
+  letter-spacing: -0.03em;
+  opacity: 0.95;
+}
+.evc-cover i {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.evc-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 32, 92, 0.5) 0%,
+    rgba(0, 32, 92, 0.08) 34%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.evc-chips {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+.evc-type,
+.evc-scarce,
+.evc-soldout {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.evc-type {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--navy);
+}
+/* Gold is light, so it always takes dark text. */
+.evc-scarce {
+  background: var(--gold);
+  color: #3d2b00;
+}
+.evc-soldout {
+  background: rgba(220, 38, 38, 0.94);
+  color: #fff;
+}
+
+.evc-score {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px -6px rgba(0, 32, 92, 0.5);
+  line-height: 1;
+}
+.evc-score-n {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+.evc-score-l {
+  margin-top: 2px;
+  font-size: 8.5px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.evc-score.green .evc-score-n { color: var(--green); }
+.evc-score.amber .evc-score-n { color: var(--amber); }
+.evc-score.red .evc-score-n { color: var(--red); }
+
+/* The hover plate. Hidden by GSAP's autoAlpha, so it is out of the
+   accessibility tree rather than merely transparent. */
+.evc-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 32, 92, 0.15) 0%,
+    rgba(0, 32, 92, 0.82) 55%,
+    rgba(0, 32, 92, 0.95) 100%
+  );
+  /* No `visibility` here — GSAP animates opacity alone (see EventCard.tsx),
+     and the plate is aria-hidden with pointer-events off, so it is already out
+     of the accessibility tree and out of the way when transparent. */
+  opacity: 0;
+  pointer-events: none;
+}
+.evc-why {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.94);
+}
+.evc-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #3d2b00;
+  font-size: 12.5px;
+  font-weight: 750;
+}
+
+.evc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 15px 16px 16px;
+  flex: 1;
+}
+.evc-name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 730;
+  line-height: 1.24;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+}
+.evc:hover .evc-name {
+  color: var(--navy);
+}
+.evc-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  min-width: 0;
+}
+.evc-meta svg {
+  flex: none;
+  color: var(--ink-3);
+}
+.evc-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evc-wants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 2px 0 0;
+}
+.evc-tag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--navy-tint);
+  border: 1px solid rgba(0, 48, 135, 0.12);
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 620;
+}
+.evc-tag.ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-3);
+}
+
+.evc-rings {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0 4px;
+  margin-top: auto;
+}
+/* Label UNDER the ring, not beside it — three side-by-side pairs read as six
+   loose items and the row stops scanning as a set. */
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.metric-value {
+  font-size: 12px;
+  font-weight: 750;
+  font-family: var(--sans);
+}
+.metric-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.evc-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 11px;
+  border-top: 1px solid var(--line);
+}
+.evc-price {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.evc-price b {
+  font-size: 17px;
+  font-weight: 780;
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.evc-price small {
+  margin-top: 2px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.evc-price em {
+  font-style: normal;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.evc-slots {
+  font-size: 12px;
+  font-weight: 640;
+  color: var(--green);
+  white-space: nowrap;
+}
+.evc-slots.is-full {
+  color: var(--red);
+}
+
+.ev-status {
+  padding: 20px 2px;
+}
+.ev-foot {
+  margin: 30px 2px 0;
+  max-width: 78ch;
+  line-height: 1.55;
+}
+
+/* ---------- Events: list header ---------- */
+.ev-listhead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 2px 16px;
+}
+.ev-listhead h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 760;
+  letter-spacing: -0.024em;
+  color: var(--navy);
+}
+.ev-listsub {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.ev-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ev-count em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+@media (max-width: 1040px) {
+  .events-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 30px 22px 24px;
+  }
+  .events-hero h1 {
+    font-size: 32px;
+  }
+  .fb-divider {
+    display: none;
+  }
+  .fb-group {
+    flex: 1 1 100%;
+  }
+  .fb-group-label {
+    position: static;
+    margin-bottom: -2px;
+  }
+  .fb-group {
+    flex-wrap: wrap;
+    padding-top: 4px;
+  }
+  .fb-cell {
+    flex: 1 1 150px;
+  }
+}
+
+@media (max-width: 560px) {
+  /**
+   * One control per row on a phone.
+   *
+   * A readable listbox needs about 210px, and at two-per-row the cells were
+   * narrower than that — so the panel spilled past whichever edge it was
+   * anchored to. Full-width cells make the panel fit its own control instead
+   * of fighting the viewport.
+   */
+  .fb-cell {
+    flex: 1 1 100%;
+  }
+  .sel-panel {
+    min-width: 100%;
+  }
+
+  .events-hero {
+    padding: 24px 16px 20px;
+    border-radius: 20px;
+  }
+  .events-hero h1 {
+    font-size: 26px;
+    max-width: none;
+  }
+  /**
+   * The bento KEEPS its two columns on a phone.
+   *
+   * Stacking all three ran the hero to 576px on a Pixel 7 — most of the screen
+   * spent on three numbers, with the filter bar and every event pushed below
+   * the fold on a page whose entire job is the list. Two narrow tiles plus the
+   * wide one holds it near the original height, and 185px is comfortably above
+   * what the short notes need.
+   */
+  .hero-bento {
+    gap: 8px;
+  }
+  .hb-tile {
+    padding: 11px 13px;
+    border-radius: 15px;
+    gap: 4px;
+  }
+  .hb-value {
+    font-size: 21px;
+  }
+  .hb-accent .hb-value {
+    font-size: 23px;
+  }
+  .hb-note {
+    font-size: 11px;
+  }
+  .evc-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* The plate is a pointer affordance; on touch the whole card is the target. */
+  .evc-veil {
+    display: none;
+  }
+  .ev-listhead h2 {
+    font-size: 19px;
+  }
+}
+
+/* ---------- Event detail ----------
+   The listing page above was rewritten; the detail page was NOT part of that
+   change, so these are the styles it and the apply/ROI panels still rely on.
+   Kept in their own block so the two pages can move independently. */
+
+.cockpit.events.detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+  padding: 16px 20px 40px;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+.cockpit.events.detail .cockpit-side {
+  min-width: 0;
+}
+.cockpit.events.detail .card.sticky {
+  position: sticky;
+  top: 92px;
+}
+
+.crumb {
+  margin-bottom: 4px;
+}
+.crumb a {
+  font-size: 13px;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.crumb a:hover {
+  color: var(--navy);
+  text-decoration: underline;
+}
+
+/* The poster sits above the facts, capped so a tall portrait cannot push the
+   rest of the page below the fold. `contain` shows it whole; the blurred copy
+   behind fills the letterbox so the panel never reads as a gap. */
+.detail-hero {
+  position: relative;
+  height: 280px;
+  overflow: hidden;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.detail-poster {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.detail-poster img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  border-radius: 6px;
+  /* Lifts the poster off the navy so it reads as an object on a surface. */
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32);
+}
+/* A plain navy field behind the poster, NOT a blurred copy of it.
+   The blurred-backdrop trick reads as the poster repeated three times at this
+   width — the artwork is too graphic and too high-contrast to dissolve — so it
+   competed with the real thing instead of receding behind it. A flat brand
+   ground makes the poster the only thing in the frame, which is the point. */
+.detail-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(150deg, var(--navy-deep), var(--navy));
+}
+.detail-hero .ev-cover {
+  width: 100%;
+  height: 100%;
+}
+
+.event-title {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: var(--navy);
+}
+
+.event-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.event-facts {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.event-facts > div {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+.event-facts dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+.event-facts dd {
+  margin: 0;
+  font-size: 13.5px;
+  min-width: 0;
+}
+
+.booth-list {
+  display: grid;
+  gap: 8px;
+}
+.booth {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-height: var(--control-lg);
+}
+.booth:hover {
+  background: var(--surface);
+}
+.booth.is-selected {
+  border-color: var(--navy);
+  background: var(--navy-tint);
+}
+.booth-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.booth-price {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The ROI headline is a RATIO, sized to be read first — see RoiPanel.tsx. */
+.roi-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 15px;
+  border-radius: var(--radius);
+  background: var(--navy-tint);
+  border: 1px solid var(--navy-soft);
+}
+.roi-figure {
+  font-size: 40px;
+  font-weight: 750;
+  line-height: 1;
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.roi-caption {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.roi-assumptions summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  min-height: var(--control-sm);
+  display: flex;
+  align-items: center;
+}
+
+.events .pos {
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+.events .neg {
+  color: var(--red);
+  font-variant-numeric: tabular-nums;
+}
+
+.dim-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.dim-notes li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
+  font-size: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.dim-notes li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.score-hero {
+  display: flex;
+  justify-content: center;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.empty-state h3 {
+  margin: 0 0 6px;
+}
+.empty-state p {
+  margin: 0 0 14px;
+}
+
+.checkline {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  min-height: var(--control-md);
+}
+.checkline input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.signin-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.signin-or::before,
+.signin-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-2);
+  text-decoration: underline;
+}
+button.ghost:hover {
+  background: transparent;
+  color: var(--navy);
+}
+
+ul.tight {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.events .hint,
+.hint {
+  font-size: 11px;
+  color: var(--ink-3);
+  line-height: 1.4;
+}
+
+@media (max-width: 1040px) {
+  .cockpit.events.detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Score above the detail on a phone, not below a very long page. */
+  .cockpit.events.detail .cockpit-side {
+    order: -1;
+  }
+  .cockpit.events.detail .card.sticky {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .cockpit.events.detail {
+    padding: 12px 12px 32px;
+  }
+  .event-facts > div {
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+  .roi-figure {
+    font-size: 32px;
+  }
+}
+
+/* ---------- Footer ----------
+   Same navy as the navigation, so the page is bracketed by the brand. Every
+   piece of text here was checked against this ground: white is 11.9:1, the
+   0.72 muted white 6.8:1, gold 5.9:1. */
+
+.footer {
+  position: relative;
+  overflow: hidden;
+  margin-top: 64px;
+  padding: 52px 24px 0;
+  color: #fff;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 38%),
+    linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
+}
+
+/* A hairline of gold along the top edge, so the footer arrives rather than
+   just appearing. Decorative only — nothing reads on it. */
+.footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold) 22%, var(--gold) 78%, transparent);
+  opacity: 0.85;
+}
+
+.ft-glow {
+  position: absolute;
+  bottom: -220px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 720px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(242, 169, 0, 0.16), transparent 65%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.ft-inner {
+  position: relative;
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1.5fr;
+  gap: 40px;
+  padding-bottom: 40px;
+}
+
+.ft-col h2 {
+  margin: 0 0 14px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.ft-col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+}
+
+/* ---- Brand block ---- */
+.ft-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.ft-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(0, 16, 48, 0.4);
+  flex: none;
+}
+.ft-word {
+  font-size: 21px;
+  font-weight: 780;
+  letter-spacing: -0.022em;
+  color: #fff;
+}
+.ft-word b {
+  font-weight: 780;
+  color: var(--gold);
+}
+.ft-tagline {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--gold);
+}
+.ft-blurb {
+  margin: 8px 0 0;
+  max-width: 42ch;
+  font-size: 13px;
+  line-height: 1.62;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* ---- Link columns ---- */
+/* Scoped to the LINK LISTS, not to every anchor in a column.
+   `.ft-col a` (0,2,0) also matched the brand logo and the source links and
+   beat their own rules — it is what made the logo print as a lone gold
+   "ential" over an invisible white "Spot", and it is the same overreach that
+   once broke `.sr-only` two rules further down. */
+.ft-col ul a {
+  display: inline-block;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+.ft-col ul a:hover {
+  color: #fff;
+}
+/* The underline grows from the left rather than appearing whole — a small
+   thing, but it is what makes the column feel handled rather than listed.
+
+   Scoped to the LINK LISTS, not to every span inside a footer link. Written as
+   `.ft-col a span` it also matched the brand logo's `.sr-only` label and
+   overrode its `position: absolute` (0,2,1 beating 0,1,0) — which broke the
+   clip that hides it, and "Spotential home" appeared as visible text beside
+   the wordmark. */
+.ft-col ul a span {
+  position: relative;
+}
+.ft-col ul a span::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 100%;
+  height: 1.5px;
+  border-radius: 2px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ft-col ul a:hover span::after {
+  transform: scaleX(1);
+}
+
+/* ---- Sources ---- */
+.ft-sources {
+  display: grid;
+  gap: 8px;
+}
+.ft-sources li {
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.68);
+}
+.ft-sources a {
+  font-size: 12px;
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: rgba(242, 169, 0, 0.55);
+  text-underline-offset: 2px;
+}
+.ft-sources a:hover {
+  text-decoration-color: var(--gold);
+}
+
+/* ---- Base bar ---- */
+.ft-base {
+  position: relative;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 0 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.ft-base p {
+  margin: 0;
+  max-width: 74ch;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.66);
+}
+.ft-base strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 650;
+}
+.ft-copy {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
+.footer a:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+@media (max-width: 1040px) {
+  .ft-inner {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  .ft-brand,
+  .ft-data {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .footer {
+    margin-top: 44px;
+    padding: 40px 16px 0;
+  }
+  /* The two link columns stay side by side rather than stacking. Single-column
+     ran the footer to ~800px on a phone — most of a viewport of scrolling for
+     five links — and the 44px touch floor makes each row tall enough that the
+     pairing still clears it comfortably. */
+  .ft-inner {
+    grid-template-columns: 1fr 1fr;
+    gap: 26px 20px;
+  }
+  .ft-base {
+    padding-bottom: 20px;
+  }
+}
+
+/* ---------- Footer in print ----------
+   AFTER the footer's own rules, deliberately. A media query adds no
+   specificity, so an @media print block sitting earlier in the file loses
+   every tie on source order — the first attempt at this printed the
+   credits in black ink on the navy background it had failed to remove.
+   Still before the pointer:coarse block, which stays last. */
+@media print {
+  .footer {
+    margin-top: 16px;
+    padding: 0;
+    color: #000;
+    background: none;
+    break-inside: avoid;
+  }
+  .footer::before {
+    display: none;
+  }
+  .ft-inner {
+    display: block;
+    padding-bottom: 6px;
+    border-top: 1px solid #999;
+    padding-top: 8px;
+  }
+  .ft-logo,
+  .ft-tagline,
+  .ft-blurb,
+  .ft-copy {
+    display: none;
+  }
+  .ft-col h2 {
+    margin: 0 0 4px;
+    color: #000;
+    font-size: 9px;
+  }
+  /* `.ft-col ul a` is (0,1,2) and beats a bare `.footer a` (0,1,1), so the
+     source links printed white on white — invisible, which on this particular
+     block means the attribution silently is not there. Matched explicitly
+     rather than relying on source order. */
+  .ft-sources li,
+  .ft-base p,
+  .ft-base strong,
+  .footer a,
+  .ft-col ul a,
+  .ft-sources a {
+    color: #000;
+    font-size: 9px;
+  }
+  .ft-sources a {
+    text-decoration-color: #000;
+  }
+  .ft-base {
+    padding: 6px 0 0;
+    border-top: 0;
+  }
+}
+
+/* ---------- Touch targets ----------
+
+   LAST IN THE FILE, deliberately.
+
+   44px is the accessibility floor for a finger, and almost nothing here met
+   it. The first attempt sat near the top of the stylesheet and silently lost
+   twice: `button.tiny` (0,2,0) outranks a bare `button` (0,1,0) because a
+   media query adds no specificity, and `.tab` is declared several hundred
+   lines further down so it won on source order. Both classes are named
+   explicitly below and the whole block sits at the end, so it wins either way.
+
+   Scoped to a coarse pointer, so the dense desktop dashboard keeps the scale
+   it is designed around instead of inflating everything to touch size. */
+@media (pointer: coarse) {
+  button,
+  button.tiny,
+  select,
+  .tab,
+  .segmented button,
+  .layer-toggle,
+  .top-area,
+  .portal-link,
+  .cmp-add,
+  .cmp-chip-remove,
+  a.cta,
+  .nav-link,
+  .nav-burger,
+  .linkbtn,
+  /* SPECIFICITY-MATCHED, and it has to be.
+     The base rules are written as `.navbar .nav-login` (0,2,0) so they beat a
+     bare `.nav-login` (0,1,0) here — a media query contributes no specificity,
+     so being last in the file does not save it. Measured on an emulated Pixel:
+     these two stayed at 36px against a 44px floor until the selectors matched.
+     Same trap the button/tab rules above already record. */
+  .navbar .nav-login,
+  .navbar .nav-signup {
+    min-height: var(--control-lg);
+  }
+
+  /**
+   * The round clear button gets a FIXED box, and it needs its own rule to do
+   * so. Appending it to the list above shared `height`/`width` with every
+   * button, select, tab and portal link in the app — which forced all of them
+   * to 44px WIDE on touch devices and clipped their labels to nothing. The
+   * shared rule sets a minimum height and only that; anything needing an exact
+   * size states it separately.
+   */
+  .fb-clear {
+    height: var(--control-md);
+    width: var(--control-md);
+    min-height: var(--control-md);
+  }
+
+  /* The filter bar's other controls are absent deliberately: `.fb-search`,
+     `.fb-money` and `.sel-trigger` already set `min-height: var(--control-lg)`
+     in their base rules, so they clear the floor at every pointer type and
+     sidestep the specificity trap above rather than having to match it. */
+
+  .cmp-chip-remove {
+    min-width: var(--control-lg);
+  }
+  /* 8px between adjacent targets, so a 44px box is not undone by a mis-tap. */
+  .tabs,
+  .nav-actions,
+  .page-actions,
+  .cmp-chips {
+    gap: 8px;
   }
 }

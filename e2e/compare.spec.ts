@@ -89,8 +89,11 @@ test("renders both locations and names a winner when they differ", async ({ page
   // Both series appear in the radar legend.
   await expect(page.getByText("Central KL").first()).toBeVisible();
   await expect(page.getByText("Suburban PJ").first()).toBeVisible();
-  // The spread-out site should win on competition density.
-  await expect(page.getByText(/best: Suburban PJ/)).toBeVisible();
+  // The spread-out site should win on competition density, and the verdict is
+  // the first thing on the page rather than a pill in a card header.
+  await expect(
+    page.getByRole("heading", { name: /Suburban PJ scores highest/ }),
+  ).toBeVisible();
 });
 
 test("states that these are comparison scores, not forecasts", async ({ page }) => {
@@ -152,17 +155,91 @@ test("category and radius apply to the whole comparison", async ({ page }) => {
 test("the comparison link round-trips", async ({ page }) => {
   await stub(page);
   await page.goto(TWO);
-  await expect(page.getByText(/best: Suburban PJ/)).toBeVisible();
+  const verdict = page.getByRole("heading", { name: /Suburban PJ scores highest/ });
+  await expect(verdict).toBeVisible();
 
   const link = page.url();
   await page.goto("about:blank");
   await page.goto(link);
 
-  await expect(page.getByText(/best: Suburban PJ/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Suburban PJ scores highest/ })).toBeVisible();
 });
 
 test("the simulator route is untouched", async ({ page }) => {
   await page.goto("/simulator");
   await expect(page.getByTestId("headline-profit")).toHaveText("RM 38,418");
   await expect(page.getByText("Location profiles")).toHaveCount(0);
+});
+
+/**
+ * The redesign's own guarantees.
+ *
+ * The page moved from a sidebar-and-stacked-cards layout to the cockpit the
+ * other routes use. What must survive that is not the markup but the honesty:
+ * three distinct outcomes, no zero standing in for missing data, and a hero
+ * that cannot disagree with the table beneath it.
+ */
+test("the hero verdict agrees with the table it sits above", async ({ page }) => {
+  await stub(page);
+  await page.goto(TWO);
+
+  await expect(page.getByRole("heading", { name: /Suburban PJ scores highest/ })).toBeVisible();
+
+  // The Overall row's verdict cell must name the same winner. Both read the
+  // same comparison object, and this pins that they cannot drift apart.
+  const overall = page.getByRole("row").filter({ hasText: "Overall" });
+  await expect(overall.getByText("Suburban PJ")).toBeVisible();
+});
+
+test("names the dimension that actually decided it", async ({ page }) => {
+  await stub(page);
+  await page.goto(TWO);
+
+  // Competition density is the axis these two sites differ most on.
+  await expect(page.getByText(/driven mostly by competition/)).toBeVisible();
+});
+
+test("keeps the three outcomes visually distinct", async ({ page }) => {
+  await stub(page);
+  await page.goto(TWO);
+
+  const dims = page.locator(".cmp-dim");
+  await expect(dims.first()).toBeVisible();
+
+  // A decided dimension draws bars; a no-data one draws none and says so.
+  const noData = dims.filter({ hasText: "no data either side" });
+  if ((await noData.count()) > 0) {
+    await expect(noData.first().locator(".cmp-bar-fill")).toHaveCount(0);
+    await expect(noData.first().locator(".cmp-empty")).toBeVisible();
+  }
+
+  // Somewhere on the page at least one dimension is drawn as bars.
+  await expect(page.locator(".cmp-bar-fill").first()).toBeVisible();
+});
+
+test("draws no bar for a dimension with no data on either side", async ({ page }) => {
+  await stub(page);
+  // Kuantan and Kota Bharu - outside every curated trading area, so rent is
+  // unavailable for both. That dimension gets an empty track and the words,
+  // never two zero-length bars, which would read as a tie at 0.
+  await page.goto(
+    "/compare?c=korean_restaurant&r=500&p=3.8077,103.3260,Kuantan&p=6.1254,102.2381,Kota Bharu",
+  );
+
+  const rent = page.locator(".cmp-dim").filter({ hasText: "Rent sensitivity" });
+  await expect(rent.locator(".cmp-empty")).toBeVisible();
+  await expect(rent.locator(".cmp-bar-fill")).toHaveCount(0);
+});
+
+test("the other routes are untouched by the compare styles", async ({ page }) => {
+  await stub(page);
+
+  // The CSS is scoped under .cockpit.compare; nothing here may leak.
+  await page.goto("/analysis?lat=3.1578&lng=101.7123&q=KLCC");
+  await expect(page.locator(".cockpit.compare")).toHaveCount(0);
+  await expect(page.locator(".cmp-hero")).toHaveCount(0);
+
+  await page.goto("/heatmap");
+  await expect(page.locator(".cockpit.heat")).toHaveCount(1);
+  await expect(page.locator(".cmp-hero")).toHaveCount(0);
 });

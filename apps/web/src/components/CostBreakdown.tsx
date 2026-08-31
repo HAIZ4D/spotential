@@ -56,7 +56,7 @@ export function CostBreakdown({ result }: { result: SimulationResult }) {
                   {formatCurrency(steady.profit)}
                 </td>
                 <td>
-                  {steady.revenue > 0 ? formatPercent(steady.profit / steady.revenue) : "—"}
+                  {steady.revenue > 0 ? formatPercent(steady.profit / steady.revenue) : "not available"}
                 </td>
               </tr>
             </tbody>

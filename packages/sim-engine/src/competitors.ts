@@ -44,14 +44,35 @@ export function isTruncated(competitors: Competitor[]): boolean {
   return competitors.length >= PLACES_MAX_RESULTS;
 }
 
-/** Places `includedTypes` per business category. */
+/**
+ * Places `includedTypes` per business category.
+ *
+ * These are Places API (New) Table A type names, which are NOT free-form — an
+ * unrecognised one is rejected by the API rather than ignored, so a typo here
+ * surfaces as a failed search rather than a quiet miss. The deployed smoke
+ * check exercises one type from each sector for that reason.
+ */
 export const CATEGORY_PLACE_TYPES: Record<BusinessCategory, string[]> = {
+  // Food and beverage
   korean_restaurant: ["korean_restaurant", "restaurant"],
   cafe_coffee_shop: ["cafe", "coffee_shop", "bakery"],
   casual_dining: ["restaurant", "meal_takeaway"],
   bubble_tea_dessert: ["cafe", "dessert_shop", "juice_shop"],
   fast_casual_takeaway: ["meal_takeaway", "fast_food_restaurant"],
   other_fnb: ["restaurant", "cafe"],
+
+  // Retail
+  clothing_fashion: ["clothing_store", "shoe_store"],
+  convenience_store: ["convenience_store"],
+  pharmacy_health: ["pharmacy", "drugstore"],
+  phone_electronics: ["cell_phone_store", "electronics_store"],
+  other_retail: ["store"],
+
+  // Services
+  salon_barber: ["hair_salon", "barber_shop", "beauty_salon"],
+  laundry: ["laundry"],
+  fitness_studio: ["gym", "fitness_center"],
+  other_services: ["store"],
 };
 
 export function withDistance(

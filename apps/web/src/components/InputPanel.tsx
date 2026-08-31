@@ -4,8 +4,11 @@ import {
   STATUTORY,
   formatCurrency,
   formatPercent,
-  listCategories,
+  SECTORS,
+  SECTOR_LABELS,
+  listCategoriesBySector,
   listDistricts,
+  sectorOf,
   type BusinessCategory,
   type DistrictId,
 } from "@spotential/sim-engine";
@@ -108,11 +111,15 @@ export function InputPanel({ scenario }: { scenario: ScenarioState }) {
               value={inputs.businessCategory}
               onChange={(e) => setCategory(e.target.value as BusinessCategory)}
             >
-              {listCategories().map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
+                      {SECTORS.map((sector) => (
+          <optgroup key={sector} label={SECTOR_LABELS[sector]}>
+            {listCategoriesBySector(sector).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
             </select>
             <span className="source">{category.source}</span>
           </div>
@@ -265,15 +272,24 @@ export function InputPanel({ scenario }: { scenario: ScenarioState }) {
 
           {inputs.sstRegistered && (
             <NumberField
-              label="Dine-in share of revenue"
+              /* The field name is `dineInSharePct` in the engine and in every
+                 share URL, so it cannot be renamed without breaking links
+                 already sent. The LABEL adapts instead. */
+              label={
+                sectorOf(inputs.businessCategory) === "fnb"
+                  ? "Dine-in share of revenue"
+                  : "Taxable share of revenue"
+              }
               value={Number((inputs.dineInSharePct * 100).toFixed(0))}
               onChange={(v) => setField("dineInSharePct", v / 100)}
               sliderMax={100}
               suffix={<span className="source">%</span>}
               source={
-                result.steady.sstApplies
-                  ? `Service tax ${formatCurrency(result.steady.serviceTax)}/month`
-                  : "Below the threshold — no service tax applies yet."
+                sectorOf(inputs.businessCategory) !== "fnb"
+                  ? "Seeded at 0. Service tax scope outside F&B changed in 2025 and is not carried here without a source — confirm your own registration position before changing it."
+                  : result.steady.sstApplies
+                    ? `Service tax ${formatCurrency(result.steady.serviceTax)}/month`
+                    : "Below the threshold — no service tax applies yet."
               }
             />
           )}

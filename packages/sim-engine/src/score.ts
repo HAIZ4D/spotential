@@ -130,7 +130,7 @@ function competitionScore(
   if (outlets === 0) {
     return {
       score: 35,
-      note: "No competitors found — unproven rather than open. Nobody here may want this.",
+      note: "No competitors found. Unproven rather than open; nobody here may want this.",
     };
   }
 
@@ -156,19 +156,19 @@ function competitionScore(
     const score = clamp(100 - ((perKm2 - 40) / 260) * 100);
     return {
       score,
-      note: `${outlets}+ competitors, ~${Math.round(perKm2)} per km² — ${
-        perKm2 >= 250 ? "extremely dense" : perKm2 >= 120 ? "dense" : "busy but not packed"
+      note: `${outlets}+ competitors, ~${Math.round(perKm2)} per km². ${
+        perKm2 >= 250 ? "Extremely dense" : perKm2 >= 120 ? "Dense" : "Busy but not packed"
       }.`,
     };
   }
 
   if (outlets <= 2) {
-    return { score: 78, note: `${outlets} competitor${outlets === 1 ? "" : "s"} — thin, some proof of demand.` };
+    return { score: 78, note: `${outlets} competitor${outlets === 1 ? "" : "s"}. Thin, but some proof of demand.` };
   }
-  if (outlets <= 5) return { score: 100, note: `${outlets} competitors — demand proven, room left.` };
-  if (outlets <= 9) return { score: 72, note: `${outlets} competitors — getting busy.` };
-  if (outlets <= 14) return { score: 45, note: `${outlets} competitors — crowded.` };
-  return { score: 20, note: `${outlets} competitors — saturated.` };
+  if (outlets <= 5) return { score: 100, note: `${outlets} competitors. Demand proven, room left.` };
+  if (outlets <= 9) return { score: 72, note: `${outlets} competitors. Getting busy.` };
+  if (outlets <= 14) return { score: 45, note: `${outlets} competitors. Crowded.` };
+  return { score: 20, note: `${outlets} competitors. Saturated.` };
 }
 
 /** Reviews per outlet: how busy the existing operators are. */
@@ -181,8 +181,8 @@ function footfallScore(summary: CompetitorSummary): { score: number; note: strin
   const score = clamp((perOutlet / 400) * 100);
   return {
     score,
-    note: `${Math.round(perOutlet)} reviews per outlet — ${
-      perOutlet >= 250 ? "existing operators are busy" : perOutlet >= 80 ? "moderate trade" : "quiet"
+    note: `${Math.round(perOutlet)} reviews per outlet. ${
+      perOutlet >= 250 ? "Existing operators are busy" : perOutlet >= 80 ? "Moderate trade" : "Quiet"
     }.`,
   };
 }
@@ -255,8 +255,8 @@ function measuredCatchmentScore(
     score,
     kind: "direct",
     note:
-      `${Math.round(catchment).toLocaleString("en-MY")} residents within ${radiusMetres}m — ` +
-      `denser than ${Math.round(percentile * 100)}% of where Malaysians live.`,
+      `${Math.round(catchment).toLocaleString("en-MY")} residents within ${radiusMetres}m. ` +
+      `Denser than ${Math.round(percentile * 100)}% of where Malaysians live.`,
   };
 }
 
@@ -301,8 +301,8 @@ function competitorQualityScore(
   return {
     score,
     kind: "direct",
-    note: `Competitors average ${summary.averageRating} — ${
-      summary.averageRating >= 4.4 ? "strong incumbents, hard to displace" : "beatable on quality"
+    note: `Competitors average ${summary.averageRating}. ${
+      summary.averageRating >= 4.4 ? "Strong incumbents, hard to displace" : "Beatable on quality"
     }.`,
   };
 }

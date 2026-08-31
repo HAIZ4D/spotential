@@ -6,13 +6,38 @@
  * parity test (SPEC §12) a tautology rather than a hope.
  */
 
+/**
+ * Sectors exist because the cost structures are genuinely different, and
+ * because two things depend on knowing which one you are in:
+ *
+ *   1. Service tax. `dineInSharePct` drives it, and STATUTORY.serviceTax is
+ *      declared `dineInOnly` — so it applies to prepared food, not to goods
+ *      sold over a retail counter.
+ *   2. Opportunity Gap Detection, which costs one Places call per category.
+ *      Scoping it to a sector keeps that bill flat AND compares outlets that
+ *      actually substitute for each other.
+ */
+export type BusinessSector = "fnb" | "retail" | "services";
+
 export type BusinessCategory =
+  // Food and beverage
   | "korean_restaurant"
   | "cafe_coffee_shop"
   | "casual_dining"
   | "bubble_tea_dessert"
   | "fast_casual_takeaway"
-  | "other_fnb";
+  | "other_fnb"
+  // Retail
+  | "clothing_fashion"
+  | "convenience_store"
+  | "pharmacy_health"
+  | "phone_electronics"
+  | "other_retail"
+  // Services
+  | "salon_barber"
+  | "laundry"
+  | "fitness_studio"
+  | "other_services";
 
 /**
  * Curated commercial rent benchmarks — NOT DOSM administrative districts.

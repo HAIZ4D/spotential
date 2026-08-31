@@ -1,7 +1,9 @@
 import {
+  SECTOR_LABELS,
   formatCurrency,
   formatNumber,
   rentSensitivity,
+  sectorOf,
   type BusinessCategory,
   type LatLng,
   type ResolvedRent,
@@ -102,7 +104,7 @@ export function RentPanel({
                 <div className="tiny muted">Break-even</div>
                 <div className="figure">
                   {sensitivity.breakEvenPerDay === null
-                    ? "—"
+                    ? "not available"
                     : `${formatNumber(sensitivity.breakEvenPerDay)}/day`}
                 </div>
                 <div className="tiny muted">customers, to cover all fixed costs</div>
@@ -110,6 +112,20 @@ export function RentPanel({
             </div>
 
             <div className="body small">{sensitivity.note}</div>
+
+            {/* The benchmarks were researched for ground-floor F&B. Applying
+                them to a shop or a salon is defensible as an indication and
+                nothing more, so the panel says which it is doing. */}
+            {sectorOf(category) !== "fnb" && (
+              <div className="notice warn">
+                <span>
+                  <strong>Researched for F&amp;B.</strong> These benchmarks cover ground-floor food
+                  and beverage units. Applied to {SECTOR_LABELS[sectorOf(category)].toLowerCase()},
+                  treat the figure as indicative only and enter the rent you were quoted to replace
+                  it.
+                </span>
+              </div>
+            )}
 
             {/* Provenance sits with the figure, not in a footnote. A benchmark
                 read as a quote is the main way this panel could mislead. */}

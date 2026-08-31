@@ -105,10 +105,14 @@ test("says plainly that it maps people, not opportunity", async ({ page }) => {
   await stub(page);
   await page.goto("/heatmap");
 
-  await expect(page.getByText(/where people live/)).toBeVisible();
-  await expect(page.getByText(/knows nothing about competition/)).toBeVisible();
+  // Scoped to the warning notice deliberately. The phrase also appears in the
+  // caption below it, and it is the NOTICE that has to carry this — a caption
+  // is the part people skip.
+  const warning = page.locator(".notice.warn");
+  await expect(warning.getByText(/where people live/)).toBeVisible();
+  await expect(warning.getByText(/knows nothing about competition/)).toBeVisible();
   // The specific misreading it must head off.
-  await expect(page.getByText(/may already be saturated/)).toBeVisible();
+  await expect(warning.getByText(/may already be saturated/)).toBeVisible();
 });
 
 test("credits both free data sources", async ({ page }) => {
@@ -116,19 +120,60 @@ test("credits both free data sources", async ({ page }) => {
   await page.goto("/heatmap");
 
   // CC BY and ODbL both oblige attribution, and it is also the answer to
-  // "what did this cost".
-  await expect(page.getByText(/Kontur Population \(CC BY 4\.0\)/)).toBeVisible();
-  await expect(page.getByText(/20231101/)).toBeVisible();
-  await expect(page.getByText(/OpenStreetMap contributors \(ODbL\)/)).toBeVisible();
+  // "what did this cost". The site footer carries these too, so this is
+  // scoped to the page's OWN credit — the one that names the dataset
+  // version, which the footer does not. footer.spec covers the other copy.
+  // The page's own credit line, which names the dataset VERSION — the site
+  // footer carries the licence names too, so a page-wide lookup matches both.
+  // footer.spec covers that copy; this one is the heatmap's.
+  const credit = page.locator(".tiny.muted").filter({ hasText: /Kontur Population/ });
+  await expect(credit.getByText(/Kontur Population \(CC BY 4\.0\)/)).toBeVisible();
+  await expect(credit.getByText(/20231101/)).toBeVisible();
+  await expect(credit.getByText(/OpenStreetMap contributors \(ODbL\)/)).toBeVisible();
 });
 
 test("shows a density legend calibrated nationally, not a good-to-bad ramp", async ({ page }) => {
   await stub(page);
   await page.goto("/heatmap");
 
-  await expect(page.getByText("Top 5% nationally")).toBeVisible();
-  await expect(page.getByText("Median", { exact: true })).toBeVisible();
-  await expect(page.getByText(/means the same thing in every city/)).toBeVisible();
+  await expect(page.getByText("top 5% nationally")).toBeVisible();
+  await expect(page.getByText("national median")).toBeVisible();
+  await expect(page.getByText(/means the same density in every city/)).toBeVisible();
+});
+
+/**
+ * The safety mechanism for the green-to-red ramp.
+ *
+ * The owner chose the familiar heat gradient over the earlier navy-to-red
+ * scale knowing the trade-off: on this map green means almost NOBODY LIVES
+ * THERE, while looking exactly like the "space to open" colour. Nothing in the
+ * rendering can fix that, so the words carry it — which makes them a feature
+ * with a test, not caption copy.
+ */
+test("says in words which end of the ramp is which", async ({ page }) => {
+  await stub(page);
+  await page.goto("/heatmap");
+
+  // Not swatches alone: both ends named in plain language, in the legend.
+  const legend = page.locator(".legend");
+  await expect(legend.getByText("Most people")).toBeVisible();
+  await expect(legend.getByText("Few people")).toBeVisible();
+  await expect(legend.getByText(/almost nobody lives here/)).toBeVisible();
+
+  // The exact misreading the ramp invites, refused explicitly in the notice.
+  const warning = page.locator(".notice.warn");
+  await expect(warning.getByText(/Green does not mean space to open/)).toBeVisible();
+  await expect(warning.getByText(/red is where the most people are/)).toBeVisible();
+});
+
+test("puts the hottest row of the legend first", async ({ page }) => {
+  await stub(page);
+  await page.goto("/heatmap");
+
+  // Read top-down, the first thing anyone sees must be that red means most.
+  const rows = page.locator(".legend-row");
+  await expect(rows.first()).toContainText("Most people");
+  await expect(rows.last()).toContainText("Few people");
 });
 
 const card = (page: Page, title: string) =>
@@ -193,7 +238,7 @@ test("keeps the population map working when OpenStreetMap is busy", async ({ pag
   await expect(page.getByText(/OpenStreetMap is busy right now/)).toBeVisible();
   // The thing that must survive: the density surface and its summary.
   await expect(card(page, "In view").getByText("13,320")).toBeVisible();
-  await expect(page.getByText(/where people live/)).toBeVisible();
+  await expect(page.locator(".notice.warn").getByText(/where people live/)).toBeVisible();
 });
 
 test("keeps working when the amenities route errors outright", async ({ page }) => {
@@ -201,7 +246,7 @@ test("keeps working when the amenities route errors outright", async ({ page }) 
   await page.goto("/heatmap");
 
   await expect(card(page, "In view").getByText("13,320")).toBeVisible();
-  await expect(page.getByText(/where people live/)).toBeVisible();
+  await expect(page.locator(".notice.warn").getByText(/where people live/)).toBeVisible();
 });
 
 test("requests only a bounded box around the chosen city", async ({ page }) => {

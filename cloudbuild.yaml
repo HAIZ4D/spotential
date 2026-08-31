@@ -31,6 +31,11 @@ steps:
 options:
   # The default Cloud Build service account has no logs bucket of its own.
   logging: CLOUD_LOGGING_ONLY
-  machineType: E2_HIGHCPU_8
+  # NO machineType, deliberately. Cloud Build's 2,500 free build-minutes a
+  # month cover the DEFAULT e2-standard-2 only; naming any other machine opts
+  # out of the free tier entirely and bills from the first minute. This build
+  # ran on E2_HIGHCPU_8 for 28 builds and 32.6 minutes, which is about RM 2.45
+  # that need not have been spent. Slower — roughly 3 minutes rather than 1.2 —
+  # and that cost is paid at deploy time only, never at runtime.
 
 timeout: 900s

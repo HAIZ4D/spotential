@@ -155,6 +155,23 @@ async function createAmenitiesSeed() {
   }
 }
 
+/**
+ * The bundled event catalogue. Missing it is not fatal for the rest of the
+ * service, but it does mean /v1/events reports itself unavailable rather than
+ * serving an empty list that would look like a filter matching nothing.
+ */
+async function createEvents() {
+  try {
+    const { EventCatalogue } = await import("./events/catalogue.js");
+    const catalogue = await EventCatalogue.load();
+    console.log(`[events] loaded ${catalogue.size} listings, ${catalogue.vintage} vintage.`);
+    return catalogue;
+  } catch (error) {
+    console.error("[events] no bundled catalogue:", error);
+    return undefined;
+  }
+}
+
 async function createPopulation() {
   try {
     const grid = await PopulationGrid.load();
@@ -166,15 +183,28 @@ async function createPopulation() {
   }
 }
 
-const [geminiTransport, stores, demographics, population, amenitiesSeed] = await Promise.all([
-  createGeminiTransport(),
-  createStores(),
-  createDemographics(),
-  createPopulation(),
-  createAmenitiesSeed(),
-]);
+const [geminiTransport, stores, demographics, population, amenitiesSeed, events] =
+  await Promise.all([
+    createGeminiTransport(),
+    createStores(),
+    createDemographics(),
+    createPopulation(),
+    createAmenitiesSeed(),
+    createEvents(),
+  ]);
 
-const { competitorStore, listingsStore, amenitiesStore } = stores;
+const { competitorStore, listingsStore, amenitiesStore, applicationStore } = stores;
+
+/**
+ * The Firebase project, used to verify ID tokens on the apply route.
+ *
+ * Same value the browser signs in against. Absent means applications report
+ * themselves unavailable rather than accepting an unauthenticated write.
+ */
+const firebaseProjectId =
+  process.env["FIREBASE_PROJECT_ID"] ??
+  process.env["GOOGLE_CLOUD_PROJECT"] ??
+  (onCloudRun ? "spotential-app" : undefined);
 
 const app = buildApp({
   allowedOrigins: process.env["ALLOWED_ORIGINS"],
@@ -193,6 +223,16 @@ const app = buildApp({
   amenitiesStore,
   amenitiesFetcher: (bounds) => fetchAmenities(bounds),
   amenitiesSeed,
+  events,
+  /**
+   * Real accounts, for applications only.
+   *
+   * Verified with `jose` against Google's public keys — no firebase-admin, so
+   * no second gRPC stack and no second Firestore client. Absent means applying
+   * is refused outright rather than falling back to something ungated.
+   */
+  auth: firebaseProjectId ? { projectId: firebaseProjectId } : undefined,
+  applicationStore,
   // Gates the routes that cost money. Absent only in local development and
   // tests; production always sets APP_CHECK_PROJECT_NUMBER.
   appCheck: appCheckProjectNumber
@@ -217,6 +257,9 @@ const app = buildApp({
     amenitiesCache: amenitiesStore ? "firestore" : "in-memory",
     amenities: "overpass",
     amenitiesSeed: amenitiesSeed ? `cities:${amenitiesSeed.cityCount}` : "none",
+    events: events ? `seed:${events.size}` : "none",
+    auth: firebaseProjectId ? "firebase" : "off",
+    applications: applicationStore ? "firestore" : "in-memory",
   },
 });
 
@@ -247,6 +290,7 @@ async function createStores() {
     const { FirestoreCompetitorStore } = await import("./competitors/store.js");
     const { FirestoreListingsStore } = await import("./properties/store.js");
     const { FirestoreAmenitiesStore } = await import("./amenities/store.js");
+    const { FirestoreApplicationStore } = await import("./events/store.js");
     const firestore = new Firestore(explicitProject ? { projectId: explicitProject } : {});
     // Do NOT read firestore.projectId here: it throws "Client is not yet ready
     // to issue requests" until credentials resolve, and the catch below would
@@ -257,6 +301,9 @@ async function createStores() {
       competitorStore: new FirestoreCompetitorStore(firestore as never),
       listingsStore: new FirestoreListingsStore(firestore as never),
       amenitiesStore: new FirestoreAmenitiesStore(firestore as never),
+      // Not a cache. See the note in app.ts on why there is no in-memory
+      // fallback for this one.
+      applicationStore: new FirestoreApplicationStore(firestore as never),
     };
   } catch (error) {
     console.error("[cache] Firestore unavailable, falling back to in-memory:", error);

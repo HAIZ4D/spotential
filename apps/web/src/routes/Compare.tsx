@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import {
-  RADIUS_BUCKETS,
   compareLocations,
-  listCategories,
   resolveRent,
   roundForCache,
   scoreLocation,
@@ -12,6 +10,9 @@ import {
 } from "@spotential/sim-engine";
 import { Masthead } from "../components/Masthead.js";
 import { CompareRadar } from "../components/CompareRadar.js";
+import { CompareToolbar } from "../components/compare/CompareToolbar.js";
+import { CompareHero } from "../components/compare/CompareHero.js";
+import { DimensionCompare } from "../components/compare/DimensionCompare.js";
 import { CompareTable } from "../components/CompareTable.js";
 import { ReportButton } from "../components/ReportButton.js";
 import { postCompetitors, postDemographics } from "../lib/api.js";
@@ -187,139 +188,107 @@ export default function Compare() {
         </div>
       )}
 
-      <div className="layout">
-        <aside className="col-inputs no-print">
-          <section className="card">
-            <header>
-              <h2>Compared on</h2>
-            </header>
-            <div className="body">
-              {/* Comparison-level, never per location. */}
-              <div className="field">
-                <label htmlFor="compare-category">Business type</label>
-                <select
-                  id="compare-category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as BusinessCategory)}
-                >
-                  {listCategories().map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="compare-radius">Search radius</label>
-                <select
-                  id="compare-radius"
-                  value={radiusMetres}
-                  onChange={(e) => setRadiusMetres(Number(e.target.value))}
-                >
-                  {RADIUS_BUCKETS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}m
-                    </option>
-                  ))}
-                </select>
-                <span className="source">
-                  Both apply to every location — comparing different categories or radii would not
-                  be a comparison.
-                </span>
-              </div>
-            </div>
-          </section>
+      <CompareToolbar
+        category={category}
+        onCategory={setCategory}
+        radiusMetres={radiusMetres}
+        onRadius={setRadiusMetres}
+        locations={locations}
+        onRemove={(index) => {
+          // Rents are positional, so they must be removed in lockstep or
+          // every later one shifts onto the wrong site.
+          setLocations((current) => current.filter((_, i) => i !== index));
+          setRents((current) => current.filter((_, i) => i !== index));
+        }}
+      />
 
-          <section className="card">
-            <header>
-              <h2>Locations</h2>
-            </header>
-            <div className="body stack">
-              {locations.length === 0 && (
-                <span className="small muted">
-                  Nothing to compare yet. Open a spot on the Location page and use “Add to
-                  comparison”.
-                </span>
-              )}
-              {locations.map((location) => (
-                <div className="spread" key={`${location.lat},${location.lng}`}>
-                  <span className="small">{location.label}</span>
-                  <button
-                    type="button"
-                    className="tiny"
-                    onClick={() => {
-                      // Rents are positional, so they must be removed in
-                      // lockstep or every later one shifts onto the wrong site.
-                      const index = locations.indexOf(location);
-                      setLocations((current) => current.filter((_, i) => i !== index));
-                      setRents((current) => current.filter((_, i) => i !== index));
-                    }}
-                  >
-                    remove
-                  </button>
-                </div>
-              ))}
-              <a className="small" href="/analysis">
-                Add another from the Location page →
-              </a>
-            </div>
-          </section>
-        </aside>
-
-        <main className="col-detail">
-          {locations.length < 2 ? (
+      {locations.length < 2 ? (
+        <div className="cockpit compare">
+          <div className="cockpit-info">
             <section className="card">
               <header>
                 <h2>Comparison</h2>
               </header>
               <div className="body">
                 <div className="notice info">
-                  Add at least two locations to compare. A single score means little on its own —
-                  the point is the difference between two sites.
-                </div>
-              </div>
-            </section>
-          ) : (
-            <section className="card">
-              <header>
-                <h2>Location profiles</h2>
-                {!loading && comparison.winnerId && (
-                  <span className="pill green">
-                    best: {scored.find((s) => s.id === comparison.winnerId)?.label}
-                  </span>
-                )}
-                {!loading && !comparison.winnerId && scored.length > 1 && (
-                  <span className="pill amber">too close to call</span>
-                )}
-              </header>
-
-              <div className="body">
-                <div className="notice info" style={{ marginBottom: 12 }}>
                   <span>
-                    These are <strong>comparison scores, not forecasts</strong>. Nothing here has
-                    been validated against real outcomes. Read the shapes and the dimension
-                    differences below rather than the totals alone.
-                    {withRent === 0
-                      ? " Rent sensitivity is missing for every location — no benchmark covers these spots."
-                      : withRent < scored.length
-                        ? " Rent sensitivity is inferred for some locations and missing for others, so weigh that dimension carefully."
-                        : " Rent figures are researched benchmarks unless you entered a quote, so treat that dimension as indicative."}
+                    Add at least two locations to compare. A single score means little on its own —
+                    the point is the difference between two sites.
                   </span>
                 </div>
-
-                {loading ? (
-                  <div className="small muted">Scoring each location…</div>
-                ) : (
-                  <>
-                    <CompareRadar locations={scored} />
-                    <CompareTable locations={scored} comparison={comparison} />
-                  </>
-                )}
               </div>
             </section>
-          )}
-        </main>
-      </div>
+          </div>
+        </div>
+      ) : loading ? (
+        <div className="cockpit compare">
+          <div className="cockpit-info">
+            <section className="card">
+              <div className="body">
+                <div className="small muted">Scoring each location…</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : (
+        <>
+          <CompareHero locations={scored} comparison={comparison} />
+
+          <div className="cockpit compare">
+            <div className="cockpit-info">
+              <section className="card">
+                <header>
+                  <h2>Location profiles</h2>
+                </header>
+                <div className="body">
+                  <DimensionCompare locations={scored} comparison={comparison} />
+                </div>
+              </section>
+
+              <section className="card">
+                <header>
+                  <h2>Every figure</h2>
+                </header>
+                <div className="body">
+                  {/* Substantively untouched: the table has to tally, and it
+                      already labels measured vs inferred correctly. */}
+                  <CompareTable locations={scored} comparison={comparison} />
+                </div>
+              </section>
+            </div>
+
+            <div className="cockpit-map cmp-aside">
+              <section className="card">
+                <header>
+                  <h2>Profile shapes</h2>
+                </header>
+                <div className="body">
+                  <CompareRadar locations={scored} />
+                </div>
+              </section>
+
+              <div className="notice info">
+                <span>
+                  These are <strong>comparison scores, not forecasts</strong>. Nothing here has
+                  been validated against real outcomes. Read the shapes and the dimension
+                  differences rather than the totals alone.
+                  {withRent === 0
+                    ? " Rent sensitivity is missing for every location — no benchmark covers these spots."
+                    : withRent < scored.length
+                      ? " Rent sensitivity is inferred for some locations and missing for others, so weigh that dimension carefully."
+                      : " Rent figures are researched benchmarks unless you entered a quote, so treat that dimension as indicative."}
+                </span>
+              </div>
+
+              <div className="tiny muted">
+                Business type and radius apply to every location — comparing different categories
+                or radii would not be a comparison.
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
     </>
   );
 }

@@ -53,6 +53,47 @@ test("a corrupted link falls back to defaults with a notice", async ({ page }) =
   await expect(page.getByTestId("headline-profit")).toHaveText("RM 38,418");
 });
 
+/**
+ * The banner must fire on a broken link and stay silent otherwise.
+ *
+ * It used to test `window.location.search.includes("s=")`, which matches ANY
+ * parameter whose name ends in s — `?seats=40`, `?days=7`, `?utm_campaigns=x`
+ * each produced a red error about a shared link that was never sent. Six of
+ * twelve sampled URLs were false positives.
+ */
+test.describe("the shared-link notice", () => {
+  test("stays silent when no scenario was offered", async ({ page }) => {
+    for (const url of [
+      "/simulator",
+      "/simulator?seats=40",
+      "/simulator?days=7",
+      "/simulator?utm_campaigns=spring",
+      "/simulator?options=1",
+      // The real handoff from the analysis page seeds rent and district.
+      "/simulator?rent=9000&category=korean_restaurant&district=klcc",
+    ]) {
+      await page.goto(url);
+      await expect(page.getByText(/could not be read/)).toHaveCount(0);
+      // And the page still works from defaults.
+      await expect(page.getByTestId("headline-profit")).toBeVisible();
+    }
+  });
+
+  test("still warns when a scenario was offered and is broken", async ({ page }) => {
+    // Present but empty is a broken link, not an absent one — the decode
+    // reason alone cannot tell those apart, which is why `supplied` exists.
+    for (const url of ["/simulator?s=", "/simulator?s=garbage", "/simulator?s=v1.notBase64"]) {
+      await page.goto(url);
+      await expect(page.getByText(/could not be read/)).toBeVisible();
+    }
+  });
+
+  test("says what to do about it", async ({ page }) => {
+    await page.goto("/simulator?s=v1.notBase64");
+    await expect(page.getByText(/Ask them to resend the link/)).toBeVisible();
+  });
+});
+
 test("a hostile link cannot smuggle in an unknown field", async ({ page }) => {
   const hostile = Buffer.from(
     JSON.stringify({
