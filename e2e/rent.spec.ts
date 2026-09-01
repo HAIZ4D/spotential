@@ -271,8 +271,14 @@ test("says the listings are the portals', not ours", async ({ page }) => {
   await page.goto(AT_KLCC);
   await openSection(page, "Rent");
 
-  await expect(rentPanel(page).getByText(/Listings live on the portals/)).toBeVisible();
-  await expect(rentPanel(page).getByText(/Asking prices, not/)).toBeVisible();
+  /**
+   * Scoped to the portal note. The curated shortlist above it carries the
+   * same "asking prices, not transacted rents" caveat, and both of them
+   * should — a page-wide lookup is simply ambiguous now, not wrong.
+   */
+  const note = rentPanel(page).locator(".properties-note");
+  await expect(note.getByText(/Listings live on the portals/)).toBeVisible();
+  await expect(note.getByText(/Asking prices, not/)).toBeVisible();
 });
 
 test("falls back to the district when no benchmark covers the pin", async ({ page }) => {
@@ -429,7 +435,9 @@ test("falls back to plain portal links when the source is unavailable", async ({
 
   await expect(panel.locator(".plist-card")).toHaveCount(0);
   await expect(panel.getByRole("link", { name: /PropertyGuru/ })).toBeVisible();
-  await expect(panel.getByText(/Listings live on the portals/)).toBeVisible();
+  // available:false is a REFUSAL, and now says so rather than borrowing the
+  // wording used when the source simply had nothing.
+  await expect(panel.getByText(/PropertyGuru refused the request/)).toBeVisible();
   // The break-even is the panel's real job and must be untouched by any of this.
   await expect(panel.getByText("93/day", { exact: true })).toBeVisible();
 });
@@ -452,4 +460,72 @@ test("shows the two that exist rather than padding to five", async ({ page }) =>
 
   await expect(rentPanel(page).locator(".plist-card")).toHaveCount(2);
   await expect(rentPanel(page).getByText(/2 on the market near Kuantan/)).toBeVisible();
+});
+
+test("a refused source says so, instead of flashing cards that vanish", async ({ page }) => {
+  /**
+   * The bug: three card-shaped placeholders with an image box and two text
+   * lines appeared while the fetch ran, sat there through a 403 and its retry,
+   * then disappeared. A reader saw property cards arrive and then get taken
+   * away, and the note underneath read as though listings had never been
+   * intended. PropertyGuru refuses our server, so that is the usual path, not
+   * an edge case.
+   *
+   * Same rule as the competition rings: a zero that was measured and a zero
+   * that was never looked at must not render identically.
+   */
+  await page.route("**/v1/properties*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        listings: [],
+        available: false,
+        reason: "http_403",
+        fromCache: false,
+        area: "KLCC",
+      }),
+    }),
+  );
+
+  await page.goto(AT_KLCC);
+  await openSection(page, "Rent");
+
+  // Nothing that looks like a listing is ever drawn.
+  await expect(page.locator(".plist-skeleton")).toHaveCount(0);
+  await expect(page.locator(".plist-card")).toHaveCount(0);
+
+  // And the refusal is stated, not left as an empty space.
+  await expect(page.getByText(/PropertyGuru refused the request/)).toBeVisible();
+
+  /**
+   * The portal links are the whole point of the panel in this state. Not a
+   * fixed count: Mudah's link needs a resolved STATE, and CI blocks Maps, so
+   * only PropertyGuru's is guaranteed. Asserting two made the test depend on
+   * geocoding that this spec deliberately does not have.
+   */
+  await expect(page.locator(".portal-link").first()).toBeVisible();
+});
+
+test("an empty result reads differently from a refused one", async ({ page }) => {
+  await page.route("**/v1/properties*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        listings: [],
+        available: true,
+        reason: null,
+        fromCache: true,
+        area: "KLCC",
+      }),
+    }),
+  );
+
+  await page.goto(AT_KLCC);
+  await openSection(page, "Rent");
+
+  // Reached the source, it simply had nothing. That is a different sentence.
+  await expect(page.getByText(/PropertyGuru refused the request/)).toHaveCount(0);
+  await expect(page.getByText(/Listings live on the portals and change daily/)).toBeVisible();
 });

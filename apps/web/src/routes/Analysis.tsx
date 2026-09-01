@@ -659,6 +659,9 @@ export default function Analysis() {
                 stateName={demographics.data?.demographics?.state ?? null}
                 listings={listings.data?.listings ?? []}
                 listingsLoading={listings.isFetching}
+                /* A refusal and an empty result are different answers, and the
+                   panel needs both to say which one it got. */
+                listingsAvailable={listings.data?.available ?? !listings.isError}
               />
             )}
 

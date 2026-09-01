@@ -155,12 +155,25 @@ export function AvailableProperties({
   state = null,
   listings = [],
   loading = false,
+  sourceAvailable = true,
 }: {
   area: string | null;
   state?: string | null;
   /** Real units from PropertyGuru. Empty is normal, not an error. */
   listings?: PropertyListing[];
   loading?: boolean;
+  /**
+   * Whether the source could be READ, which is not the same as whether it had
+   * anything to say.
+   *
+   * The panel used to receive only the listings, so "we asked and were
+   * refused" and "we asked and there was nothing" rendered identically: three
+   * placeholder cards appeared, sat there through the fetch and its retry,
+   * then vanished, leaving a note that read as though listings had never been
+   * intended. Same rule as the competition rings, where a band beyond the
+   * search is marked "not searched" rather than shown as zero.
+   */
+  sourceAvailable?: boolean;
 }) {
   // No area means no honest search to build — a national listing page dressed
   // up as "near here" would be worse than saying nothing.
@@ -188,20 +201,20 @@ export function AvailableProperties({
         </span>
       </div>
 
+      {/**
+        * A line, not three card-shaped placeholders.
+        *
+        * The skeleton drew three cards with an image box and two text lines,
+        * which reads as listings that have arrived. They then disappeared when
+        * the fetch resolved with nothing, which is most of the time. A
+        * placeholder should hold space for something likely to arrive; when
+        * the usual answer is "none", three fake cards are a promise the panel
+        * cannot keep.
+        */}
       {loading && listings.length === 0 && (
-        <ul className="plist" aria-busy="true">
-          {[0, 1, 2].map((i) => (
-            <li key={i} className="plist-item">
-              <div className="plist-card plist-skeleton" aria-hidden="true">
-                <span className="plist-thumb plist-thumb-fallback" />
-                <div className="plist-body">
-                  <span className="skeleton-line short" />
-                  <span className="skeleton-line" />
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <p className="tiny muted properties-loading" aria-busy="true">
+          Checking PropertyGuru for units near {area}…
+        </p>
       )}
 
       {listings.length > 0 && (
@@ -236,10 +249,16 @@ export function AvailableProperties({
         ))}
       </div>
 
+      {/**
+        * Three different sentences for three different situations, because a
+        * reader cannot tell them apart from an empty space.
+        */}
       <p className="tiny muted properties-note">
         {listings.length > 0
           ? "Asking prices advertised on PropertyGuru, refreshed daily. These are not transacted rents, and not used in the Success Score. Tap a unit to see it on PropertyGuru."
-          : "Listings live on the portals and change daily, so these open a live search rather than a copy that would be out of date by the time you called the agent. Asking prices, not transacted rents."}
+          : !loading && !sourceAvailable
+            ? "PropertyGuru refused the request from our server, so no units are listed here. That is their choice to make and we do not work around it. The links below open the same search on their own site, where it works normally."
+            : "Listings live on the portals and change daily, so these open a live search rather than a copy that would be out of date by the time you called the agent. Asking prices, not transacted rents."}
       </p>
     </div>
   );

@@ -4432,6 +4432,160 @@ ul.tight {
   color: var(--navy);
 }
 
+/* ---------- Units on the market ----------
+   Photo-forward, because the picture is what makes a listing feel real and
+   the owner asked for it specifically. Everything under it is the arithmetic
+   a listing site cannot do: rent per square foot against the area benchmark,
+   and what the unit demands in customers a day. */
+.rentals-sort {
+  align-self: flex-start;
+}
+
+.rentals-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: 14px;
+}
+
+.rental {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+@media (hover: hover) {
+  .rental:hover {
+    border-color: rgba(0, 48, 135, 0.24);
+    box-shadow: 0 2px 6px rgba(0, 48, 135, 0.06), 0 16px 34px -18px rgba(0, 48, 135, 0.45);
+  }
+}
+
+.rental-photo {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+  overflow: hidden;
+}
+.rental-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* The headline number, on the photo. A monthly rent means nothing across
+   sizes; this is the figure that lets two units be compared at all. */
+.rental-psf {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: #fff;
+  background: rgba(16, 24, 40, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.rental-psf.green { background: rgba(22, 122, 60, 0.92); }
+.rental-psf.amber { background: rgba(146, 99, 0, 0.92); }
+.rental-psf.red { background: rgba(178, 32, 32, 0.92); }
+
+.rental-body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 15px 15px;
+}
+.rental-body h3 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.32;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.rental-figures {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.rental-figures strong {
+  font-size: 17px;
+  font-weight: 780;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+}
+.rental-dot {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 8px 3px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+
+/* The line a portal cannot give you. */
+.rental-breakeven {
+  margin: 2px 0 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border-left: 3px solid var(--gold);
+  background: rgba(242, 169, 0, 0.09);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.rental-breakeven strong {
+  font-weight: 750;
+}
+
+.rental-verdict {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+}
+.rental-verdict.green { color: #167a3c; }
+.rental-verdict.amber { color: #926300; }
+.rental-verdict.red { color: #b22020; }
+.rental-verdict .muted { font-weight: 500; }
+
+.rental-where {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+/* The compiler's own read, kept verbatim, sceptical bits included. */
+.rental-note {
+  margin: 4px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.rental-agent {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+@media (max-width: 560px) {
+  .rentals-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ---------- Touch targets ----------
 
    LAST IN THE FILE, deliberately.

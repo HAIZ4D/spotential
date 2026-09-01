@@ -10,6 +10,7 @@ import {
 } from "@spotential/sim-engine";
 import { AvailableProperties } from "./analysis/AvailableProperties.js";
 import type { PropertyListing } from "../lib/api.js";
+import { CuratedRentals } from "./analysis/CuratedRentals.js";
 
 /**
  * Rental market — Feature 1e.
@@ -49,6 +50,7 @@ export function RentPanel({
   stateName = null,
   listings = [],
   listingsLoading = false,
+  listingsAvailable = true,
 }: {
   rent: ResolvedRent | null;
   category: BusinessCategory;
@@ -65,6 +67,8 @@ export function RentPanel({
   /** Real units advertised nearby. Display only — never feeds the score. */
   listings?: PropertyListing[];
   listingsLoading?: boolean;
+  /** Whether the source could be READ, as opposed to having nothing to say. */
+  listingsAvailable?: boolean;
 }) {
   const sensitivity = rent ? rentSensitivity(rent, category, point) : null;
 
@@ -189,11 +193,17 @@ export function RentPanel({
         {/* The spec's "Available properties". Area precision, best first: the
             benchmark label is a real trading area, the district is broader,
             and the searched label is whatever the user typed. */}
+        {/* Real units first, portal links after: a photograph and a
+            break-even beat a link, and the links stay because fourteen
+            hand-compiled listings are never the whole market. */}
+        <CuratedRentals point={point} category={category} rent={rent} />
+
         <AvailableProperties
           area={rent?.district?.label ?? districtName ?? null}
           state={stateName}
           listings={listings}
           loading={listingsLoading}
+          sourceAvailable={listingsAvailable}
         />
 
         {simulatorHref && (
