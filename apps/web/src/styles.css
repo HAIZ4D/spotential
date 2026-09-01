@@ -1207,11 +1207,25 @@ button:disabled {
   gap: 2px;
   padding: 4px;
   overflow-x: auto;
-  border: 1px solid var(--line);
   border-radius: 999px;
-  /* A recessed track. Seven separately-bordered pills was seven boxes
-     pretending to be a control; one track with a position IS the control. */
-  background: linear-gradient(180deg, rgba(0, 48, 135, 0.045), rgba(0, 48, 135, 0.02));
+  /**
+   * NAVY AND GOLD, by the owner's call.
+   *
+   * This reverses a decision recorded for the navbar, where the active pill
+   * went white precisely so gold stayed the CTA colour and Sign up kept it.
+   * Here the two brand colours carry the control instead: a navy track for the
+   * whole set, a gold thumb for the one you are on. Worth knowing the trade is
+   * deliberate rather than forgotten.
+   *
+   * Recolouring the ground means EVERY colour inside now has a new one, which
+   * is the trap that once rendered a white button on a white panel at 1.00:1.
+   * So each state below is measured on painted pixels, not assumed.
+   */
+  background: linear-gradient(180deg, #00327f 0%, #002a6b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 48, 135, 0.18),
+    0 10px 24px -16px rgba(0, 48, 135, 0.75);
   scrollbar-width: none;
 }
 .tabs::-webkit-scrollbar { display: none; }
@@ -1224,21 +1238,32 @@ button:disabled {
   left: 0;
   height: calc(100% - 8px);
   border-radius: 999px;
-  background: var(--bg);
-  box-shadow: 0 1px 2px rgba(0, 48, 135, 0.12), 0 4px 12px -6px rgba(0, 48, 135, 0.45);
+  background: linear-gradient(180deg, #ffb919 0%, #f2a900 100%);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
   visibility: hidden;
   pointer-events: none;
+  /* Its own compositor layer: GSAP writes transform and width every frame, and
+     without this the browser repaints the navy gradient underneath each time. */
+  will-change: transform, width;
 }
 
 .tab {
   position: relative;
   z-index: 1;
   min-height: var(--control-md);
-  /* `flex: none` is load-bearing. With the default `flex-shrink: 1` these
-     were all squashed to the 92px minimum, and a label plus its badge then
-     overflowed its own button and covered the next tab's first letter. The
-     rail scrolls; the tabs do not shrink. */
-  flex: none;
+  /**
+   * GROW TO FILL, NEVER SHRINK.
+   *
+   * `flex: none` stopped the tabs being squashed to a `min-width` and
+   * overflowing their own buttons, but it also left them bunched at the left
+   * with dead space down the right of the capsule. `flex-grow: 1` spreads the
+   * spare width across them so the set fills the track, while `flex-shrink: 0`
+   * keeps the fix: when the labels genuinely need more room than the rail has,
+   * the rail scrolls rather than the tabs collapsing onto each other.
+   */
+  flex: 1 0 auto;
   justify-content: center;
   display: inline-flex;
   align-items: center;
@@ -1247,23 +1272,54 @@ button:disabled {
   border-radius: 999px;
   border: 1px solid transparent;
   background: none;
-  color: var(--ink-2);
+  /* On navy: 11.6:1 measured. `--ink-2` here would be invisible. */
+  color: rgba(255, 255, 255, 0.88);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 160ms ease;
+  transition: color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+/**
+ * SPECIFICITY-MATCHED against the app-wide `button:hover` (0,1,1) at the top of
+ * this file, which sets `background: var(--surface)`.
+ *
+ * The first version of this rule set only `color`, so it "won" the tie on
+ * source order while `button:hover`'s BACKGROUND still applied underneath —
+ * painting a light panel behind white text on a navy capsule, at roughly
+ * 1.1:1. The label simply vanished on hover, which on a phone is the state a
+ * tap leaves the control in.
+ *
+ * Fourth appearance of this trap, so the rule is now written the way the
+ * navbar's are: scoped high enough that it cannot lose, and stating its own
+ * background rather than assuming none.
+ */
 @media (hover: hover) {
-  .tab:hover { color: var(--ink); }
+  .tabs .tab:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  /* The active tab already has the gold thumb behind it; a white wash there
+     would dull the one colour that marks where you are. */
+  .tabs .tab[aria-selected="true"]:hover {
+    color: var(--navy);
+    background: none;
+  }
 }
 .tab[aria-selected="true"] {
+  /* Dark on gold, never white on gold: gold is a light colour. 6.3:1. */
   color: var(--navy);
   font-weight: 700;
 }
+/* A navy ring on a navy capsule is invisible, and a gold one vanishes on the
+   gold thumb. Each state takes the ring the other cannot use. */
 .tab:focus-visible {
-  outline: 2px solid var(--navy);
-  outline-offset: 1px;
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+.tab[aria-selected="true"]:focus-visible {
+  outline-color: var(--navy);
 }
 
 .tab-badge {
@@ -1272,19 +1328,18 @@ button:disabled {
   font-variant-numeric: tabular-nums;
   padding: 1px 7px;
   border-radius: 999px;
-  background: var(--navy-soft);
-  color: var(--navy);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
   transition: background 160ms ease, color 160ms ease;
 }
 .tab[aria-selected="true"] .tab-badge {
-  /* Navy, not gold. Gold is the CTA colour and the page already spends it on
-     one thing; a gold badge here would give the eye two "act on me" signals.
-     Same call the navbar pill made. */
+  /* Navy on the gold thumb: the same two colours, swapped round. */
   background: var(--navy);
   color: #fff;
 }
 
-/* Data missing or degraded, visible without opening the section. */
+/* Data missing or degraded, visible without opening the section. Both grounds
+   need their own treatment: a gold dot is invisible on the gold thumb. */
 .tab-dot {
   width: 7px;
   height: 7px;
@@ -1294,7 +1349,11 @@ button:disabled {
 .tab-dot.warn { background: var(--gold); }
 .tab-dot.none {
   background: transparent;
-  border: 1.5px solid var(--ink-3);
+  border: 1.5px solid rgba(255, 255, 255, 0.62);
+}
+.tab[aria-selected="true"] .tab-dot.warn { background: var(--navy); }
+.tab[aria-selected="true"] .tab-dot.none {
+  border-color: rgba(0, 48, 135, 0.6);
 }
 
 /* The one piece of GENERATED prose on the Location page, marked as such.
@@ -2454,7 +2513,51 @@ button:disabled {
     gap: 10px;
   }
 
-
+  /**
+   * The section rail prints light.
+   *
+   * It is a navy capsule with a gold thumb on screen, and a solid dark bar
+   * across a printed page is both a waste of ink and unreadable in greyscale,
+   * where gold and navy collapse towards each other. The bar still prints
+   * rather than being hidden: its badges carry the figures for the sections
+   * that did NOT print, and the printed page is the copy most likely to be
+   * handed to a landlord.
+   *
+   * SELECTORS ARE SPECIFICITY-MATCHED. A media query contributes none, so a
+   * bare `.tab` (0,1,0) here would lose to `.tab[aria-selected="true"]`
+   * (0,2,0) and the active label would print navy on white paper. Same trap
+   * that once printed the footer's licence links white on white.
+   */
+  .tabs {
+    background: none;
+    box-shadow: none;
+    border: 1px solid #999;
+  }
+  .tab-thumb {
+    display: none;
+  }
+  .tab,
+  .tab[aria-selected="true"] {
+    color: #000;
+  }
+  .tab[aria-selected="true"] {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .tab-badge,
+  .tab[aria-selected="true"] .tab-badge {
+    background: none;
+    color: #000;
+    border: 1px solid #999;
+  }
+  .tab-dot.warn,
+  .tab[aria-selected="true"] .tab-dot.warn {
+    background: #000;
+  }
+  .tab-dot.none,
+  .tab[aria-selected="true"] .tab-dot.none {
+    border-color: #666;
+  }
 }
 
 /* ---------- Floating capsule navigation ----------

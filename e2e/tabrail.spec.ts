@@ -168,3 +168,211 @@ test("exactly one tab is selected, and its badge stays legible", async ({ page }
     )
     .toBeGreaterThanOrEqual(4.5);
 });
+
+test("the tabs fill the capsule instead of bunching to one side", async ({ page }) => {
+  await stub(page);
+  // Every data route failing is the sparse case: no badges, so the labels are
+  // at their narrowest and the row is most likely to leave dead space.
+  for (const path of ["**/v1/competitors", "**/v1/demographics", "**/v1/opportunity-gaps"]) {
+    await page.route(path, (route) =>
+      route.fulfill({ status: 503, contentType: "application/json", body: "{}" }),
+    );
+  }
+  await page.goto(AT_KL);
+  await expect(page.getByRole("tab", { name: /^Overview/ })).toBeVisible();
+
+  const fit = await page.evaluate(() => {
+    const rail = document.querySelector(".tabs")!;
+    const tabs = [...rail.querySelectorAll(".tab")];
+    const box = rail.getBoundingClientRect();
+    return {
+      leftGap: tabs[0]!.getBoundingClientRect().left - box.left,
+      rightGap: box.right - tabs.at(-1)!.getBoundingClientRect().right,
+      overflows: rail.scrollWidth > rail.clientWidth + 1,
+    };
+  });
+
+  /**
+   * `flex-grow` spreads the spare width, so the last tab should finish at the
+   * track's own padding rather than short of it. Skipped when the labels are
+   * genuinely wider than the rail (a phone), where the rail scrolls instead —
+   * `flex-shrink: 0` is what keeps that from squashing them back into the
+   * overflow bug above.
+   */
+  if (!fit.overflows) {
+    expect(Math.abs(fit.rightGap - fit.leftGap)).toBeLessThanOrEqual(2);
+  }
+});
+
+test("the navy capsule keeps every label legible on its new ground", async ({ page }) => {
+  await stub(page);
+  await page.goto(AT_KL);
+  await openSection(page, "Competition");
+
+  /**
+   * Recolouring the track navy gave every colour inside it a NEW ground, which
+   * is the trap that once rendered a white button on a white panel at 1.00:1.
+   * The active label is dark-on-gold and the idle ones are white-on-navy, so
+   * they fail in opposite directions and both need checking.
+   *
+   * Polled, because selecting a tab crossfades the label colour.
+   */
+  const contrast = (selector: string, ground: [number, number, number]) =>
+    page.locator(selector).first().evaluate((el, bg) => {
+      const parse = (s: string) => (s.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+      const lum = ([r, g, b]: number[]) => {
+        const f = (v: number) => {
+          const c = v / 255;
+          return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        };
+        return 0.2126 * f(r!) + 0.7152 * f(g!) + 0.0722 * f(b!);
+      };
+      const [hi, lo] = [lum(parse(getComputedStyle(el).color)), lum(bg)].sort((a, b) => b - a);
+      return (hi! + 0.05) / (lo! + 0.05);
+    }, ground);
+
+  // The track's own navy, and the thumb's gold, sampled as the gradients paint.
+  await expect.poll(() => contrast('.tab[aria-selected="false"]', [0, 47, 121])).toBeGreaterThanOrEqual(4.5);
+  await expect.poll(() => contrast('.tab[aria-selected="true"]', [246, 174, 12])).toBeGreaterThanOrEqual(4.5);
+});
+
+test("a hovered tab keeps its label readable", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "no hover on a touch device");
+  await stub(page);
+  await page.goto(AT_KL);
+
+  const tab = page.getByRole("tab", { name: /^People/ });
+  await expect(tab).toBeVisible();
+
+  /**
+   * Box FIRST, then place the pointer, then capture.
+   *
+   * `boundingBox()` scrolls the element into view, and any scroll leaves the
+   * mouse somewhere else — so hovering before measuring captured the RESTING
+   * tab and passed happily with the bug reinstated.
+   */
+  const box = (await tab.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(tab).toHaveCSS("color", "rgb(255, 255, 255)");
+
+  /**
+   * INSET, because the tab is a pill on a navy rail.
+   *
+   * Its rounded ends show the capsule behind them, and those corner pixels are
+   * dark enough to supply the whole luminance range on their own: the full box
+   * reported a comfortable 13.37:1 for a hover state that was actually
+   * rendering white text on a near-white panel. Sampling the pill's interior
+   * reports the truth — 1.05:1 — which is the same correction the navbar spec
+   * already had to make for its round buttons.
+   */
+  const sample = {
+    x: box.x + box.width * 0.22,
+    y: box.y + box.height * 0.18,
+    width: box.width * 0.56,
+    height: box.height * 0.64,
+  };
+  const shot = (await page.screenshot({ clip: sample })).toString("base64");
+
+  /**
+   * The bug this guards: the app-wide `button:hover` (0,1,1) sets
+   * `background: var(--surface)`, and the tab's own hover rule set only
+   * `color`. A light panel painted behind white text on a navy capsule and the
+   * label vanished — the fourth control in this app to lose to that exact
+   * selector, and on a phone it is worse still, because a tap leaves the
+   * control hovered.
+   */
+  const contrast = await page.evaluate(
+    (b64) =>
+      new Promise<number>((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(-1);
+          ctx.drawImage(img, 0, 0);
+          const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+          const channel = (v: number) => {
+            const c = v / 255;
+            return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+          };
+          const lums: number[] = [];
+          for (let i = 0; i < data.length; i += 4) {
+            lums.push(
+              0.2126 * channel(data[i]!) +
+                0.7152 * channel(data[i + 1]!) +
+                0.0722 * channel(data[i + 2]!),
+            );
+          }
+          lums.sort((a, b) => a - b);
+          const at = (q: number) => lums[Math.floor(q * (lums.length - 1))]!;
+          resolve((at(0.99) + 0.05) / (at(0.01) + 0.05));
+        };
+        img.onerror = () => resolve(-1);
+        img.src = "data:image/png;base64," + b64;
+      }),
+    shot,
+  );
+
+  expect(contrast).toBeGreaterThanOrEqual(4.5);
+});
+
+test("the thumb slides in one direction without being interrupted", async ({ page }) => {
+  await stub(page);
+  await page.goto(AT_KL);
+  await expect(page.getByRole("tab", { name: /^Overview/ })).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as never as Record<string, unknown>)["__f"] = [];
+    const tick = () => {
+      const t = document.querySelector(".tab-thumb");
+      const rail = document.querySelector(".tabs");
+      const w = window as never as Record<string, unknown>;
+      /**
+       * Position within the rail's CONTENT, not the viewport.
+       *
+       * On a narrow screen the rail also scrolls to centre the chosen tab, and
+       * that carries the thumb the other way — so a viewport-relative reading
+       * mixes two motions and reports reversals for a slide that is perfectly
+       * smooth. Adding `scrollLeft` back isolates the tween itself.
+       */
+      if (t && rail) {
+        (w["__f"] as number[]).push(
+          t.getBoundingClientRect().x - rail.getBoundingClientRect().x + rail.scrollLeft,
+        );
+      }
+      w["__r"] = requestAnimationFrame(tick);
+    };
+    tick();
+  });
+
+  await page.getByRole("tab", { name: /^Ask/ }).click();
+  await page.waitForTimeout(900);
+
+  /**
+   * A REVERSAL MEANS THE TWEEN WAS RESTARTED, which is what the stutter was.
+   * The effect depended on `tabs`, an array rebuilt every render, so each
+   * arriving figure re-ran it and `gsap.to` began again from wherever the
+   * thumb had reached; the ResizeObserver then `gsap.set` it to the end
+   * mid-flight. Neither is visible in a screenshot — only the per-frame path
+   * shows it, so this samples every frame and asserts the travel is monotonic.
+   */
+  const path = await page.evaluate(() => {
+    const w = window as never as Record<string, unknown>;
+    cancelAnimationFrame(w["__r"] as number);
+    const frames = w["__f"] as number[];
+    const steps = frames
+      .slice(1)
+      .map((v, i) => v - frames[i]!)
+      .filter((d) => Math.abs(d) > 0.01);
+    const signs = steps.map(Math.sign);
+    return {
+      moved: Math.abs((frames.at(-1) ?? 0) - (frames[0] ?? 0)),
+      reversals: signs.filter((sign, i) => i > 0 && sign !== signs[i - 1]).length,
+    };
+  });
+
+  expect(path.moved).toBeGreaterThan(50);
+  expect(path.reversals).toBe(0);
+});

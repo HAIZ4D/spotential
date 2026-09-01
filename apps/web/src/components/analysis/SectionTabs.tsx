@@ -63,39 +63,74 @@ export function SectionTabs({
    *  would fly the thumb across the bar on every page load. */
   const placed = useRef(false);
 
+  /** Reads the live geometry. Measured, never computed from equal segments:
+   *  badges make these tabs genuinely different widths. */
+  const target = () => {
+    const rail = railRef.current;
+    const el = rail?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!el || el.offsetWidth === 0) return null;
+    return { x: el.offsetLeft, width: el.offsetWidth, autoAlpha: 1 };
+  };
+
+  /**
+   * SLIDE ON SELECTION ONLY — deps are `[active]`, deliberately not `[tabs]`.
+   *
+   * `tabs` is rebuilt on every render of the page, so depending on it re-ran
+   * this effect constantly: each pass restarted the tween from wherever it had
+   * reached, and with figures still arriving (competitors, demographics, the
+   * hero count-up) that is several restarts inside one 400ms slide. It read as
+   * stutter, and it was — the animation was being interrupted, not dropped.
+   */
   useLayoutEffect(() => {
+    const rail = railRef.current;
+    const thumb = thumbRef.current;
+    const to = target();
+    if (!rail || !thumb || !to) return;
+
+    const first = !placed.current;
+    placed.current = true;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (first || reduce) {
+      gsap.set(thumb, to);
+    } else {
+      gsap.to(thumb, { ...to, duration: 0.34, ease: "power3.out", overwrite: true });
+    }
+
+    // Keep the chosen tab reachable when the rail scrolls on a narrow screen.
+    // `scrollIntoView` would walk up and scroll the PAGE as well, moving the
+    // sticky toolbar; this scrolls the rail's own box and nothing else.
+    if (rail.scrollWidth > rail.clientWidth + 1) {
+      const el = rail.querySelector<HTMLElement>('[aria-selected="true"]')!;
+      rail.scrollTo({
+        left: el.offsetLeft - (rail.clientWidth - el.offsetWidth) / 2,
+        behavior: first ? "auto" : "smooth",
+      });
+    }
+  }, [active]);
+
+  /**
+   * Re-measure when the geometry moves under it: a late-loading font, or a
+   * badge appearing when its figure finally lands.
+   *
+   * Silent when a slide is in flight. `gsap.set` mid-tween would snap the
+   * thumb to the end and abandon the rest of the animation, which is the
+   * visible jump this observer used to cause every time a query resolved.
+   */
+  useEffect(() => {
     const rail = railRef.current;
     const thumb = thumbRef.current;
     if (!rail || !thumb) return;
 
-    const place = (animate: boolean) => {
-      const el = rail.querySelector<HTMLElement>('[aria-selected="true"]');
-      if (!el || el.offsetWidth === 0) return;
-
-      const to = { x: el.offsetLeft, width: el.offsetWidth, autoAlpha: 1 };
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      if (animate && placed.current && !reduce) {
-        gsap.to(thumb, { ...to, duration: 0.42, ease: "power3.out", overwrite: "auto" });
-      } else {
-        gsap.set(thumb, to);
-      }
-      placed.current = true;
-
-      // Keep the chosen tab reachable when the rail scrolls on a narrow screen.
-      // `scrollIntoView` would walk up and scroll the PAGE as well, moving the
-      // sticky toolbar; this scrolls the rail's own box and nothing else.
-      const left = el.offsetLeft - (rail.clientWidth - el.offsetWidth) / 2;
-      rail.scrollTo({ left, behavior: placed.current ? "smooth" : "auto" });
-    };
-
-    place(true);
-
-    /** A late-loading font changes every label's width after first paint. */
-    const observer = new ResizeObserver(() => place(false));
+    const observer = new ResizeObserver(() => {
+      if (gsap.isTweening(thumb)) return;
+      const to = target();
+      if (to) gsap.set(thumb, to);
+    });
     observer.observe(rail);
+    for (const el of rail.querySelectorAll(".tab")) observer.observe(el);
     return () => observer.disconnect();
-  }, [active, tabs]);
+  }, [tabs.length]);
 
   useEffect(() => () => { gsap.killTweensOf(thumbRef.current); }, []);
 
