@@ -90,6 +90,15 @@ function stubFetch(text: string) {
   );
 }
 
+const OPPORTUNITY = {
+  verdict: "No category stands out as an opening, because all 6 compared categories are saturated.",
+  why: "Korean restaurants face 20 or more outlets averaging 379 reviews per outlet.",
+  moves: [
+    "Visit the competitor 40m away to check their peak hour pricing.",
+    "Negotiate the rent below the RM 9,600 benchmark.",
+  ],
+};
+
 const GOOD = JSON.stringify({
   headline: "This is a fully worked F&B street rather than an opening.",
   readings: [
@@ -98,6 +107,7 @@ const GOOD = JSON.stringify({
   ],
   watchOut: "The search filled its cap within 421m, so the count is a floor.",
   nextStep: "Compare this against a second location before committing.",
+  opportunity: OPPORTUNITY,
 });
 
 const post = (app: ReturnType<typeof buildApp>, payload: unknown) =>
@@ -146,6 +156,7 @@ describe("the briefing", () => {
         readings: ["The nearest competitor is 40m away."],
         watchOut: "The result cap filled within 421m.",
         nextStep: "Negotiate hard.",
+        opportunity: OPPORTUNITY,
       }),
     );
 
@@ -168,6 +179,7 @@ describe("the briefing", () => {
         readings: ["The nearest competitor is 40m away.", "Footfall is around 9400 a day."],
         watchOut: "The result cap filled within 421m.",
         nextStep: "Compare against a quieter site.",
+        opportunity: OPPORTUNITY,
       }),
     );
 
@@ -225,6 +237,7 @@ describe("the briefing", () => {
         readings: ["The nearest competitor is 40m away."],
         watchOut: "Watch the rent.",
         nextStep: "Compare sites.",
+        opportunity: OPPORTUNITY,
       }),
     );
     const store = new InMemoryBriefingStore();
@@ -297,5 +310,83 @@ describe("the gap facts", () => {
     // The PDF and the plain chat route both pass no gaps, and an empty heading
     // would invite the model to fill it.
     expect(buildFacts(LOCATION, null)).not.toContain("CATEGORY SATURATION");
+  });
+});
+
+describe("the opportunity block", () => {
+  it("refuses a briefing whose ADVICE invents a figure", () => {
+    // The moves are the part a reader acts on, so they are guarded exactly
+    // like everything else. 9400 is in no fact sheet.
+    stubFetch(
+      JSON.stringify({
+        headline: "A fully worked street.",
+        readings: ["The nearest competitor is 40m away."],
+        watchOut: "The cap filled within 421m.",
+        nextStep: "Compare sites.",
+        opportunity: {
+          verdict: "No category stands out.",
+          why: "Everything is saturated.",
+          moves: ["Target 9400 walk-ins a month to clear the rent."],
+        },
+      }),
+    );
+    const app = buildApp({ gemini: { transport: TRANSPORT } });
+    return post(app, body()).then(async (res) => {
+      expect(res.json().kind).toBe("refused");
+      expect(res.json().unsupported).toContain(9400);
+      await app.close();
+    });
+  });
+
+  it("refuses a briefing with no opportunity verdict at all", async () => {
+    /**
+     * Silence about a gap reads as "there is none", which is a claim the model
+     * never made. An empty verdict is not a briefing.
+     */
+    stubFetch(
+      JSON.stringify({
+        headline: "A fully worked street.",
+        readings: ["The nearest competitor is 40m away."],
+        watchOut: "The cap filled within 421m.",
+        nextStep: "Compare sites.",
+        opportunity: { verdict: "", why: "", moves: [] },
+      }),
+    );
+    const app = buildApp({ gemini: { transport: TRANSPORT } });
+    const res = await post(app, body());
+    expect(res.json().kind).toBe("refused");
+    await app.close();
+  });
+
+  it("caps the moves so a runaway reply cannot fill the page", async () => {
+    stubFetch(
+      JSON.stringify({
+        headline: "A fully worked street.",
+        readings: ["The nearest competitor is 40m away."],
+        watchOut: "The cap filled within 421m.",
+        nextStep: "Compare sites.",
+        opportunity: {
+          verdict: "No category stands out.",
+          why: "Everything is saturated.",
+          moves: ["One", "Two", "Three", "Four", "Five", "Six", "Seven"],
+        },
+      }),
+    );
+    const app = buildApp({ gemini: { transport: TRANSPORT } });
+    const res = await post(app, body());
+    expect(res.json().briefing.opportunity.moves).toHaveLength(4);
+    await app.close();
+  });
+
+  it("puts the absent categories in the facts as a warning, never as a gap", () => {
+    // What the model is told is what stops it naming an empty category as the
+    // opening. The prose rule is tested live; this pins the input to it.
+    const facts = buildFacts(LOCATION, {
+      ...ALL_SATURATED,
+      noPresence: [{ label: "Healthy food" }],
+    });
+    const absent = facts.indexOf("Categories with NO outlets at all nearby");
+    expect(absent).toBeGreaterThan(-1);
+    expect(facts.indexOf("Zero outlets is NOT evidence of an opening")).toBeGreaterThan(absent);
   });
 });

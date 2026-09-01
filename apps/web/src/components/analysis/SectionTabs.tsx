@@ -12,8 +12,7 @@ export type SectionId =
   | "competition"
   | "people"
   | "demand"
-  | "rent"
-  | "gaps";
+  | "rent";
 
 export interface SectionTab {
   id: SectionId;

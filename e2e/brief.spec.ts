@@ -73,6 +73,14 @@ const BRIEFING = {
     ],
     watchOut: "Rent here is an inferred benchmark rather than a quoted figure.",
     nextStep: "Get a real quoted rent for the specific unit.",
+    opportunity: {
+      verdict: "No category stands out as an opening, because all 6 compared categories are saturated.",
+      why: "Korean restaurants face 20 or more outlets averaging 379 reviews per outlet.",
+      moves: [
+        "Visit the competitor 40m away to check their peak hour pricing.",
+        "Negotiate the rent below the RM 9,600 benchmark.",
+      ],
+    },
   },
 };
 
@@ -108,7 +116,7 @@ test("the analysis is in the page, not behind a tab", async ({ page }) => {
 
   // And the tab it used to live in is gone.
   await expect(page.getByRole("tab", { name: /^Ask/ })).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveCount(6);
+  await expect(page.getByRole("tab")).toHaveCount(5);
 });
 
 test("says every category is crowded, which the table alone never did", async ({ page }) => {
@@ -172,14 +180,18 @@ test("labels what was computed separately from what was written", async ({ page 
   await expect(panel(page).locator(".ai-derived-tag")).toContainText(/computed from the figures/i);
 });
 
-test("the gaps tab keeps the table and no longer carries its own write-up", async ({ page }) => {
+test("the gap is discussed as advice, with actions rather than observations", async ({ page }) => {
   await stub(page, { status: 200, body: BRIEFING });
   await page.goto(AT_KL);
-  await page.getByRole("tab", { name: /^Gaps/ }).click();
 
-  // The evidence stays where it was; only the interpretation moved.
-  await expect(page.getByRole("table")).toBeVisible();
-  await expect(page.locator(".gap-narrative")).toHaveCount(0);
+  /**
+   * The Gaps tab is gone and the reading is here instead. What the owner asked
+   * for is the last assertion: not more things to know, but things to do.
+   */
+  await expect(page.getByRole("tab", { name: /^Gaps/ })).toHaveCount(0);
+  await expect(page.locator(".ai-gap-verdict")).toContainText(/No category stands out/);
+  await expect(page.locator(".ai-moves li")).toHaveCount(2);
+  await expect(page.locator(".ai-moves li").first()).toContainText(/Visit the competitor/);
 });
 
 test("reduced motion leaves nothing stranded", async ({ browser }) => {

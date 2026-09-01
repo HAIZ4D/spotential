@@ -33,6 +33,19 @@ export interface Briefing {
   watchOut: string;
   /** One concrete thing to do next. */
   nextStep: string;
+  /**
+   * The gap, and what to do about it.
+   *
+   * This replaced a table of outlets, reviews per outlet and ratings that the
+   * owner could not act on. `moves` is the point of it: not more observations,
+   * but things a seller can actually do — which is why they are separate from
+   * `readings` above rather than folded in.
+   */
+  opportunity: {
+    verdict: string;
+    why: string;
+    moves: string[];
+  };
 }
 
 export type BriefOutcome =
@@ -58,6 +71,17 @@ ABSOLUTE RULES
 WHEN EVERY CATEGORY IS SATURATED
 That is a real finding and your most useful answer. Say so directly, explain what it means for someone deciding here, and do not manufacture an opportunity to be encouraging.
 
+THE OPPORTUNITY SECTION, WHICH IS THE MOST IMPORTANT PART
+The fact sheet may contain a CATEGORY SATURATION section comparing business categories on this street.
+
+- ANSWER THE QUESTION THE RANKING ASKED. If the fact sheet names a least crowded category, your "verdict" must be about THAT category. Do not substitute the business type the owner is currently considering, even though it is the obvious thing to talk about: the ranking compared every category on this street, and quietly answering about a different one presents a comparison that was never made. If the owner's own type is worth a sentence, put it in "why".
+- NEVER INVENT AN OPENING. If every category is saturated, say so plainly in "verdict" and spend "moves" on what to do about a crowded street. A manufactured opportunity is far worse than an honest "there is no gap here", because someone may sign a lease on it.
+- A category with NO OUTLETS AT ALL IS NOT A GAP. It may mean untapped demand, or that there is no appetite for it here, and this data cannot tell the two apart. Never name one as the opening.
+- The ranking is RELATIVE TO THIS STREET, not to Malaysia. Do not claim a category is underserved nationally.
+- Reviews per outlet is a PROXY for how busy operators are, not a measurement of demand. Say "suggests" rather than "shows".
+- "moves" must be ACTIONS, not observations, and each one must be something the owner could start this week. Tie each to a figure they can see. Good moves: negotiate the rent to a stated break-even, differentiate on an axis the incumbents are weak on, visit at a specific time to check something the data cannot, compare a second site before committing. Bad moves: "consider your options", "do more research", "understand your customers".
+- Two to four moves. Fewer good ones beats more filler.
+
 THE HEADLINE IS A VERDICT, NOT A DESCRIPTION
 Say what this place IS for this business, in one sentence an owner could repeat to a partner. Never describe the briefing itself, never restate the inputs, and never begin with "This briefing", "This analysis", "This location report" or similar.
 Good: "A fully worked Korean food street where the question is whether to be here at all."
@@ -68,7 +92,12 @@ Reply with JSON only, no code fence, in exactly this shape:
   "headline": "the verdict, one sentence",
   "readings": ["two to four observations, each resting on a figure from the fact sheet"],
   "watchOut": "the single constraint that binds hardest here",
-  "nextStep": "one concrete thing the owner should do next"
+  "nextStep": "one concrete thing the owner should do next",
+  "opportunity": {
+    "verdict": "which gap can be filled here, or plainly that none can",
+    "why": "the reasoning, resting on figures from the fact sheet",
+    "moves": ["two to four actions the owner could start this week"]
+  }
 }`;
 
 /**
@@ -108,15 +137,39 @@ function parse(text: string): Briefing | null {
         .slice(0, 4)
     : [];
 
+  const opp = (typeof value["opportunity"] === "object" && value["opportunity"] !== null
+    ? value["opportunity"]
+    : {}) as Record<string, unknown>;
+  const oppStr = (key: string) =>
+    typeof opp[key] === "string" ? (opp[key] as string).trim() : "";
+
   const briefing: Briefing = {
     headline: str("headline"),
     readings,
     watchOut: str("watchOut"),
     nextStep: str("nextStep"),
+    opportunity: {
+      verdict: oppStr("verdict"),
+      why: oppStr("why"),
+      moves: Array.isArray(opp["moves"])
+        ? (opp["moves"] as unknown[])
+            .filter((m): m is string => typeof m === "string" && m.trim().length > 0)
+            .map((m) => m.trim())
+            .slice(0, 4)
+        : [],
+    },
   };
 
-  // A briefing with no headline and no readings is not a briefing.
+  /**
+   * A briefing with no headline and no readings is not a briefing.
+   *
+   * The opportunity verdict is required too, because it is the whole reason
+   * this section exists. A missing one would render as an empty heading, and
+   * silence about a gap reads as "there is none" — a claim the model never
+   * actually made.
+   */
   if (briefing.headline.length === 0 || briefing.readings.length === 0) return null;
+  if (briefing.opportunity.verdict.length === 0) return null;
   return briefing;
 }
 
@@ -168,8 +221,17 @@ export async function briefLocation(
           readings: { type: "ARRAY", items: { type: "STRING" } },
           watchOut: { type: "STRING" },
           nextStep: { type: "STRING" },
+          opportunity: {
+            type: "OBJECT",
+            properties: {
+              verdict: { type: "STRING" },
+              why: { type: "STRING" },
+              moves: { type: "ARRAY", items: { type: "STRING" } },
+            },
+            required: ["verdict", "why", "moves"],
+          },
         },
-        required: ["headline", "readings", "watchOut", "nextStep"],
+        required: ["headline", "readings", "watchOut", "nextStep", "opportunity"],
       },
     },
   });
@@ -190,7 +252,16 @@ export async function briefLocation(
    * user utterance here, so the fact sheet is the only legitimate source.
    */
   const unsupported = new Set<number>();
-  for (const field of [briefing.headline, briefing.watchOut, briefing.nextStep, ...briefing.readings]) {
+  const guarded = [
+    briefing.headline,
+    briefing.watchOut,
+    briefing.nextStep,
+    ...briefing.readings,
+    briefing.opportunity.verdict,
+    briefing.opportunity.why,
+    ...briefing.opportunity.moves,
+  ];
+  for (const field of guarded) {
     for (const value of checkNumbers(field, facts, "").unsupported) unsupported.add(value);
   }
 

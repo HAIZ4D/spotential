@@ -1,114 +1,136 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openSection } from "./sections.js";
 
 /**
- * Opportunity Gap Detection — Feature add-on #1.
+ * Opportunity gaps, at their new home.
  *
- * Maps stays blocked and the endpoint is stubbed, as everywhere in this suite.
- * The assertions here are mostly about what the panel must REFUSE to claim: an
- * SME could sign a lease on this, and the demand signal is a proxy.
+ * This file used to drive a Gaps tab holding a ranked table. The tab is gone —
+ * the owner could not act on the numbers — and the reading is now written by
+ * Gemini inside the Spotential AI panel, with the figures folded into a
+ * disclosure beneath it.
+ *
+ * PORTED RATHER THAN BINNED. This repo has already learned that deleting a
+ * page is not deleting its guarantees: running `heatmap.spec` against its new
+ * home caught three things that had silently gone missing in that merge. Of
+ * the eight tests here, seven guard behaviour that still exists, and one
+ * genuinely died with the table.
  */
 
 const MAPS = "https://maps.googleapis.com/**";
+const AT_KL = "/analysis?lat=3.1478&lng=101.6953";
 
-const gap = (over: Record<string, unknown>) => ({
-  category: "other_fnb",
-  label: "Other (F&B)",
-  outlets: 4,
-  outletsAreMinimum: false,
-  totalReviews: 400,
-  averageRating: 4.1,
-  reviewsPerOutlet: 100,
-  demandIndex: 0.5,
-  saturationIndex: 0.5,
-  gapScore: 0.5,
-  verdict: "balanced",
-  ...over,
-});
+const RANKED = [
+  {
+    category: "bubble_tea",
+    label: "Bubble tea / dessert",
+    outlets: 3,
+    outletsAreMinimum: false,
+    totalReviews: 1_920,
+    reviewsPerOutlet: 640,
+    averageRating: 4.5,
+    demandIndex: 0.9,
+    saturationIndex: 0.2,
+    gapScore: 0.88,
+    verdict: "underserved",
+  },
+  {
+    category: "korean_restaurant",
+    label: "Korean restaurant",
+    outlets: 20,
+    outletsAreMinimum: true,
+    totalReviews: 7_580,
+    reviewsPerOutlet: 379,
+    averageRating: 4.41,
+    demandIndex: 0.5,
+    saturationIndex: 0.9,
+    gapScore: 0.2,
+    verdict: "saturated",
+  },
+];
 
-function payload(over: Record<string, unknown> = {}) {
-  return {
-    ranked: [
-      gap({
-        category: "bubble_tea_dessert",
-        label: "Bubble tea / dessert",
-        outlets: 1,
-        totalReviews: 1200,
-        reviewsPerOutlet: 1200,
-        averageRating: 4.6,
-        gapScore: 1,
-        verdict: "underserved",
-      }),
-      gap({
-        category: "korean_restaurant",
-        label: "Korean restaurant",
-        outlets: 3,
-        totalReviews: 2450,
-        reviewsPerOutlet: 816.67,
-        gapScore: 0.23,
-        verdict: "balanced",
-      }),
-      gap({
-        category: "cafe_coffee_shop",
-        label: "Cafe / coffee shop",
-        outlets: 20,
-        outletsAreMinimum: true,
-        totalReviews: 800,
-        reviewsPerOutlet: 40,
-        gapScore: 0,
-        verdict: "saturated",
-      }),
-    ],
-    noPresence: [
-      gap({
-        category: "fast_casual_takeaway",
-        label: "Fast-casual takeaway",
-        outlets: 0,
-        totalReviews: 0,
-        reviewsPerOutlet: null,
-        averageRating: null,
-        gapScore: 0,
-        verdict: "no-presence",
-      }),
-    ],
-    topOpportunity: gap({
-      category: "bubble_tea_dessert",
-      label: "Bubble tea / dessert",
-      gapScore: 1,
-      verdict: "underserved",
-    }),
-    narrative: "A dessert or bubble tea concept is the clearest opening on this street.",
-    radiusMetres: 500,
-    fromCache: false,
-    categoriesFetched: 6,
-    fetchedAt: Date.now(),
-    searchSkipped: false,
-    placesConfigured: true,
-    ...over,
-  };
-}
+const ABSENT = [
+  {
+    category: "fast_casual",
+    label: "Fast-casual takeaway",
+    outlets: 0,
+    outletsAreMinimum: false,
+    totalReviews: 0,
+    reviewsPerOutlet: null,
+    averageRating: null,
+    demandIndex: 0,
+    saturationIndex: 0,
+    gapScore: 0,
+    verdict: "no-presence",
+  },
+];
 
-async function stubGaps(page: Page, over: Record<string, unknown> = {}) {
+const BRIEFING = {
+  kind: "brief",
+  cached: false,
+  briefing: {
+    headline: "A street with one thin category and one crowded one.",
+    readings: ["Korean restaurants number 20 or more, averaging 379 reviews per outlet."],
+    watchOut: "The result cap filled early, so the count is a floor.",
+    nextStep: "Get a quoted rent for the unit.",
+    opportunity: {
+      verdict: "Bubble tea and dessert is the least crowded category relative to its demand here.",
+      why: "Three outlets carry 640 reviews each, against 20 or more Korean restaurants averaging 379.",
+      moves: [
+        "Visit the 3 dessert outlets at 9pm to see whether the queues match the review counts.",
+        "Compare a second site before committing.",
+      ],
+    },
+  },
+};
+
+async function stub(
+  page: Page,
+  over: Record<string, unknown> = {},
+  brief: { status: number; body: unknown } = { status: 200, body: BRIEFING },
+) {
+  await page.route(MAPS, (route) => route.abort());
   await page.route("**/v1/opportunity-gaps", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(payload(over)),
+      body: JSON.stringify({
+        ranked: RANKED,
+        noPresence: ABSENT,
+        topOpportunity: RANKED[0],
+        radiusMetres: 500,
+        fromCache: true,
+        categoriesFetched: 6,
+        fetchedAt: Date.now(),
+        searchSkipped: false,
+        placesConfigured: true,
+        ...over,
+      }),
     }),
   );
-  // Keep the competitor panel quiet so it cannot confuse the assertions.
+  await page.route("**/v1/location/brief", (route) =>
+    route.fulfill({
+      status: brief.status,
+      contentType: "application/json",
+      body: JSON.stringify(brief.body),
+    }),
+  );
+  await page.route("**/v1/demographics", (route) =>
+    route.fulfill({ status: 503, contentType: "application/json", body: "{}" }),
+  );
   await page.route("**/v1/competitors", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         competitors: [],
-        summary: { total: 0, averageRating: null, ratedCount: 0, totalReviews: 0, nearestMetres: null, operational: 0 },
-        density: [
-          { upToMetres: 250, count: 0 },
-          { upToMetres: 500, count: 0 },
-          { upToMetres: 1000, count: 0 },
-        ],
+        summary: {
+          total: 0,
+          averageRating: null,
+          ratedCount: 0,
+          totalReviews: 0,
+          nearestMetres: null,
+          operational: 0,
+        },
+        density: [{ upToMetres: 500, count: 0 }],
         fromCache: true,
         fetchedAt: Date.now(),
         radiusMetres: 500,
@@ -121,91 +143,92 @@ async function stubGaps(page: Page, over: Record<string, unknown> = {}) {
   );
 }
 
-test.beforeEach(async ({ page }) => {
-  await page.route(MAPS, (route) => route.abort());
-});
+const openWorking = async (page: Page) => {
+  await page.getByText("Show the figures behind this").click();
+};
 
-test("ranks categories and names the best opportunity", async ({ page }) => {
-  await stubGaps(page);
-  await page.goto("/analysis?lat=3.1478&lng=101.6953");
-  await openSection(page, "Gaps");
+test("names the best opportunity, without a tab to open", async ({ page }) => {
+  await stub(page);
+  await page.goto(AT_KL);
 
-  await expect(page.getByText("Opportunity gaps")).toBeVisible();
-  await expect(page.getByText("best: Bubble tea / dessert")).toBeVisible();
-  /**
-   * The write-up is no longer here. It moved to the Spotential AI panel at the
-   * top of the page, which sees the competitors, catchment and rent as well —
-   * and which, unlike this one, still writes something when no category stands
-   * out. This section keeps the evidence; `brief.spec.ts` covers the prose.
-   */
-  await expect(page.locator(".gap-narrative")).toHaveCount(0);
-  await expect(page.getByRole("table")).toBeVisible();
+  // It used to take a click on a Gaps tab. It is on the page now.
+  await expect(page.getByRole("tab", { name: /^Gaps/ })).toHaveCount(0);
+  await expect(page.locator(".ai-gap-verdict")).toContainText(/Bubble tea/);
 });
 
 test("shows a capped category as a minimum and marks it saturated", async ({ page }) => {
-  await stubGaps(page);
-  await page.goto("/analysis?lat=3.1478&lng=101.6953");
-  await openSection(page, "Gaps");
+  await stub(page);
+  await page.goto(AT_KL);
+  await openWorking(page);
 
   // "20+", never a bare 20 that reads as an exact count.
-  await expect(page.getByText("20+", { exact: true })).toBeVisible();
-  await expect(page.getByText("saturated", { exact: true })).toBeVisible();
+  await expect(page.locator(".ai-gap-rows")).toContainText("20+ outlets");
+  await expect(page.locator(".ai-gap-verdict-pill.saturated")).toBeVisible();
 });
 
 test("keeps zero-outlet categories out of the ranking and says why", async ({ page }) => {
-  // The most dangerous false positive in the feature.
-  await stubGaps(page);
-  await page.goto("/analysis?lat=3.1478&lng=101.6953");
-  await openSection(page, "Gaps");
+  // The most dangerous false positive in the feature, and the one the model is
+  // most tempted by: an empty category looks exactly like an open market.
+  await stub(page);
+  await page.goto(AT_KL);
+  await openWorking(page);
 
-  await expect(page.getByText(/NOT FOUND NEARBY/)).toBeVisible();
-  // Scoped to the panel: the category names also appear in the select options.
-  await expect(page.getByRole("main").getByText("Fast-casual takeaway")).toBeVisible();
+  await expect(page.getByText(/Not found nearby/)).toBeVisible();
   await expect(page.getByText(/Zero outlets is/)).toBeVisible();
   await expect(page.getByText(/cannot tell the two apart/)).toBeVisible();
 
-  // And it is definitely not presented as the recommendation.
-  await expect(page.getByText("best: Fast-casual takeaway")).toHaveCount(0);
+  // And it is definitely not what the AI called the opening.
+  await expect(page.locator(".ai-gap-verdict")).not.toContainText(/Fast-casual/);
 });
 
 test("states the limitations on screen rather than hiding them", async ({ page }) => {
-  await stubGaps(page);
-  await page.goto("/analysis?lat=3.1478&lng=101.6953");
-  await openSection(page, "Gaps");
+  await stub(page);
+  await page.goto(AT_KL);
+  await openWorking(page);
 
-  await page.getByText(/How this is calculated/).click();
+  // The five caveats had no other home. They moved before the panel was
+  // deleted, which is the whole reason this file was ported rather than binned.
   await expect(page.getByText(/proxy, not a measure of demand/)).toBeVisible();
   await expect(page.getByText(/relative to the other categories at this spot/)).toBeVisible();
   await expect(page.getByText(/lifetime totals/)).toBeVisible();
+  await expect(page.getByText(/category labels are approximate/)).toBeVisible();
 });
 
-test("renders the table even when the write-up is missing", async ({ page }) => {
-  // Gemini Pro failing must cost the prose, not the analysis.
-  await stubGaps(page, { narrative: "" });
-  await page.goto("/analysis?lat=3.1478&lng=101.6953");
-  await openSection(page, "Gaps");
+test("keeps the figures when the write-up is missing", async ({ page }) => {
+  /**
+   * Gemini failing must cost the prose, not the analysis — the same rule the
+   * table followed in its own tab. Caught a real regression during the move:
+   * the disclosure was nested inside the AI-ready branch, so a refused
+   * briefing took the evidence down with it.
+   */
+  await stub(page, {}, { status: 503, body: { error: "ai_unavailable", message: "Not configured." } });
+  await page.goto(AT_KL);
 
-  await expect(page.getByRole("cell", { name: "Korean restaurant" })).toBeVisible();
-  await expect(page.getByText("best: Bubble tea / dessert")).toBeVisible();
+  await expect(page.locator(".ai-unavailable")).toBeVisible();
+  await openWorking(page);
+  await expect(page.locator(".ai-gap-rows")).toContainText("Korean restaurant");
 });
 
 test("explains an area with nothing trading in it", async ({ page }) => {
-  await stubGaps(page, { ranked: [], noPresence: [], topOpportunity: null, narrative: "" });
-  await page.goto("/analysis?lat=3.1478&lng=101.6953");
-  await openSection(page, "Gaps");
+  await stub(page, { ranked: [], noPresence: [], topOpportunity: null });
+  await page.goto(AT_KL);
 
   await expect(page.getByText(/no signal to compare against/)).toBeVisible();
+  // Emptiness is not an opening, and the copy has to say so.
+  await expect(page.getByText(/no appetite for this kind of business/)).toBeVisible();
 });
 
 test("a failing gap analysis leaves the rest of the page working", async ({ page }) => {
+  await page.route(MAPS, (route) => route.abort());
   await page.route("**/v1/opportunity-gaps", (route) =>
     route.fulfill({ status: 502, contentType: "application/json", body: "{}" }),
   );
-  await page.goto("/analysis?lat=3.1478&lng=101.6953&q=Bangsar");
-  await openSection(page, "Gaps");
+  await page.goto(`${AT_KL}&q=Bangsar`);
 
-  await expect(page.getByText(/Could not analyse this area/)).toBeVisible();
-  await expect(page.getByText("3.14780, 101.69530")).toBeVisible();
+  // The deterministic core is untouched: the score still renders, and the
+  // panel still leads with a sentence computed from the figures.
+  await expect(page.getByRole("img", { name: /Success score/ })).toBeVisible();
+  await expect(page.locator(".ai-derived")).toContainText(/scores \d+ out of 100/);
 });
 
 test("the simulator route never requests gap analysis", async ({ page }) => {
@@ -214,9 +237,8 @@ test("the simulator route never requests gap analysis", async ({ page }) => {
     if (r.url().includes("/v1/opportunity-gaps")) calls.push(r.url());
   });
 
+  await page.route(MAPS, (route) => route.abort());
   await page.goto("/simulator");
-  await expect(page.getByTestId("headline-profit")).toBeVisible();
-  await page.waitForTimeout(1_000);
-
+  await expect(page.getByText(/What-if/i).first()).toBeVisible();
   expect(calls).toEqual([]);
 });

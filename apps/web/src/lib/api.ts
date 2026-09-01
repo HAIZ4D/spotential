@@ -303,6 +303,12 @@ export interface Briefing {
   readings: string[];
   watchOut: string;
   nextStep: string;
+  /** The gap, and the actions that would take it. */
+  opportunity: {
+    verdict: string;
+    why: string;
+    moves: string[];
+  };
 }
 
 export type BriefResponse =

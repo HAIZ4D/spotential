@@ -94,6 +94,72 @@ export function deriveSummary(input: {
   return parts.join(" ");
 }
 
+/**
+ * The figures behind the gap reading, folded away.
+ *
+ * The owner asked for the Gaps tab to go, and said its table told them
+ * nothing. Both are true, and neither is a reason to make the AI's claim
+ * unfalsifiable: everything else on this page can be checked against a number,
+ * and this section should be no different. So the table is collapsed rather
+ * than deleted, exactly as the score working is.
+ *
+ * The five caveats come with it. They were the only honest account of what
+ * this ranking cannot tell you, and they lived nowhere else.
+ */
+function GapWorking({ gaps }: { gaps: GapsResponse }) {
+  return (
+    <details className="ai-working">
+      <summary>Show the figures behind this</summary>
+
+      <ul className="ai-gap-rows">
+        {gaps.ranked.map((row) => (
+          <li key={row.category}>
+            <span className="ai-gap-label">{row.label}</span>
+            <span className="ai-gap-figs">
+              {/* A capped search is a floor, never an exact count. */}
+              {row.outletsAreMinimum ? `${row.outlets}+` : row.outlets} outlets
+              {row.reviewsPerOutlet === null
+                ? ", reviews not known"
+                : `, ${formatNumber(row.reviewsPerOutlet)} reviews each`}
+              {row.averageRating === null ? ", unrated" : `, ${row.averageRating}★`}
+            </span>
+            <span className={`ai-gap-verdict-pill ${row.verdict}`}>{row.verdict}</span>
+          </li>
+        ))}
+      </ul>
+
+      {gaps.noPresence.length > 0 && (
+        <p className="ai-working-note">
+          <strong>Not found nearby:</strong> {gaps.noPresence.map((r) => r.label).join(", ")}. Zero
+          outlets is <strong>not</strong> evidence of an opening. It may mean untapped demand, or
+          that there is no appetite for it here, and this data cannot tell the two apart, so these
+          are left out of the ranking.
+        </p>
+      )}
+
+      <ul className="ai-working-notes">
+        <li>
+          <strong>Reviews per outlet</strong> stands in for how busy existing operators are. It is a
+          proxy, not a measure of demand.
+        </li>
+        <li>
+          Scores are <strong>relative to the other categories at this spot</strong>, not to Malaysia.
+          The claim is &ldquo;underserved compared with what else trades on this street&rdquo;.
+        </li>
+        <li>
+          Review counts are lifetime totals, so they favour long-established businesses over busy new
+          ones.
+        </li>
+        <li>
+          Google&rsquo;s category labels are approximate. A Korean restaurant tagged simply as
+          &ldquo;restaurant&rdquo; lands in the wrong bucket.
+        </li>
+        <li>Real demographic demand data will replace this proxy when it lands.</li>
+      </ul>
+    </details>
+  );
+}
+
 /** Openers that map onto what the data actually holds. */
 const SUGGESTIONS = [
   "Why did it score this?",
@@ -332,6 +398,30 @@ export function SpotentialAI({
               ))}
             </ul>
 
+            {/**
+              * The gap, given its own block.
+              *
+              * This replaced a six-row table of outlets, reviews per outlet
+              * and ratings that the owner could not act on. The moves are
+              * numbered because they are steps, and because numbering
+              * separates advice from the observations above at a glance.
+              */}
+            <section className="ai-gap ai-reveal" aria-label="The opening, and how to take it">
+              <h3 className="ai-gap-title">The opening, and how to take it</h3>
+              <p className="ai-gap-verdict">{brief.briefing.opportunity.verdict}</p>
+              {brief.briefing.opportunity.why && (
+                <p className="ai-gap-why">{brief.briefing.opportunity.why}</p>
+              )}
+
+              {brief.briefing.opportunity.moves.length > 0 && (
+                <ol className="ai-moves">
+                  {brief.briefing.opportunity.moves.map((move) => (
+                    <li key={move}>{move}</li>
+                  ))}
+                </ol>
+              )}
+            </section>
+
             <div className="ai-cards">
               {brief.briefing.watchOut && (
                 <div className="ai-card watch ai-reveal">
@@ -362,6 +452,26 @@ export function SpotentialAI({
           // still true and still computed from the data.
           <p className="ai-unavailable">{brief.reason}</p>
         )}
+
+        {/**
+          * OUTSIDE the ready branch, deliberately.
+          *
+          * Nesting it inside meant a failed or refused briefing took the
+          * figures down with it, leaving nothing checkable at all — the
+          * opposite of the point. The model failing should cost the prose, not
+          * the evidence, which is the rule the gaps table already followed
+          * when it lived in its own tab.
+          */}
+        {gaps &&
+          (gaps.ranked.length > 0 ? (
+            <GapWorking gaps={gaps} />
+          ) : (
+            <p className="ai-working-note">
+              Nothing of any tracked category trades within {gaps.radiusMetres}m of here, so there
+              is no signal to compare against. That is not the same as an opening: it may equally
+              mean there is no appetite for this kind of business on this street.
+            </p>
+          ))}
       </div>
 
       <div className="ai-ask no-print">

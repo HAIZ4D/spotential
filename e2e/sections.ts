@@ -16,7 +16,11 @@ import { expect, type Page } from "@playwright/test";
  * "Ask" is gone. The AI panel it opened lives in the page itself now, above
  * the tab rail, so there is nothing to select and nothing to wait for.
  */
-export type Section = "Overview" | "Competition" | "People" | "Rent" | "Gaps";
+/**
+ * "Gaps" went the way of "Ask": its reading is written by the AI panel in the
+ * page, and the figures behind it sit in a disclosure there.
+ */
+export type Section = "Overview" | "Competition" | "People" | "Rent";
 
 export async function openSection(page: Page, section: Section): Promise<void> {
   const tab = page.getByRole("tab", { name: new RegExp(`^${section}`) });

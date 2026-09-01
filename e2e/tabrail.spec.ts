@@ -371,8 +371,8 @@ test("the thumb slides in one direction without being interrupted", async ({ pag
   });
 
   // The furthest tab from Overview, which is what makes the travel worth
-  // measuring. It was "Ask" until that tab moved into the page itself.
-  await page.getByRole("tab", { name: /^Gaps/ }).click();
+  // measuring. It was "Ask", then "Gaps"; both moved into the page itself.
+  await page.getByRole("tab", { name: /^Rent/ }).click();
   await page.waitForTimeout(900);
 
   /**

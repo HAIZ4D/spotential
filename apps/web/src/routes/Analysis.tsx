@@ -22,7 +22,6 @@ import {
   CompetitorList,
   CompetitorScatter,
 } from "../components/CompetitorPanels.js";
-import { OpportunityGaps } from "../components/OpportunityGaps.js";
 import { DemographicsPanel } from "../components/DemographicsPanel.js";
 import { SuccessScore } from "../components/SuccessScore.js";
 import { RentPanel } from "../components/RentPanel.js";
@@ -49,7 +48,6 @@ import {
   type CompetitorsResponse,
   type DemographicsResponse,
   type AmenityLayer,
-  type GapsResponse,
   type HeatmapCell,
   type ReportLocation,
 } from "../lib/api.js";
@@ -76,9 +74,7 @@ import {
   parseRentFromSearch,
   type PickedLocation,
 } from "../lib/location.js";
-
 const MAPS_API_KEY: string = import.meta.env["VITE_GOOGLE_MAPS_API_KEY"] ?? "";
-
 /**
  * Google calls this global when the key is rejected at runtime — wrong
  * referrer, billing off, API not enabled.
@@ -92,10 +88,8 @@ declare global {
     gm_authFailure?: (() => void) | undefined;
   }
 }
-
 function useMapsAuthFailure(): boolean {
   const [failed, setFailed] = useState(false);
-
   useEffect(() => {
     const previous = window.gm_authFailure;
     window.gm_authFailure = () => {
@@ -106,10 +100,8 @@ function useMapsAuthFailure(): boolean {
       window.gm_authFailure = previous;
     };
   }, []);
-
   return failed;
 }
-
 /**
  * Location Analysis — slices 1a and 1b.
  *
@@ -126,21 +118,16 @@ export default function Analysis() {
   );
   const [category, setCategory] = useState<BusinessCategory>("korean_restaurant");
   const [radiusMetres, setRadiusMetres] = useState<number>(500);
-
   // Feature 1e. The one figure on this page the USER supplied, so it survives
   // a reload rather than having to be retyped.
   const rentFromLink = useMemo(() => parseRentFromSearch(window.location.search), []);
   const [overrideRent, setOverrideRent] = useState<number | null>(rentFromLink.monthlyRent);
   const [unitSqft, setUnitSqft] = useState<number | null>(rentFromLink.unitSqft);
-
   /** Which section the tab bar is showing. Overview holds the full profile. */
   const [section, setSection] = useState<SectionId>("overview");
-
   /** Shared by the competitor list and the map pins, which sit side by side. */
   const [hoveredCompetitor, setHoveredCompetitor] = useState<string | null>(null);
-
   const heroRef = useRef<HTMLElement>(null);
-
   /**
    * The hero resolves once, on arrival.
    *
@@ -166,13 +153,11 @@ export default function Analysis() {
     },
     { scope: heroRef },
   );
-
   /**
    * The population surface under the pin, showing where the catchment came
    * from — this page's "people within 500m" is computed from that same grid.
    */
   const [demand, setDemand] = useState(false);
-
   /**
    * The visible map box, reported on every camera settle.
    *
@@ -181,11 +166,9 @@ export default function Analysis() {
    * zooming out give a city view, which is what City Demand was for.
    */
   const [view, setView] = useState<Bounds | null>(null);
-
   /** Which amenity layers are drawn, and whether rent benchmarks show. */
   const [activeLayers, setActiveLayers] = useState<Set<string>>(() => new Set());
   const [showRentPins, setShowRentPins] = useState(false);
-
   /**
    * Where to move the CAMERA when a ranked area or rent pin is chosen.
    *
@@ -194,18 +177,15 @@ export default function Analysis() {
    */
   const [flyTo, setFlyTo] = useState<{ lat: number; lng: number } | null>(null);
   const onBoundsChange = useCallback((next: Bounds) => setView(next), []);
-
   /**
    * Two booleans, one owner each. `demand` draws the surface; this also turns
    * on when the tab is open, so opening it loads the data without the tab
    * having to reach into the map's state.
    */
   const demandActive = demand || section === "demand";
-
   // Bounds move on every pixel of a pan. Bucketed to ~110m for the query key
   // and debounced on top, so a drag collapses into one or two fetches.
   const settledView = useDebounced(view, 350);
-
   // Same pattern as the simulator's share links: replaceState on a debounce,
   // so dragging the pin does not stack up history entries.
   const settled = useDebounced(location, 400);
@@ -219,13 +199,11 @@ export default function Analysis() {
     }).toString();
     window.history.replaceState(null, "", url.toString());
   }, [settled, settledRent, settledSqft]);
-
   const pickCoordinates = useCallback(({ lat, lng }: { lat: number; lng: number }) => {
     // A map click has no address, so label it by coordinates until the user
     // searches for something. Honest rather than inventing a name.
     setLocation({ lat, lng, label: formatLatLng({ lat, lng }) });
   }, []);
-
   // Keyed on the ROUNDED location so nudging the pin a few metres reuses the
   // result rather than triggering another request. The server rounds
   // identically for its cache key, so the two stay in step.
@@ -242,7 +220,6 @@ export default function Analysis() {
     staleTime: 10 * 60 * 1000,
     retry: 1,
   });
-
   /**
    * Gap detection, scoped to the selected category's SECTOR.
    *
@@ -265,7 +242,6 @@ export default function Analysis() {
     staleTime: 10 * 60 * 1000,
     retry: 1,
   });
-
   // Pure server-side computation, no external API, so cache it aggressively.
   const demographics = useQuery({
     // Radius is part of the key: the catchment sum depends on it, so a radius
@@ -281,7 +257,6 @@ export default function Analysis() {
     staleTime: 60 * 60 * 1000,
     retry: 1,
   });
-
   /**
    * The population grid, only while the surface is on.
    *
@@ -290,7 +265,6 @@ export default function Analysis() {
    * pin does not refetch a grid that covers several kilometres either way.
    */
   const gridBox = settledView ? padBounds(settledView) : demandBounds(settled);
-
   const grid = useQuery({
     queryKey: ["analysis-grid", bucketBounds(gridBox)],
     queryFn: ({ signal }) => getHeatmap(gridBox, signal),
@@ -300,7 +274,6 @@ export default function Analysis() {
     // blanking the map between zoom levels.
     placeholderData: (prev) => prev,
   });
-
   /**
    * Transit, malls, hospitals and the rest — free, from a versioned snapshot
    * for the four shipped cities and a cached Overpass call elsewhere.
@@ -320,7 +293,6 @@ export default function Analysis() {
     retry: 1,
     placeholderData: (prev) => prev,
   });
-
   /**
    * Everything the demand panel reports, computed from WHAT IS ON SCREEN.
    *
@@ -332,20 +304,16 @@ export default function Analysis() {
    */
   const gridCells = grid.data?.cells ?? [];
   const amenityLayers = amenities.data?.layers ?? [];
-
   const inView = useMemo(
     () => (settledView ? cellsWithin(gridCells, settledView) : gridCells),
     [gridCells, settledView],
   );
-
   /** The cell the PIN is in — not one the reader had to click for. */
   const pinCell = useMemo(() => cellAt(gridCells, location), [gridCells, location.lat, location.lng]);
-
   const rankedAreas = useMemo(
     () => rankAreas(inView, amenities.data?.places ?? []),
     [inView, amenities.data],
   );
-
   const rentDistricts = useMemo(
     () =>
       settledView
@@ -359,7 +327,6 @@ export default function Analysis() {
         : [],
     [settledView],
   );
-
   // Feature 1e. Entirely local — a table lookup and a break-even, no request
   // and no cost. Null when no benchmark covers the pin and no rent was typed.
   const rent = useMemo(
@@ -373,13 +340,11 @@ export default function Analysis() {
       ),
     [settled, category, overrideRent, unitSqft],
   );
-
   /**
    * The place name the listings search runs on, best precision first: the
    * resolved benchmark is a real trading area, the DOSM district is broader.
    */
   const listingArea = rent?.district?.label ?? demographics.data?.demographics?.district ?? null;
-
   /**
    * Real units for rent, from PropertyGuru via our own cache.
    *
@@ -397,7 +362,6 @@ export default function Analysis() {
     // panel degrades to portal links either way.
     retry: 1,
   });
-
   // Pure derivation from queries already in flight: no new endpoint, no cost.
   const score = useMemo(() => {
     if (!competitors.data) return null;
@@ -413,7 +377,6 @@ export default function Analysis() {
       point: settled,
     });
   }, [competitors.data, demographics.data, radiusMetres, rent, category, settled]);
-
   // Chip figures, from the same rent object the Rent tab renders.
   const sensitivity = useMemo(
     () => (rent ? rentSensitivity(rent, category, settled) : null),
@@ -423,7 +386,6 @@ export default function Analysis() {
   const rentLight = sensitivity
     ? ({ green: "green", amber: "amber", red: "red" } as const)[sensitivity.light]
     : undefined;
-
   /**
    * The location context, exactly as the PDF report and the chatbot both need
    * it. One builder so the two cannot end up grounded on different data.
@@ -449,7 +411,6 @@ export default function Analysis() {
     }),
     [settled, competitors.data, demographics.data, overrideRent],
   );
-
   /**
    * Hands the rent to the simulator so the two pages agree on it.
    *
@@ -463,7 +424,6 @@ export default function Analysis() {
     if (rent.district) params.set("district", rent.district.id);
     return `/simulator?${params.toString()}`;
   }, [rent, category]);
-
   /**
    * The link carried location parameters and they did not parse.
    *
@@ -474,7 +434,6 @@ export default function Analysis() {
    * supplied is broken", so use that instead of guessing from the raw text.
    */
   const linkWasBad = !fromLink.ok && fromLink.reason !== "no location in the link";
-
   /**
    * The four figures worth seeing before any tab is opened.
    *
@@ -517,7 +476,6 @@ export default function Analysis() {
       tone: rentLight,
     },
   ];
-
   const tabs: SectionTab[] = [
     { id: "overview", label: "Overview" },
     {
@@ -565,9 +523,7 @@ export default function Analysis() {
       label: "Rent",
       ...(rent ? { badge: `RM${Math.round(rent.monthlyRent / 1000)}k` } : { state: "none" as const }),
     },
-    { id: "gaps", label: "Gaps", ...(gaps.isError ? { state: "warn" as const } : {}) },
   ];
-
   const shell = (mapPane: ReactNode, searchNode: ReactNode) => (
     <>
       <Toolbar
@@ -577,7 +533,6 @@ export default function Analysis() {
         onRadius={setRadiusMetres}
         search={searchNode}
       />
-
       <div className="cockpit">
         <main className="cockpit-info">
           {/* The hero the old page never had: the score, the shape and the
@@ -608,10 +563,8 @@ export default function Analysis() {
               * subject rather than decoration borrowed from elsewhere.
               */}
             <span className="hero-rings" aria-hidden="true" />
-
             <p className="hero-eyebrow">Location report</p>
             <h2 className="hero-name">{location.label}</h2>
-
             {score ? (
               <div className="hero-answer">
                 <ScoreRing score={score.overall} />
@@ -630,10 +583,8 @@ export default function Analysis() {
                   : "Scoring this spot…"}
               </p>
             )}
-
             <StatChips chips={chips} />
           </header>
-
           {/* IN THE REPORT, NOT IN A TAB. The interpretation of everything
               below is the first thing read, and it is never a click away. */}
           <SpotentialAI
@@ -655,9 +606,7 @@ export default function Analysis() {
               if (nextRadius) setRadiusMetres(nextRadius);
             }}
           />
-
           <SectionTabs tabs={tabs} active={section} onSelect={setSection} />
-
           <div className="section-body" id={`section-${section}`} role="tabpanel">
             {section === "overview" && (
               /* No card header: the tab above it already says Overview, and a
@@ -675,7 +624,6 @@ export default function Analysis() {
                 </div>
               </section>
             )}
-
             {section === "competition" && (
               <CompetitorSection
                 query={competitors}
@@ -684,7 +632,6 @@ export default function Analysis() {
               />
             )}
             {section === "people" && <DemographicsSection query={demographics} />}
-
             {section === "demand" && (
               <DemandSection
                 cells={inView}
@@ -709,8 +656,6 @@ export default function Analysis() {
                 amenityAttribution={amenities.data?.attribution ?? null}
               />
             )}
-            {section === "gaps" && <GapSection query={gaps} />}
-
             {section === "rent" && (
               <RentPanel
                 rent={rent}
@@ -730,15 +675,12 @@ export default function Analysis() {
                 listingsAvailable={listings.data?.available ?? !listings.isError}
               />
             )}
-
           </div>
         </main>
-
         <div className="cockpit-map no-print">{mapPane}</div>
       </div>
     </>
   );
-
   return (
     <>
       <Masthead subtitle="Location Analysis">
@@ -758,7 +700,6 @@ export default function Analysis() {
         >
           Add to comparison
         </button>
-
         {/* Disabled until the competitor lookup lands: a report without it
             would be a page of dashes rather than an analysis. */}
         <ReportButton
@@ -771,7 +712,6 @@ export default function Analysis() {
           })}
         />
       </Masthead>
-
       {linkWasBad && (
         <div className="notice danger no-print" style={{ margin: 0, borderRadius: 0 }}>
           <span>
@@ -781,14 +721,12 @@ export default function Analysis() {
           </span>
         </div>
       )}
-
       {!isInMalaysia(location) && (
         <div className="notice warn no-print" style={{ margin: 0, borderRadius: 0 }}>
           This point is outside Malaysia. The category and rent presets were researched for
           Malaysian F&amp;B, so treat any figures with caution.
         </div>
       )}
-
       {MAPS_API_KEY ? (
         <APIProvider apiKey={MAPS_API_KEY} libraries={["geocoding", "streetView", "marker"]}>
           <MapAwareBody
@@ -830,7 +768,6 @@ export default function Analysis() {
     </>
   );
 }
-
 /**
  * Moves the CENTRE only — never the zoom.
  *
@@ -844,15 +781,12 @@ export default function Analysis() {
  */
 function PanTo({ target }: { target: { lat: number; lng: number } | null }) {
   const map = useMap();
-
   useEffect(() => {
     if (!map || !target) return;
     map.panTo({ lat: target.lat, lng: target.lng });
   }, [map, target]);
-
   return null;
 }
-
 function MapAwareBody({
   location,
   onPick,
@@ -904,7 +838,6 @@ function MapAwareBody({
 }) {
   const status = useApiLoadingStatus();
   const authFailed = useMapsAuthFailure();
-
   // Maps is the one part of this app that depends on a third-party script at
   // runtime. Its failure is confined to the map card — everything served by
   // our own backend keeps working.
@@ -920,7 +853,6 @@ function MapAwareBody({
       <NoGeocoderCard />,
     );
   }
-
   if (status === APILoadingStatus.FAILED) {
     return shell(
       <MapPane
@@ -933,7 +865,6 @@ function MapAwareBody({
       <NoGeocoderCard />,
     );
   }
-
   return shell(
     <div data-testid="map-card">
       <MapPane
@@ -1036,8 +967,6 @@ function MapAwareBody({
     <AddressSearch onPick={onSearch} compact />,
   );
 }
-
-
 function CompetitorSection({
   query,
   hoveredId = null,
@@ -1057,7 +986,6 @@ function CompetitorSection({
       </section>
     );
   }
-
   if (query.isError) {
     return (
       <section className="card">
@@ -1072,7 +1000,6 @@ function CompetitorSection({
       </section>
     );
   }
-
   if (!query.data.placesConfigured) {
     return (
       <section className="card">
@@ -1087,7 +1014,6 @@ function CompetitorSection({
       </section>
     );
   }
-
   return (
     <>
       <CompetitorList data={query.data} hoveredId={hoveredId} {...(onHover ? { onHover } : {})} />
@@ -1096,39 +1022,6 @@ function CompetitorSection({
     </>
   );
 }
-
-function GapSection({ query }: { query: UseQueryResult<GapsResponse, unknown> }) {
-  if (query.isPending) {
-    return (
-      <section className="card">
-        <header>
-          <h2>Opportunity gaps</h2>
-        </header>
-        <div className="body small muted">
-          Comparing supply against demand across all six categories…
-        </div>
-      </section>
-    );
-  }
-
-  if (query.isError) {
-    return (
-      <section className="card">
-        <header>
-          <h2>Opportunity gaps</h2>
-        </header>
-        <div className="body">
-          <div className="notice warn">
-            Could not analyse this area. The competitor data above is unaffected.
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  return <OpportunityGaps data={query.data} />;
-}
-
 function DemographicsSection({ query }: { query: UseQueryResult<DemographicsResponse, unknown> }) {
   if (query.isPending) {
     return (
@@ -1154,7 +1047,6 @@ function DemographicsSection({ query }: { query: UseQueryResult<DemographicsResp
   }
   return <DemographicsPanel data={query.data} />;
 }
-
 /**
  * Fills the map frame when Maps cannot render.
  *
@@ -1187,7 +1079,6 @@ function MapUnavailableBody({ reason }: { reason: string }) {
     </div>
   );
 }
-
 /** Address lookup needs the Maps geocoder; coordinates in the URL do not. */
 /** Inline, for the toolbar — address search needs the Maps geocoder. */
 function NoGeocoderCard() {

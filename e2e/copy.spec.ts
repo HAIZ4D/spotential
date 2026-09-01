@@ -54,7 +54,7 @@ test("no dash in the deeper panels either", async ({ page }) => {
    * miss it. Every panel gets opened, including the disclosure that holds the
    * score working.
    */
-  for (const tab of ["Competition", "People", "Demand", "Rent", "Gaps", "Ask"]) {
+  for (const tab of ["Competition", "People", "Demand", "Rent"]) {
     const button = page.locator(".tab").filter({ hasText: tab });
     if ((await button.count()) === 0) continue;
     await button.first().click();
