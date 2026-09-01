@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { APIProvider, useApiLoadingStatus, useMap, APILoadingStatus } from "@vis.gl/react-google-maps";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import {
   rentSensitivity,
   formatNumber,
@@ -136,6 +138,34 @@ export default function Analysis() {
 
   /** Shared by the competitor list and the map pins, which sit side by side. */
   const [hoveredCompetitor, setHoveredCompetitor] = useState<string | null>(null);
+
+  const heroRef = useRef<HTMLElement>(null);
+
+  /**
+   * The hero resolves once, on arrival.
+   *
+   * The rings expand outward like a sweep going out from the pin, which is
+   * what the page is doing. `useGSAP` with a scope rather than a raw effect:
+   * a killed `from` strands its targets instead of putting them back, and
+   * this codebase has paid for that three times.
+   */
+  useGSAP(
+    () => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      gsap
+        .timeline()
+        .from(".hero-rings", { scale: 0.72, opacity: 0, duration: 1.1, ease: "power2.out" })
+        .from(".hero-eyebrow", { y: 10, opacity: 0, duration: 0.4, ease: "power2.out" }, 0.05)
+        .from(".hero-name", { y: 16, opacity: 0, duration: 0.55, ease: "power3.out" }, 0.12)
+        .from(".hero-answer", { y: 14, opacity: 0, duration: 0.5, ease: "power2.out" }, 0.24)
+        .from(
+          ".chips > *",
+          { y: 10, opacity: 0, duration: 0.4, stagger: 0.05, ease: "power2.out" },
+          0.34,
+        );
+    },
+    { scope: heroRef },
+  );
 
   /**
    * The population surface under the pin, showing where the catchment came
@@ -463,11 +493,15 @@ export default function Analysis() {
       tone: "navy",
     },
     {
-      label: `People within ${radiusMetres}m`,
+      // Not "People within 500m": that label clipped to "PEOPLE WITHIN..." in
+      // a quarter-width tile, and the radius reads fine in the note.
+      label: "Residents",
       value: demographics.data?.catchment
         ? demographics.data.catchment.population.toLocaleString("en-MY")
         : "no data",
-      note: demographics.data?.catchment ? "400m population grid" : "no grid coverage",
+      note: demographics.data?.catchment
+        ? `within ${radiusMetres}m`
+        : "no grid coverage",
       tone: "navy",
     },
     {
@@ -564,7 +598,18 @@ export default function Analysis() {
             * on the page, once, small, under the map where the shareable link
             * lives.
             */}
-          <div className="hero">
+          <header className="hero" ref={heroRef}>
+            {/**
+              * Concentric rings, not the events page's square grid.
+              *
+              * That grid reads as a catalogue of many things, which is what
+              * that page is. This page is a report on ONE place, and rings are
+              * the language it already speaks: the search radius drawn on the
+              * map beside it, and the score ring itself. The texture is the
+              * subject rather than decoration borrowed from elsewhere.
+              */}
+            <span className="hero-rings" aria-hidden="true" />
+
             <p className="hero-eyebrow">Location report</p>
             <h2 className="hero-name">{location.label}</h2>
 
@@ -588,7 +633,7 @@ export default function Analysis() {
             )}
 
             <StatChips chips={chips} />
-          </div>
+          </header>
 
           <SectionTabs tabs={tabs} active={section} onSelect={setSection} />
 

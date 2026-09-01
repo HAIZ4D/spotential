@@ -5,6 +5,7 @@ import {
   type ChatTurn,
   type ReportLocation,
 } from "../lib/api.js";
+import { SectionLede } from "./analysis/SectionLede.js";
 
 /**
  * Ask about this location — Feature 3.
@@ -113,12 +114,17 @@ export function LocationChat({
 
       <div className="body stack">
         {turns.length === 0 && (
-          <div className="notice info">
-            <span>
-              Answers can only cite figures shown on this page. The assistant does not calculate.
-              if a question needs a number nobody measured, it says so rather than estimating.
-            </span>
-          </div>
+          <SectionLede
+            eyebrow="Grounded on this page"
+            headline={
+              <>
+                Answers can only cite figures already shown on this page. The assistant does not
+                calculate, so if a question needs a number nobody measured, it says so rather than
+                estimating one.
+              </>
+            }
+            note="Every figure in a reply is checked against the panels before you see it. An answer that cites anything else is refused rather than shown."
+          />
         )}
 
         {turns.length > 0 && (

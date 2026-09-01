@@ -66,8 +66,12 @@ test("states up front that it cannot calculate", async ({ page }) => {
   await page.goto(AT_KLCC);
   await openSection(page, "Ask");
 
-  await expect(chat(page).getByText(/can only cite figures shown on this page/)).toBeVisible();
-  await expect(chat(page).getByText(/does not calculate/)).toBeVisible();
+  // Same promise, now the section lede rather than a filled notice box. The
+  // wording gained "already" and lost a sentence break the dash pass created.
+  await expect(
+    chat(page).getByText(/can only cite figures already shown on this page/),
+  ).toBeVisible();
+  await expect(chat(page).getByText(/does not\s+calculate/)).toBeVisible();
 });
 
 test("waits for the analysis before accepting a question", async ({ page }) => {

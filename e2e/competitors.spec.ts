@@ -97,8 +97,17 @@ test("lists competitors with rating, reviews and distance", async ({ page }) => 
   await expect(page.getByText("Seoul Garden Bangsar")).toBeVisible();
   await expect(page.getByText("Kim's Kitchen")).toBeVisible();
   await expect(page.getByText("3 within 500m")).toBeVisible();
-  await expect(page.getByText(/Average rating 4\.15 across 2 rated/)).toBeVisible();
-  await expect(page.getByText(/nearest 120m away/)).toBeVisible();
+
+  /**
+   * The summary moved into the section lede, which answers before it lists.
+   * The same two figures are still on screen, now labelled rather than run
+   * together in one grey sentence — so this asserts the pairing, which is
+   * what a reader actually has to be able to find.
+   */
+  const lede = page.locator(".lede");
+  await expect(lede.getByText(/3 rivals inside 500m/)).toBeVisible();
+  await expect(lede.locator(".lede-fact", { hasText: "Average rating" })).toContainText("4.15");
+  await expect(lede.locator(".lede-fact", { hasText: "Nearest" })).toContainText("120m");
 });
 
 test("marks permanently closed competitors rather than hiding them", async ({ page }) => {

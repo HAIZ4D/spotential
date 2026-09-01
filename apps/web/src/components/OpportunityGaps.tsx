@@ -1,5 +1,6 @@
 import { formatNumber, type CategoryGap } from "@spotential/sim-engine";
 import type { GapsResponse } from "../lib/api.js";
+import { SectionLede, type LedeFact } from "./analysis/SectionLede.js";
 
 /**
  * Opportunity Gap Detection — the panel.
@@ -40,6 +41,32 @@ export function OpportunityGaps({ data }: { data: GapsResponse }) {
 
   const best = Math.max(...ranked.map((r) => r.gapScore), 0.0001);
 
+  /**
+   * The finding, derived. NO WINNER IS A REAL ANSWER: in a dense city centre
+   * every category comes back saturated, and naming the least crowded of six
+   * crowded categories would contradict the "saturated" label beside it.
+   */
+  const saturated = ranked.filter((r) => r.verdict === "saturated").length;
+
+  const headline = topOpportunity
+    ? `${topOpportunity.label} carries the most demand per outlet of the ${ranked.length} categories with a presence here. That is a ranking against its neighbours, not a verdict on the trade.`
+    : saturated === ranked.length
+      ? "Every tracked category is already crowded here. There is no clear gap at this spot, which is itself a finding worth taking seriously."
+      : "Nothing stands out at this spot. No category shows meaningfully more demand per outlet than the others.";
+
+  const facts: LedeFact[] = [
+    {
+      label: "Best placed",
+      value: topOpportunity ? topOpportunity.label : "no clear gap",
+      tone: topOpportunity ? "green" : "amber",
+    },
+    { label: "Categories ranked", value: String(ranked.length) },
+    { label: "Already crowded", value: `${saturated} of ${ranked.length}`, tone: saturated === ranked.length ? "red" : undefined },
+    // Zero outlets is not evidence of demand, so these are excluded from the
+    // ranking entirely — counted here only so the exclusion is visible.
+    { label: "Not found nearby", value: String(noPresence.length) },
+  ];
+
   return (
     <section className="card">
       <header>
@@ -48,19 +75,16 @@ export function OpportunityGaps({ data }: { data: GapsResponse }) {
       </header>
 
       <div className="body">
-        {/* No winner is a real answer. In a dense city centre every category
-            comes back saturated, and naming the least crowded of six crowded
-            categories would contradict the "saturated" label beside it. */}
-        {!topOpportunity && (
-          <div className="notice warn" style={{ marginBottom: 12 }}>
-            {ranked.every((r) => r.verdict === "saturated")
-              ? "Every tracked category is already crowded here. There is no clear gap at this spot, which is itself a finding worth taking seriously."
-              : "Nothing stands out at this spot. No category shows meaningfully more demand per outlet than the others."}
-          </div>
-        )}
+        <SectionLede eyebrow="Where the room is" headline={headline} facts={facts} />
 
+        {/* The write-up is the only GENERATED prose on this page, so it is kept
+            visibly separate from the lede above it. The lede is derived from
+            the same object the table renders and cannot disagree with it; this
+            can, which is why it is labelled and never carries a figure the
+            table does not also show. */}
         {narrative && (
-          <p style={{ margin: "0 0 12px", fontSize: 13 }}>
+          <p className="gap-narrative">
+            <span className="gap-narrative-tag">Written by Gemini</span>
             {narrative}
           </p>
         )}

@@ -869,13 +869,61 @@ button:disabled {
    score, what it means, and the four figures the score does not itself show.
    Everything that restated the same number went. */
 .hero {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg);
-  padding: 26px 26px 22px;
-  box-shadow: var(--shadow-lift);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0, 48, 135, 0.09);
+  border-radius: 26px;
+  /* Navy-cast rather than the events page's gold. Same family, different
+     room: that page sells a catalogue, this one reports on one address. */
+  background:
+    radial-gradient(120% 130% at 78% 0%, rgba(0, 48, 135, 0.07), transparent 60%),
+    linear-gradient(180deg, rgba(0, 48, 135, 0.035), transparent 42%),
+    var(--bg);
+  padding: 34px 32px 26px;
+  margin: 10px 0 0;
+  box-shadow: 0 1px 2px rgba(0, 48, 135, 0.04), 0 20px 46px -30px rgba(0, 48, 135, 0.4);
+}
+
+/**
+ * Concentric rings, radiating from behind the score.
+ *
+ * The events hero drifts a square grid, which reads as a catalogue of many
+ * things. Rings are what THIS page already draws: the search radius on the map
+ * beside it, and the score ring itself. Spaced to suggest distance bands
+ * rather than to be counted, faded out well before the border so they never
+ * collide with the corner radius, and behind everything.
+ */
+.hero-rings {
+  position: absolute;
+  /**
+   * Centred on the SCORE RING, not on the card.
+   *
+   * The rings are meant to radiate from the number the way the search radius
+   * radiates from the pin. Centred on the card instead they were just a
+   * texture behind the middle of a box, and the metaphor did not land.
+   *
+   * Offset with margins rather than a translate: GSAP animates this element's
+   * transform on entry, and CSS holding a translate on the same property is
+   * the collision that has cost this codebase three separate bugs.
+   */
+  top: 58%;
+  left: 104px;
+  width: 620px;
+  height: 620px;
+  margin-top: -310px;
+  margin-left: -310px;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle,
+    rgba(0, 48, 135, 0.055) 0 1px,
+    transparent 1px 46px
+  );
+  mask-image: radial-gradient(circle, #000 30%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle, #000 30%, transparent 72%);
+  pointer-events: none;
 }
 .hero-eyebrow {
+  position: relative;
   margin: 0;
   font-size: 10.5px;
   font-weight: 750;
@@ -886,24 +934,32 @@ button:disabled {
 /* The PLACE, at the size the most important thing on a page should be. It
    used to be the raw coordinates, which name nothing to a reader. */
 .hero-name {
-  font-size: 30px;
-  line-height: 1.14;
-  font-weight: 700;
-  letter-spacing: -0.028em;
-  margin: 8px 0 0;
+  position: relative;
+  font-size: 36px;
+  line-height: 1.1;
+  font-weight: 720;
+  letter-spacing: -0.032em;
+  margin: 9px 0 0;
   color: var(--ink);
   overflow-wrap: anywhere;
-  max-width: 22ch;
+  max-width: 20ch;
 }
 
 .hero-answer {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 22px;
+  gap: 26px;
   align-items: center;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0, 48, 135, 0.1);
+}
+/* The verdict is the sentence the whole page exists to produce, so it reads
+   as a statement rather than as caption text under a number. */
+.hero-answer .verdict {
+  font-size: 16px;
+  line-height: 1.5;
 }
 .hero-said {
   min-width: 0;
@@ -1048,58 +1104,88 @@ button:disabled {
 }
 
 /* ---------- Stat chips ---------- */
+/* The base strip of the hero: the four figures the score itself does not
+   show. Sits above the ring texture, separated by a hairline so the block
+   reads as cover / answer / figures rather than one undifferentiated card. */
 .chips {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 48, 135, 0.1);
 }
 .chip {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--bg);
-  padding: 9px 10px;
+  position: relative;
   min-width: 0;
-  /* A left rule carries the state colour without tinting the whole chip,
-     which would compete with the ring. */
-  border-left: 3px solid var(--ink-3);
-  animation: chip-in 420ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  padding: 13px 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  /* Almost flat. Depth here would compete with the score ring, and four
+     shadowed cards in a row is the look this redesign is getting away from. */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), var(--bg));
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.chip.navy { border-left-color: var(--navy); }
-.chip.green { border-left-color: var(--green); }
-.chip.amber { border-left-color: var(--gold); }
-.chip.red { border-left-color: var(--red); }
-.chip-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ink-3);
-  font-weight: 650;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.chip-value {
-  font-size: 17px;
-  font-weight: 680;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  margin-top: 2px;
-  color: var(--ink);
-}
-.chip-note {
-  font-size: 10px;
-  color: var(--ink-3);
-  margin-top: 1px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+@media (hover: hover) {
+  .chip:hover {
+    border-color: rgba(0, 48, 135, 0.22);
+    box-shadow: 0 1px 2px rgba(0, 48, 135, 0.05), 0 10px 22px -14px rgba(0, 48, 135, 0.4);
+  }
 }
 
-@keyframes chip-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+.chip-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.085em;
+  /* `--ink-3` measures 2.58:1 on this ground and fails AA. */
+  color: var(--ink-2);
+  font-weight: 700;
 }
+.chip-label > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The tone, as a dot. It used to be a 3px rule down the left edge, which is
+   the most recognisable dashboard-card cliché there is and made four ordinary
+   figures read as four alerts. */
+.chip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--ink-3);
+}
+.chip.navy .chip-dot { background: var(--navy); }
+.chip.green .chip-dot { background: var(--green); }
+.chip.amber .chip-dot { background: var(--gold); }
+.chip.red .chip-dot { background: var(--red); }
+
+.chip-value {
+  margin-top: 7px;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  /* Tabular, so the row of figures aligns on its digits instead of drifting. */
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.chip-note {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink-2);
+  opacity: 0.85;
+}
+
 
 /* Announced, never shown. */
 .sr-only {
@@ -1116,46 +1202,70 @@ button:disabled {
 
 /* ---------- Section tabs ---------- */
 .tabs {
+  position: relative;
   display: flex;
-  gap: 6px;
+  gap: 2px;
+  padding: 4px;
   overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  /* A recessed track. Seven separately-bordered pills was seven boxes
+     pretending to be a control; one track with a position IS the control. */
+  background: linear-gradient(180deg, rgba(0, 48, 135, 0.045), rgba(0, 48, 135, 0.02));
+  scrollbar-width: none;
 }
-/**
- * Uniform whatever is inside it.
- *
- * A tab carrying a figure badge and one without used to be visibly different
- * shapes, so the bar read as ragged. A shared min-height and min-width makes
- * the row regular while the badge still earns its space.
- */
+.tabs::-webkit-scrollbar { display: none; }
+
+/* The sliding thumb. GSAP owns its transform and width; no CSS transition may
+   touch either, or the two compose and it eases backwards into GSAP's frames. */
+.tab-thumb {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: calc(100% - 8px);
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: 0 1px 2px rgba(0, 48, 135, 0.12), 0 4px 12px -6px rgba(0, 48, 135, 0.45);
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .tab {
+  position: relative;
+  z-index: 1;
   min-height: var(--control-md);
-  min-width: 92px;
+  /* `flex: none` is load-bearing. With the default `flex-shrink: 1` these
+     were all squashed to the 92px minimum, and a label plus its badge then
+     overflowed its own button and covered the next tab's first letter. The
+     rail scrolls; the tabs do not shrink. */
+  flex: none;
   justify-content: center;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
+  gap: 6px;
+  padding: 8px 13px;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--bg);
+  border: 1px solid transparent;
+  background: none;
   color: var(--ink-2);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 140ms, color 140ms, border-color 140ms;
+  transition: color 160ms ease;
 }
-.tab:hover {
-  background: var(--surface);
-  color: var(--ink);
+@media (hover: hover) {
+  .tab:hover { color: var(--ink); }
 }
 .tab[aria-selected="true"] {
-  background: var(--navy);
-  border-color: var(--navy);
-  color: #fff;
+  color: var(--navy);
+  font-weight: 700;
 }
+.tab:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+}
+
 .tab-badge {
   font-size: 11px;
   font-weight: 700;
@@ -1164,12 +1274,16 @@ button:disabled {
   border-radius: 999px;
   background: var(--navy-soft);
   color: var(--navy);
+  transition: background 160ms ease, color 160ms ease;
 }
 .tab[aria-selected="true"] .tab-badge {
-  /* Gold is light, so this pairs with dark text — never white on gold. */
-  background: var(--gold);
-  color: #3d2b00;
+  /* Navy, not gold. Gold is the CTA colour and the page already spends it on
+     one thing; a gold badge here would give the eye two "act on me" signals.
+     Same call the navbar pill made. */
+  background: var(--navy);
+  color: #fff;
 }
+
 /* Data missing or degraded, visible without opening the section. */
 .tab-dot {
   width: 7px;
@@ -1181,6 +1295,107 @@ button:disabled {
 .tab-dot.none {
   background: transparent;
   border: 1.5px solid var(--ink-3);
+}
+
+/* The one piece of GENERATED prose on the Location page, marked as such.
+   Everything else here is derived from the figures beside it and cannot
+   disagree with them; this can, so it says who wrote it. */
+.gap-narrative {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  max-width: 70ch;
+  border: 1px dashed rgba(0, 48, 135, 0.22);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.gap-narrative-tag {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+}
+
+/* ---------- Section lede ---------- */
+/**
+ * Answer first, evidence second. The band each section opens with.
+ *
+ * Quiet on purpose: it sits inside a card that already has a heading, so a
+ * second heavy surface here would give the eye two competing entry points.
+ * One hairline, one tint, and the type does the work.
+ */
+.lede {
+  padding: 15px 17px 14px;
+  border: 1px solid rgba(0, 48, 135, 0.12);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(0, 48, 135, 0.05), rgba(0, 48, 135, 0.015));
+  margin-bottom: 14px;
+}
+.lede-eyebrow {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--navy);
+}
+.lede-headline {
+  margin: 7px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--ink);
+  /* 60-75 characters is the readable measure; the sentence is prose, not a
+     label, so it must not run the full width of a 900px column. */
+  max-width: 66ch;
+}
+.lede-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 13px 0 0;
+}
+.lede-fact {
+  padding: 0 18px;
+  border-left: 1px solid rgba(0, 48, 135, 0.14);
+}
+.lede-fact:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+.lede-fact dt {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-2);
+}
+.lede-fact dd {
+  margin: 3px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.lede-fact.navy dd { color: var(--navy); }
+.lede-fact.green dd { color: var(--green); }
+.lede-fact.amber dd { color: #8a6100; }
+.lede-fact.red dd { color: var(--red); }
+.lede-note {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+@media (max-width: 560px) {
+  .lede-fact {
+    padding: 0 12px;
+  }
 }
 
 .section-body {
@@ -1468,29 +1683,40 @@ button:disabled {
   gap: 8px;
   margin-bottom: 10px;
 }
+/**
+ * Cards in a grid, not rows in a box.
+ *
+ * Twenty hairline-separated rows inside one bordered container read as a
+ * spreadsheet, and this list is meant to be scanned for a name and a rating
+ * rather than tallied. Two columns also halves the scroll on a desktop pane
+ * without shrinking anything.
+ */
 .clist {
   list-style: none;
   margin: 0;
-  padding: 0;
-  max-height: 420px;
+  padding: 2px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  max-height: 468px;
   overflow-y: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
 }
 .clist-row {
   display: grid;
-  grid-template-columns: 22px 34px minmax(0, 1fr) auto;
+  grid-template-columns: 18px 44px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  transition: background 120ms ease-out;
-}
-.clist-row + .clist-row {
-  border-top: 1px solid var(--line);
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  transition: background 140ms ease-out, border-color 140ms ease-out, box-shadow 140ms ease-out;
 }
 .clist-row:hover,
 .clist-row.hovered {
   background: var(--navy-tint);
+  border-color: rgba(0, 48, 135, 0.28);
+  box-shadow: 0 1px 2px rgba(0, 48, 135, 0.06), 0 8px 20px -14px rgba(0, 48, 135, 0.5);
 }
 .clist-row.closed {
   opacity: 0.62;
@@ -1502,25 +1728,6 @@ button:disabled {
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
   text-align: right;
-}
-
-/* The visual anchor a photo would give, for nothing. One tint for every tile:
-   colouring them per outlet looks livelier but implies a grouping that does
-   not exist, and in this app colour carries state. */
-.clist-tile {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: var(--navy-soft);
-  color: var(--navy);
-  font-weight: 700;
-  font-size: 15px;
-}
-.clist-row.hovered .clist-tile {
-  background: var(--navy);
-  color: #fff;
 }
 
 .clist-main {

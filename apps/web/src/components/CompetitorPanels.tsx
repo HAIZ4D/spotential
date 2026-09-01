@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useMemo, useState } from "react";
 import { formatNumber, type CompetitorsResponseShape } from "./competitorTypes.js";
+import { SectionLede, type LedeFact } from "./analysis/SectionLede.js";
 import { CompetitorRow } from "./analysis/CompetitorRow.js";
 
 /**
@@ -50,6 +51,74 @@ export function CompetitorList({
     [competitors],
   );
 
+  /**
+   * The finding, in one sentence, read off the response.
+   *
+   * TRUNCATION IS THE HEADLINE WHEN IT HAPPENS, not a footnote under the list.
+   * Twenty results is Google's cap, so a full quota inside 140m is a far
+   * stronger crowding signal than a count of 20 alone — and reading it as
+   * "20 rivals" understates the street. The density figure says the same
+   * thing in a unit that compares across radii.
+   */
+  const complete = data.truncated ? data.completeToMetres : data.radiusMetres;
+  const perKm2 =
+    complete && complete > 0
+      ? Math.round(competitors.length / (Math.PI * (complete / 1000) ** 2))
+      : null;
+
+  const headline = ((): string => {
+    if (competitors.length === 0) {
+      return `Nothing of this type inside ${formatNumber(data.radiusMetres)}m. That is either a real gap or a labelling one, so widen the radius before reading anything into it.`;
+    }
+    if (data.truncated && data.completeToMetres !== null) {
+      // The count comes from the response, never spelled out as "twenty": the
+      // cap is Google's, but what actually came back is what is on screen.
+      return `Google's result cap filled inside ${formatNumber(data.completeToMetres)}m, so this is the nearest ${competitors.length} and not the full count. Everything past that ring is unsearched, not empty.`;
+    }
+    const nearest = summary.nearestMetres;
+    return `${competitors.length} ${competitors.length === 1 ? "rival" : "rivals"} inside ${formatNumber(data.radiusMetres)}m${
+      nearest === null ? "" : `, the closest ${formatNumber(nearest)}m from your pin`
+    }.`;
+  })();
+
+  const facts: LedeFact[] = [
+    {
+      label: data.truncated ? "Rivals (capped)" : "Rivals",
+      value: data.truncated ? `${competitors.length}+` : String(competitors.length),
+      tone: "navy",
+    },
+    {
+      label: "Density",
+      value: perKm2 === null ? "not scored" : `${formatNumber(perKm2)}/km²`,
+      tone: "navy",
+    },
+    {
+      label: "Average rating",
+      // Never an average over unrated outlets: a missing rating is not a zero.
+      /**
+       * At least one decimal, at most two.
+       *
+       * `toFixed(1)` was the first attempt and it was wrong in the other
+       * direction: it rounded the engine's 4.15 to 4.1, discarding precision
+       * that had actually been computed. A minimum stops an average of 4.0
+       * printing as "4" — which reads as a count beside figures that genuinely
+       * are counts — without capping what the engine produced.
+       */
+      value:
+        summary.averageRating === null
+          ? "unrated"
+          : `${summary.averageRating.toLocaleString("en-MY", {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 2,
+            })} ★`,
+      tone: summary.averageRating === null ? undefined : summary.averageRating >= 4.3 ? "red" : "green",
+    },
+    {
+      label: "Nearest",
+      value: summary.nearestMetres === null ? "not scored" : `${formatNumber(summary.nearestMetres)}m`,
+    },
+  ];
+
   return (
     <section className="card">
       <header>
@@ -60,16 +129,12 @@ export function CompetitorList({
       </header>
 
       <div className="body">
-        <div className="spread" style={{ marginBottom: 10 }}>
-          <div className="small muted">
-            {summary.averageRating === null
-              ? "None of them have ratings yet"
-              : `Average rating ${summary.averageRating} across ${summary.ratedCount} rated`}
-            {summary.nearestMetres !== null && ` · nearest ${formatNumber(summary.nearestMetres)}m away`}
-          </div>
-          {/* An SME should know whether this is today's data or last Tuesday's. */}
-          <span className="tiny muted">{describeAge(fetchedAt, fromCache)}</span>
-        </div>
+        <SectionLede
+          eyebrow="Who is already here"
+          headline={headline}
+          facts={facts}
+          note={describeAge(fetchedAt, fromCache)}
+        />
 
         {/* Single span child below: .notice is display:flex, so bare inline
             elements would each become a flex item and fragment the sentence. */}

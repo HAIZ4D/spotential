@@ -2,7 +2,8 @@ import type { AmenityLayer } from "../../lib/api.js";
 import type { HeatmapCell } from "../../lib/api.js";
 import { CellInspector } from "../heatmap/CellInspector.js";
 import { CitySummary, LayerToggles, TopAreas, type RankedArea } from "../heatmap/CitySummary.js";
-import { LEGEND } from "../heatmap/ramp.js";
+import { LEGEND, percentileFor } from "../heatmap/ramp.js";
+import { SectionLede, type LedeFact } from "./SectionLede.js";
 
 /**
  * The City Demand panel, on the Location page.
@@ -87,8 +88,41 @@ export function DemandSection({
     );
   }
 
+  /**
+   * The finding, derived from the same cells the panels below tally.
+   *
+   * The pin's own cell leads, because that is the figure the rest of the page
+   * is scored on. GREEN IS NOT SPACE TO OPEN, and that hazard does not go away
+   * just because this tab paints in one hue rather than the heat ramp — the
+   * headline says outright that the map knows nothing about competition.
+   */
+  const pinPeople = pinCell ? Math.round(pinCell.population) : null;
+  const pinPercentile = pinCell === null ? null : Math.round(percentileFor(pinCell.population) * 100);
+  const inView = cells.reduce((sum, c) => sum + c.population, 0);
+
+  const headline =
+    pinPeople === null
+      ? "No population cell covers this pin. Kontur's grid is Malaysia only, so across a border this renders as nothing at all — which is not measured, rather than empty."
+      : `About ${pinPeople.toLocaleString("en-MY")} people live inside the 693m cell your pin stands in, denser than ${pinPercentile}% of where Malaysians live. This measures residents and nothing else: it does not know what is already trading here.`;
+
+  const facts: LedeFact[] = [
+    {
+      label: "Residents in this cell",
+      value: pinPeople === null ? "not measured" : pinPeople.toLocaleString("en-MY"),
+      tone: "navy",
+    },
+    {
+      label: "Nationally",
+      value: pinPercentile === null ? "not scored" : `denser than ${pinPercentile}%`,
+    },
+    { label: "Cells in view", value: cells.length.toLocaleString("en-MY") },
+    { label: "People in view", value: Math.round(inView).toLocaleString("en-MY") },
+  ];
+
   return (
     <>
+      <SectionLede eyebrow="How many people live here" headline={headline} facts={facts} />
+
       {/* The surface is off by default because it also widens the camera, and
           a panel that silently moved the map would be worse than a switch. */}
       <section className="card">
