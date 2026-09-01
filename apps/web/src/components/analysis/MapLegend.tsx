@@ -43,7 +43,7 @@ export function MapLegend({
       {partial && (
         <span className="map-legend-note">
           Places returns the nearest 20 and stops, so the ring between{" "}
-          {formatNumber(completeToMetres)}m and {formatNumber(radiusMetres)}m was never searched —
+          {formatNumber(completeToMetres)}m and {formatNumber(radiusMetres)}m was never searched.
           it is unknown, not empty.
         </span>
       )}

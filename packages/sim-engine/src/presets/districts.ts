@@ -56,7 +56,7 @@ export interface DistrictPreset {
 }
 
 const REVIEWED = "2026-08-13";
-const SOURCE = "Researched estimate — ground-floor F&B asking rents";
+const SOURCE = "Researched estimate, ground-floor F&B asking rents";
 
 export const DISTRICT_PRESETS: Record<DistrictId, DistrictPreset> = {
   // ---- Kuala Lumpur ----

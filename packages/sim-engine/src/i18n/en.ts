@@ -62,7 +62,7 @@ export const en = {
 
     seatTurnsVeryLow: (turns: number, bandLow: number) =>
       `${formatNumber(turns, 1)} seat-turns/day is well below the ${formatNumber(bandLow)} ` +
-      `typical for this category — you may be paying for seats you will not fill.`,
+      `typical for this category. You may be paying for seats you will not fill.`,
 
     wageBelowMinimum: (wage: number, minimum: number) =>
       `${formatCurrency(wage)} is below the ${formatCurrency(minimum)} statutory minimum wage.`,
@@ -76,9 +76,9 @@ export const en = {
       `exposed if footfall stays soft.`,
 
     cogsOutOfBand: (pct: number) =>
-      `A ${formatPercent(pct)} cost of goods is unusual for F&B, where 15–55% is the normal range.`,
+      `A ${formatPercent(pct)} cost of goods is unusual for F&B, where 15-55% is the normal range.`,
 
-    zeroRevenue: "No revenue at these inputs — set a price and a transaction count.",
+    zeroRevenue: "No revenue at these inputs. Set a price and a transaction count.",
 
     sstThresholdCrossed: (annual: number, threshold: number) =>
       `At ${formatCurrency(annual)} a year you cross the ${formatCurrency(threshold)} threshold ` +
@@ -93,7 +93,7 @@ export const en = {
 
   ai: {
     thinking: "Working it out…",
-    failed: "Could not reach the assistant. Your figures are unaffected — the sliders still work.",
+    failed: "Could not reach the assistant. Your figures are unaffected and the sliders still work.",
     declined: "That is outside what this simulator can answer.",
     aiChanged: "changed by AI",
     keepScenario: "Keep as scenario",

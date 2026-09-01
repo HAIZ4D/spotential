@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { resolveDataDir } from "./dataDir.js";
 import {
   boundingBoxOf,
   inBoundingBox,
@@ -62,7 +62,7 @@ interface IndexedDistrict {
   bbox: BoundingBox;
 }
 
-const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "data");
+const DATA_DIR = resolveDataDir(import.meta.url);
 
 export class DemographicsLookup {
   private constructor(

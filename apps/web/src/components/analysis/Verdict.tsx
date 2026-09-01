@@ -34,7 +34,7 @@ export function Verdict({ score }: { score: LocationScore }) {
     <p className="hero-verdict">
       {flat ? (
         <>
-          No dimension stands out here — the profile is even across{" "}
+          No dimension stands out here. The profile is even across{" "}
           <strong>{scored.length}</strong> measured axes.
         </>
       ) : (

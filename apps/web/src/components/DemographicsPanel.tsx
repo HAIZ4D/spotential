@@ -25,11 +25,11 @@ const ETHNICITY_LABELS: [string, string][] = [
 /** Working-age bands matter most for an F&B catchment. */
 const AGE_GROUPS: [string, string[]][] = [
   ["Under 15", ["0-4", "5-9", "10-14"]],
-  ["15–24", ["15-19", "20-24"]],
-  ["25–34", ["25-29", "30-34"]],
-  ["35–44", ["35-39", "40-44"]],
-  ["45–54", ["45-49", "50-54"]],
-  ["55–64", ["55-59", "60-64"]],
+  ["15-24", ["15-19", "20-24"]],
+  ["25-34", ["25-29", "30-34"]],
+  ["35-44", ["35-39", "40-44"]],
+  ["45-54", ["45-49", "50-54"]],
+  ["55-64", ["55-59", "60-64"]],
   ["65+", ["65-69", "70-74", "75-79", "80-84", "85+"]],
 ];
 
@@ -89,7 +89,7 @@ export function DemographicsPanel({ data }: { data: DemographicsResponse }) {
             <div>
               <div className="tiny muted">District population</div>
               <div className="figure muted">{formatNumber(total)}</div>
-              <div className="tiny muted">context only — never a customer count</div>
+              <div className="tiny muted">context only, never a customer count</div>
             </div>
           </div>
         )}
@@ -104,13 +104,13 @@ export function DemographicsPanel({ data }: { data: DemographicsResponse }) {
                 The catchment above is an <strong>estimate</strong>: population is assumed even
                 within each 400m cell. The age and ethnicity mix below is for the whole{" "}
                 <strong>{district}</strong> district
-                {total > 0 && <> ({formatNumber(total)} people)</>} — proportions carry across to
+                {total > 0 && <> ({formatNumber(total)} people)</>}. Proportions carry across to
                 your radius, the headcount does not.
               </>
             ) : (
               <>
                 These are figures for the whole <strong>{district}</strong> district
-                {total > 0 && <> ({formatNumber(total)} people)</>} — <strong>not</strong> a
+                {total > 0 && <> ({formatNumber(total)} people)</>}, and <strong>not</strong> a
                 catchment estimate for your radius. Use the <em>mix</em> below; the headcount is
                 context for the area, and multiplying it by anything would badly overstate your
                 market.

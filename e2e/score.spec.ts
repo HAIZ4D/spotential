@@ -78,39 +78,65 @@ test.beforeEach(async ({ page }) => {
   await page.route(MAPS, (route) => route.abort());
 });
 
-test("shows the profile with a score and the radar chart", async ({ page }) => {
+/**
+ * Opens the score working.
+ *
+ * The dimension table used to sit open on the page as the FOURTH restatement
+ * of the same five numbers: ring, bars, table, then the weighting notes. It is
+ * behind a disclosure now, so a query for the table finds nothing until this
+ * runs. That is the disclosure doing its job, not a regression.
+ */
+async function openWorking(page: Page) {
+  const summary = page.locator(".score-working > summary");
+  await summary.waitFor();
+  if ((await page.locator(".score-working[open]").count()) === 0) {
+    await summary.click();
+  }
+  await page.getByRole("table").first().waitFor();
+}
+
+test("shows the score and names the dimensions behind it", async ({ page }) => {
   await stub(page);
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
 
-  await expect(page.getByText("Location profile")).toBeVisible();
-
-  // The score is the hero now: a ring rather than a pill in a panel header.
+  // The hero names the PLACE, not its coordinates, and carries one number.
   await expect(page.getByRole("img", { name: /Success score \d+ out of 100/ })).toBeVisible();
   await expect(page.getByText("out of 100")).toBeVisible();
 
-  // Radar axes render as SVG text; the same labels also appear in the table
-  // below, so scope to the chart.
-  const radar = page.locator(".hero").getByRole("img");
-  await expect(radar.getByText("Competition", { exact: true })).toBeVisible();
-  await expect(radar.getByText("Rent sensitivity", { exact: true })).toBeVisible();
+  /**
+   * The radar is gone from here on purpose. It restated the bars below it and
+   * went actively misleading when dimensions were missing: two unscored axes
+   * drew a thin sliver that reads as a terrible location rather than as absent
+   * data. /compare keeps its own, where overlaying two shapes is the point.
+   */
+  await expect(page.locator(".hero .recharts-wrapper")).toHaveCount(0);
+
+  // The bars are what rank the dimensions now.
+  const bars = page.locator(".dim-bar");
+  await expect(bars.filter({ hasText: "Competition" })).toBeVisible();
+  await expect(bars.filter({ hasText: "Rent sensitivity" })).toBeVisible();
 });
 
 test("states that it is a comparison score and not a forecast", async ({ page }) => {
   await stub(page);
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
 
-  // The footer repeats this caveat site-wide, so both assertions name the
-  // panel. The panel's wording is its own — "comparison score" against the
-  // footer's "comparison aid" — and it is the one that has to be here.
-  const panel = page.locator(".notice.info").first();
-  await expect(panel.getByText(/comparison score, not a forecast/)).toBeVisible();
-  await expect(panel.getByText(/validated against real business outcomes/)).toBeVisible();
+  /**
+   * Still present, no longer shouted. It had been a filled panel above the
+   * data on every single visit, which is how a warning stops being read. One
+   * quiet line under the score keeps it honest without it being the loudest
+   * thing on the page.
+   */
+  const caveat = page.locator(".hero-caveat");
+  await expect(caveat.getByText(/comparison aid, not a forecast/)).toBeVisible();
+  await expect(caveat.getByText(/checked against real business outcomes/)).toBeVisible();
 });
 
 test("labels every dimension as measured or inferred", async ({ page }) => {
   await stub(page);
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
 
+  await openWorking(page);
   await expect(page.getByRole("table").getByText("measured").first()).toBeVisible();
   await expect(page.getByRole("table").getByText("inferred").first()).toBeVisible();
 });
@@ -119,6 +145,7 @@ test("rent sensitivity is inferred where a benchmark reaches", async ({ page }) 
   await stub(page);
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
 
+  await openWorking(page);
   const row = page.getByRole("row").filter({ hasText: "Rent sensitivity" });
   await expect(row.getByText("inferred")).toBeVisible();
 });
@@ -131,6 +158,7 @@ test("rent sensitivity stays empty where no benchmark reaches, rather than fakin
   // partial, and the honest answer is an empty axis, not a national average.
   await page.goto("/analysis?lat=3.8077&lng=103.3260");
 
+  await openWorking(page);
   const row = page.getByRole("row").filter({ hasText: "Rent sensitivity" });
   await expect(row.getByText("no data")).toBeVisible();
 });
@@ -145,6 +173,7 @@ test("an empty area is not presented as a perfect one", async ({ page }) => {
   });
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
 
+  await openWorking(page);
   await expect(page.getByText(/unproven rather than open/i)).toBeVisible();
 });
 
@@ -162,6 +191,7 @@ test("scores a capped search on density rather than the capped count", async ({ 
   });
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
 
+  await openWorking(page);
   await expect(page.getByText(/per km²/)).toBeVisible();
   // Not presented as a bound, because it is not one.
   await expect(page.getByText(/≤\s*\d+/)).toHaveCount(0);
@@ -185,7 +215,7 @@ test("explains the weighting when asked", async ({ page }) => {
   await stub(page);
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
 
-  await page.getByText(/How the score is weighted/).click();
+  await openWorking(page);
   await expect(page.getByText(/how much each signal can be trusted/)).toBeVisible();
   await expect(page.getByText(/peaks rather than slopes/)).toBeVisible();
 });

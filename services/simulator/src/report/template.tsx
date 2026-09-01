@@ -16,7 +16,7 @@ import type { ReportModel, Table } from "./model.js";
 /**
  * react-pdf's built-in Helvetica is WinAnsi-encoded and silently DROPS glyphs
  * it does not have, rather than substituting anything visible. En and em
- * dashes disappear, which turned "Working age (15–64)" into "(1564)" — a
+ * dashes disappear, which turned "Working age (15-64)" into "(1564)" — a
  * number that reads as real and is wrong. Fold typographic punctuation to
  * ASCII instead of shipping a 200KB font for four characters.
  */

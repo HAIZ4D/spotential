@@ -166,7 +166,7 @@ export function buildScenarioReport(
       label: "Payback",
       value: breakEven.paybackMonth === null ? "Not within 24 months" : `Month ${breakEven.paybackMonth}`,
       ...(breakEven.paybackBandLow !== null && breakEven.paybackBandHigh !== null
-        ? { note: `range ${breakEven.paybackBandLow}–${breakEven.paybackBandHigh}` }
+        ? { note: `range ${breakEven.paybackBandLow} to ${breakEven.paybackBandHigh}` }
         : {}),
     },
   ];
@@ -235,7 +235,7 @@ export function buildScenarioReport(
         },
         { cells: ["Deepest cash point", `Month ${cash.troughMonth}, ${formatCurrency(cash.troughAmount)}`] },
       ],
-      note: "Cash you must have is the worst point of the ramp, including the deposit — usually well above the initial investment.",
+      note: "Cash you must have is the worst point of the ramp, including the deposit. It is usually well above the initial investment.",
     },
     {
       title: "What moves the outcome most",
@@ -282,13 +282,13 @@ export function buildScenarioReport(
           ? `, or between months ${breakEven.paybackBandLow} and ${breakEven.paybackBandHigh} ` +
             `once the ramp is allowed to run faster or slower.`
           : `.`),
-    `The cash low point is ${formatCurrency(trough)} — that is the money you must have ` +
+    `The cash low point is ${formatCurrency(trough)}. That is the money you must have ` +
       `available before opening, and it is the figure most plans miss.`,
   ];
 
   return {
     kind: "scenario",
-    title: `${category.label} — financial projection`,
+    title: `${category.label} financial projection`,
     subtitle: `${formatCurrency(inputs.monthlyRent)}/month rent · ${formatNumber(
       inputs.customersPerDay,
     )} customers/day · ${formatCurrency(inputs.avgPricePerTransaction)} average spend`,
@@ -371,11 +371,11 @@ function scoreOne(input: LocationReportInput): {
   const rentLine = rent
     ? `${formatCurrency(rent.monthlyRent)}/month${
         rent.kind === "proxy" && rent.district
-          ? ` — inferred from the ${rent.district.label} benchmark, ${formatNumber(
+          ? `, inferred from the ${rent.district.label} benchmark, ${formatNumber(
               rent.distanceMetres ?? 0,
             )}m away, reviewed ${rent.reviewed}`
-          : " — the figure you supplied"
-      }. Break-even ${rentSensitivity(rent, input.category, input.point).breakEvenPerDay ?? "—"}/day.`
+          : ", the figure you supplied"
+      }. Break-even ${rentSensitivity(rent, input.category, input.point).breakEvenPerDay ?? "not scored"}/day.`
     : "No rent benchmark covers this location, so rent is excluded from the score rather than guessed.";
 
   return { score, rentLine, rent, sensitivity: rent ? rentSensitivity(rent, input.category, input.point) : null };
@@ -440,7 +440,7 @@ export function deriveSummary(
   const band =
     score.overall >= 70 ? "strong" : score.overall >= 40 ? "mixed" : "difficult";
   lines.push(
-    `This location scores ${Math.round(score.overall)} out of 100 — a ${band} profile — ` +
+    `This location scores ${Math.round(score.overall)} out of 100, a ${band} profile. ` +
       `with ${formatPercent(score.completeness, 0)} of the assessment based on measured data.`,
   );
 
@@ -459,7 +459,7 @@ export function deriveSummary(
       lines.push(
         `Strongest on ${best.label.toLowerCase()} (${Math.round(best.score)}) and weakest on ` +
           `${worst.label.toLowerCase()} (${Math.round(worst.score)}). ` +
-          `${worst.label} is the binding constraint here — it is what would have to change for ` +
+          `${worst.label} is the binding constraint here. It is what would have to change for ` +
           `this site to score better, and it is where to concentrate the questions you ask next.`,
       );
     }
@@ -508,14 +508,14 @@ export function buildLocationReport(
     },
     {
       label: "Average rating",
-      value: input.competitors.averageRating === null ? "—" : String(input.competitors.averageRating),
+      value: input.competitors.averageRating === null ? "unrated" : String(input.competitors.averageRating),
       note: `${formatNumber(input.competitors.ratedCount)} rated`,
     },
     {
       label: "Nearest rival",
       value:
         input.competitors.nearestMetres === null
-          ? "—"
+          ? "none found"
           : `${formatNumber(input.competitors.nearestMetres)}m`,
     },
   ];
@@ -527,9 +527,9 @@ export function buildLocationReport(
       rows: score.dimensions.map((d) => ({
         cells: [
           d.label,
-          d.kind === "unavailable" ? "—" : String(Math.round(d.score)),
+          d.kind === "unavailable" ? "not scored" : String(Math.round(d.score)),
           KIND_WORD[d.kind],
-          d.weight > 0 ? formatPercent(d.weight, 0) : "—",
+          d.weight > 0 ? formatPercent(d.weight, 0) : "excluded",
           d.note,
         ],
       })),
@@ -549,7 +549,7 @@ export function buildLocationReport(
             note:
               "The search returned the nearest 20 and stopped" +
               (input.completeToMetres
-                ? `, complete only to about ${formatNumber(input.completeToMetres)}m. Rings beyond that are marked "not searched" rather than shown as zero — they are not empty, they are unknown.`
+                ? `, complete only to about ${formatNumber(input.completeToMetres)}m. Rings beyond that are marked "not searched" rather than shown as zero. They are not empty, they are unknown.`
                 : ". Counts are a floor, not a total."),
           }
         : {}),
@@ -639,7 +639,7 @@ export function buildLocationReport(
         },
       ],
       note:
-        "Break-even covers ALL fixed costs, not rent alone — nobody breaks even on rent by " +
+        "Break-even covers ALL fixed costs, not rent alone. Nobody breaks even on rent by " +
         "itself. Every other fixed cost is a category constant, so between two sites the whole " +
         "difference is the rent. " +
         sensitivity.note,
@@ -670,7 +670,7 @@ export function buildLocationReport(
         { cells: ["District population", formatNumber(Math.round(input.demographics.total))] },
         {
           cells: [
-            "Working age (15–64)",
+            "Working age (15-64)",
             `${formatNumber(Math.round(working))} (${formatPercent(
               input.demographics.total > 0 ? working / input.demographics.total : 0,
               0,
@@ -782,7 +782,7 @@ export function buildComparisonReport(
             dimension.label,
             ...dimension.scores.map((cell) =>
               // Null, never zero: "no data" and "scored zero" are different claims.
-              cell.score === null ? "—" : String(Math.round(cell.score)),
+              cell.score === null ? "not scored" : String(Math.round(cell.score)),
             ),
             verdict,
           ],
@@ -802,7 +802,7 @@ export function buildComparisonReport(
       })),
       note: winner
         ? `${winner} scores highest, by ${formatNumber(comparison.overallSpread, 1)} points.`
-        : "Too close to call — the difference is inside the margin these figures can support.",
+        : "Too close to call. The difference is inside the margin these figures can support.",
     },
   ];
 
@@ -825,7 +825,7 @@ export function buildComparisonReport(
         `${scored.length} locations compared on the same category and the same radius.`
       : `No location wins. The spread across ${scored.length} sites is ` +
         `${formatNumber(comparison.overallSpread, 1)} points, which is inside what these figures ` +
-        `can support — treat them as equivalent on the evidence here.`,
+        `can support, so treat them as equivalent on the evidence here.`,
     ...(decisive
       ? [
           `The difference is driven mostly by ${decisive.label.toLowerCase()}, where the gap is ` +

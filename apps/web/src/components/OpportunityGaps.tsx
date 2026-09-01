@@ -31,7 +31,7 @@ export function OpportunityGaps({ data }: { data: GapsResponse }) {
           <div className="notice info">
             No F&amp;B outlets of any tracked category were found within{" "}
             {formatNumber(data.radiusMetres)}m. With nothing trading here there is no signal to
-            compare against — that is not the same as an opportunity.
+            compare against. That is not the same as an opportunity.
           </div>
         </div>
       </section>
@@ -54,7 +54,7 @@ export function OpportunityGaps({ data }: { data: GapsResponse }) {
         {!topOpportunity && (
           <div className="notice warn" style={{ marginBottom: 12 }}>
             {ranked.every((r) => r.verdict === "saturated")
-              ? "Every tracked category is already crowded here. There is no clear gap at this spot — which is itself a finding worth taking seriously."
+              ? "Every tracked category is already crowded here. There is no clear gap at this spot, which is itself a finding worth taking seriously."
               : "Nothing stands out at this spot. No category shows meaningfully more demand per outlet than the others."}
           </div>
         )}
@@ -98,14 +98,14 @@ export function OpportunityGaps({ data }: { data: GapsResponse }) {
         {noPresence.length > 0 && (
           <div style={{ marginTop: 14 }}>
             <div className="tiny muted" style={{ fontWeight: 600, marginBottom: 4 }}>
-              NOT FOUND NEARBY — no signal either way
+              NOT FOUND NEARBY, no signal either way
             </div>
             <div className="small muted">
               {noPresence.map((r) => r.label).join(" · ")}
             </div>
             <p className="tiny muted" style={{ margin: "6px 0 0" }}>
               Zero outlets is <strong>not</strong> evidence of an opportunity. It may mean untapped
-              demand, or that there is no appetite for it here — this data cannot tell the two
+              demand, or that there is no appetite for it here. This data cannot tell the two
               apart, so these are deliberately left out of the ranking.
             </p>
           </div>
@@ -132,7 +132,7 @@ export function OpportunityGaps({ data }: { data: GapsResponse }) {
               busy new ones.
             </span>
             <span>
-              Google&rsquo;s category labels are approximate — a Korean restaurant tagged simply as
+              Google&rsquo;s category labels are approximate. A Korean restaurant tagged simply as
               &ldquo;restaurant&rdquo; lands in the wrong bucket.
             </span>
             <span>

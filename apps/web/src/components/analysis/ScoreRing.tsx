@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useCountUp } from "../sim/useCountUp.js";
 
 /**
  * The Success Score, as the first thing the eye lands on.
@@ -30,6 +31,10 @@ const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function ScoreRing({ score }: { score: number }) {
+  // 700ms: this happens once on arrival and nothing is waiting on it, unlike
+  // the simulator's sliders where 200ms is right because they fire on drag.
+  const counted = useCountUp(score, 700);
+
   // Banded on the ROUNDED value. Scoring 39.6 renders as "40" but bands as
   // weak, so the ring would read "40 · WEAK" with the boundary sitting at 40 —
   // a contradiction the reader has no way to resolve.
@@ -71,7 +76,11 @@ export function ScoreRing({ score }: { score: number }) {
       </svg>
 
       <div className="ring-centre">
-        <span className="ring-score">{Math.round(score)}</span>
+        {/* Counts up as the arc sweeps, so the two read as one movement
+            rather than a number that snaps while a ring travels. Banding
+            still uses the FINAL score: a ring that changed colour on its way
+            past 40 and 70 would flash a verdict it does not hold. */}
+        <span className="ring-score">{Math.round(counted)}</span>
         <span className="ring-out-of">out of 100</span>
         <span className="ring-band" style={{ color: band.colour }}>
           {band.label.toUpperCase()}

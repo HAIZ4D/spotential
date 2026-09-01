@@ -22,7 +22,6 @@ const MAPS = "https://maps.googleapis.com/**";
 const PAGES = [
   { name: "analysis", url: "/analysis?lat=3.1578&lng=101.7123&q=KLCC" },
   { name: "compare", url: "/compare?c=korean_restaurant&r=500&p=3.1478,101.6953,KL&p=3.0738,101.5183,PJ" },
-  { name: "heatmap", url: "/heatmap" },
   { name: "simulator", url: "/simulator" },
 ];
 

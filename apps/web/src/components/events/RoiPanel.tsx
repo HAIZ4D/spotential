@@ -149,7 +149,7 @@ export function RoiPanel({
             <table>
               <caption className="tiny muted">
                 What happens at different conversion rates. These are scenarios, not
-                predictions — pick the row that matches how your stall usually performs.
+                predictions. Pick the row that matches how your stall usually performs.
               </caption>
               <thead>
                 <tr>

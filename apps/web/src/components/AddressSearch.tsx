@@ -103,7 +103,7 @@ export function AddressSearch({
 
         {!compact && (
           <span className="tiny muted">
-            You can also click anywhere on the map, or drag the pin — useful when the shoplot has no
+            You can also click anywhere on the map, or drag the pin. That helps when the shoplot has no
             address the geocoder recognises.
           </span>
         )}

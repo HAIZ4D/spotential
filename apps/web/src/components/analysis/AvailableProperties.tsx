@@ -238,7 +238,7 @@ export function AvailableProperties({
 
       <p className="tiny muted properties-note">
         {listings.length > 0
-          ? "Asking prices advertised on PropertyGuru, refreshed daily — not transacted rents, and not used in the Success Score. Tap a unit to see it on PropertyGuru."
+          ? "Asking prices advertised on PropertyGuru, refreshed daily. These are not transacted rents, and not used in the Success Score. Tap a unit to see it on PropertyGuru."
           : "Listings live on the portals and change daily, so these open a live search rather than a copy that would be out of date by the time you called the agent. Asking prices, not transacted rents."}
       </p>
     </div>

@@ -26,7 +26,7 @@ export type ScoreKind = "direct" | "proxy" | "unavailable";
 export interface ScoreDimension {
   key: string;
   label: string;
-  /** 0–100. Zero when unavailable — read `kind` before using it. */
+  /** 0-100. Zero when unavailable — read `kind` before using it. */
   score: number;
   kind: ScoreKind;
   /** Share of the final score, after renormalising over available dimensions. */
@@ -38,7 +38,7 @@ export interface ScoreDimension {
 }
 
 export interface LocationScore {
-  /** 0–100, weighted over AVAILABLE dimensions only. */
+  /** 0-100, weighted over AVAILABLE dimensions only. */
   overall: number;
   dimensions: ScoreDimension[];
   /** Share of the intended dimensions that could actually be measured. */
@@ -219,7 +219,7 @@ const CATCHMENT_DECILES = [3, 169, 388, 703, 1_130, 1_680, 2_592, 3_560, 4_796, 
  * a reader can check — and self-calibrating if the grid is ever refreshed.
  */
 /**
- * Where a catchment sits in the national distribution, as 0–1.
+ * Where a catchment sits in the national distribution, as 0-1.
  *
  * Extracted so the city heatmap can rank a hexagon on exactly the same scale
  * the Success Score uses. One implementation: if these ever diverged, the map
@@ -380,7 +380,7 @@ export function scoreLocation(inputs: ScoreInputs): LocationScore {
       // exactly the false precision the rest of this app refuses.
       note:
         rent?.note ??
-        "No rent benchmark covers this spot — enter the rent you were quoted to fill this in.",
+        "No rent benchmark covers this spot. Enter the rent you were quoted to fill this in.",
     },
   ];
 

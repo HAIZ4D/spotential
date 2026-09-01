@@ -86,7 +86,7 @@ export function MetricRing({
           className="metric-value"
           fill={measured ? "var(--ink)" : "var(--ink-3)"}
         >
-          {measured ? Math.round(dimension.score) : "–"}
+          {measured ? Math.round(dimension.score) : "n/a"}
         </text>
       </svg>
       <span className="metric-label">{label}</span>

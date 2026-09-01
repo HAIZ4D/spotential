@@ -117,8 +117,8 @@ test("shows density bands", async ({ page }) => {
   await openSection(page, "Competition");
 
   await expect(page.getByText("Competition density")).toBeVisible();
-  await expect(page.getByText("0–250m")).toBeVisible();
-  await expect(page.getByText("250–500m")).toBeVisible();
+  await expect(page.getByText("0 to 250m")).toBeVisible();
+  await expect(page.getByText("250 to 500m")).toBeVisible();
 });
 
 test("labels cached results with their age", async ({ page }) => {
@@ -293,3 +293,40 @@ test("a closed outlet keeps its badge under every sort", async ({ page }) => {
  * Verified by hand against the deployed map instead, which is the same
  * convention the pin and radius circle have always followed.
  */
+
+test("every competitor gets a photo box, with a designed fallback", async ({ page }) => {
+  /**
+   * There is no API that will hand us these pictures. Google's Place photos
+   * are a separate enterprise SKU billed per image PER PAGE LOAD, against the
+   * same thousand free calls a month the search itself spends, and it was
+   * priced and declined. So the fallback is the normal state, not an error
+   * state, and it has to look deliberate.
+   */
+  await stubCompetitors(page);
+  await page.goto("/analysis?lat=3.1478&lng=101.6953&q=Bangsar");
+  await openSection(page, "Competition");
+
+  const rows = page.locator(".clist-row");
+  await expect(rows.first()).toBeVisible();
+  const count = await rows.count();
+
+  // One box per row, no exceptions: a row without one would sit visibly short.
+  await expect(page.locator(".clist-row .photobox")).toHaveCount(count);
+
+  // Nothing is fetched for them, so every box is showing its tile.
+  await expect(page.locator(".clist-row .photobox img")).toHaveCount(0);
+  await expect(page.locator(".clist-row .photobox-tile")).toHaveCount(count);
+
+  // Initials, not an empty square, and the same shop keeps the same colour.
+  const first = page.locator(".clist-row .photobox-tile").first();
+  await expect(first).not.toBeEmpty();
+
+  const colour = await first.evaluate((el) => getComputedStyle(el).backgroundImage);
+  await page.reload();
+  await openSection(page, "Competition");
+  const again = await page
+    .locator(".clist-row .photobox-tile")
+    .first()
+    .evaluate((el) => getComputedStyle(el).backgroundImage);
+  expect(again, "the tile colour must be stable across renders").toBe(colour);
+});

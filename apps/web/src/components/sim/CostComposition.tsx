@@ -40,7 +40,7 @@ export function CostComposition({ result }: { result: SimulationResult }) {
             key={segment.key}
             className="composition-seg"
             style={{ width: `${Math.max(0, segment.pct) * 100}%`, background: segment.colour }}
-            title={`${segment.label} — ${formatCurrency(segment.amount)} (${formatPercent(segment.pct, 1)})`}
+            title={`${segment.label}: ${formatCurrency(segment.amount)} (${formatPercent(segment.pct, 1)})`}
           />
         ))}
 
@@ -48,7 +48,7 @@ export function CostComposition({ result }: { result: SimulationResult }) {
           <div
             className="composition-seg profit"
             style={{ width: `${profitShare * 100}%` }}
-            title={`Profit — ${formatCurrency(steady.profit)}`}
+            title={`Profit: ${formatCurrency(steady.profit)}`}
           />
         )}
       </div>

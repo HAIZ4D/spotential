@@ -58,7 +58,7 @@ const TOOLS = [
       {
         name: "decline_out_of_scope",
         description:
-          "Use when the facts cannot answer the question — anything about other locations, seasonality, footfall counts, lease terms, or whether the business will succeed.",
+          "Use when the facts cannot answer the question: anything about other locations, seasonality, footfall counts, lease terms, or whether the business will succeed.",
         parameters: {
           type: "OBJECT",
           properties: {

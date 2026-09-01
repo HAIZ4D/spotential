@@ -207,7 +207,7 @@ export const CATEGORY_PRESETS: Record<BusinessCategory, CategoryPreset> = {
     miscMonthly: 1100,
     typicalUnitSqft: 900,
     seatTurnBand: [3, 8],
-    source: "Generic F&B defaults — no false precision, every field editable",
+    source: "Generic F&B defaults, no false precision, every field editable",
     reviewed: REVIEWED,
   },
 

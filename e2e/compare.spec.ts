@@ -239,7 +239,9 @@ test("the other routes are untouched by the compare styles", async ({ page }) =>
   await expect(page.locator(".cockpit.compare")).toHaveCount(0);
   await expect(page.locator(".cmp-hero")).toHaveCount(0);
 
+  // City Demand was folded into the Location page; its old link still has to
+  // land somewhere, and the comparison styling must not follow it there.
   await page.goto("/heatmap");
-  await expect(page.locator(".cockpit.heat")).toHaveCount(1);
+  await expect(page).toHaveURL(/\/analysis/);
   await expect(page.locator(".cmp-hero")).toHaveCount(0);
 });

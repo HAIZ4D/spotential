@@ -185,10 +185,14 @@ test("says the figures are unaffected when the assistant fails", async ({ page }
 
   await expect(chat(page).getByText(/Every figure on the page is unaffected/)).toBeVisible();
 
-  // The deterministic core is untouched by an AI failure — the score survives
-  // in the hero, and the profile is still one click away.
+  /**
+   * The deterministic core is untouched by an AI failure. The score survives
+   * in the hero, and the working behind it is still one click away: the table
+   * sits inside a disclosure now, so the test opens it as a reader would.
+   */
   await expect(page.getByRole("img", { name: /Success score/ })).toBeVisible();
   await openSection(page, "Overview");
+  await page.locator(".score-working > summary").click();
   await expect(page.getByRole("table").getByText("Competition")).toBeVisible();
 });
 

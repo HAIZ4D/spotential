@@ -200,7 +200,7 @@ export function LayerToggles({
             disabled={!layer.pinned}
             /* Dense categories are counted but never drawn — 1,026 bus stops
                is a useful number and a useless picture. */
-            title={layer.pinned ? undefined : "Counted, not drawn — too many to map usefully"}
+            title={layer.pinned ? undefined : "Counted, not drawn: too many to map usefully"}
           >
             <span className="layer-name">{layer.label}</span>
             <span className="layer-count">{formatNumber(layer.count)}</span>

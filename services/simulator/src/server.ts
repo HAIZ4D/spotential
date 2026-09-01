@@ -68,7 +68,7 @@ async function createGeminiTransport(): Promise<GeminiTransport | undefined> {
   if (backend === "vertex") {
     const projectId = await detectProjectId();
     if (!projectId) {
-      console.error("[gemini] GEMINI_BACKEND=vertex but no project id — AI route disabled.");
+      console.error("[gemini] GEMINI_BACKEND=vertex but no project id. AI route disabled.");
       return undefined;
     }
     const model = process.env["GEMINI_MODEL"] ?? VERTEX_DEFAULT_MODEL;
@@ -79,7 +79,7 @@ async function createGeminiTransport(): Promise<GeminiTransport | undefined> {
 
   const apiKey = process.env["GEMINI_API_KEY"];
   if (!apiKey) {
-    console.warn("[gemini] no GEMINI_API_KEY — AI route disabled.");
+    console.warn("[gemini] no GEMINI_API_KEY. AI route disabled.");
     return undefined;
   }
   const model = process.env["GEMINI_MODEL"] ?? undefined;
@@ -89,7 +89,7 @@ async function createGeminiTransport(): Promise<GeminiTransport | undefined> {
 
 const placesKey = process.env["PLACES_API_KEY"];
 if (!placesKey) {
-  console.warn("[places] PLACES_API_KEY not set — /v1/competitors serves cached results only.");
+  console.warn("[places] PLACES_API_KEY not set. /v1/competitors serves cached results only.");
 }
 
 /**
@@ -101,7 +101,7 @@ if (!placesKey) {
  */
 const staticMapsKey = process.env["STATIC_MAPS_API_KEY"] ?? placesKey;
 if (!staticMapsKey) {
-  console.warn("[staticmap] no key set — PDF reports will render without a map.");
+  console.warn("[staticmap] no key set. PDF reports will render without a map.");
 }
 const staticMaps = staticMapsKey ? new StaticMapFetcher({ apiKey: staticMapsKey }) : undefined;
 
@@ -111,7 +111,7 @@ if (appCheckProjectNumber) {
 } else {
   // Loud, because an unguarded deployment means anyone can spend the Gemini
   // and Places budget by curling the URL.
-  console.warn("[appcheck] NOT ENFORCED — paid routes are open. Expected only in local dev.");
+  console.warn("[appcheck] NOT ENFORCED. Paid routes are open. Expected only in local dev.");
 }
 
 /**
@@ -281,7 +281,7 @@ async function createStores() {
     process.env["GOOGLE_CLOUD_PROJECT"] ?? process.env["FIRESTORE_PROJECT_ID"];
 
   if (!onCloudRun && !explicitProject) {
-    console.warn("[cache] not on Cloud Run and no project set — in-memory caches.");
+    console.warn("[cache] not on Cloud Run and no project set. Using in-memory caches.");
     return {};
   }
 

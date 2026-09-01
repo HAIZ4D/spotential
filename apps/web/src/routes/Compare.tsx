@@ -212,7 +212,7 @@ export default function Compare() {
               <div className="body">
                 <div className="notice info">
                   <span>
-                    Add at least two locations to compare. A single score means little on its own —
+                    Add at least two locations to compare. A single score means little on its own.
                     the point is the difference between two sites.
                   </span>
                 </div>
@@ -273,7 +273,7 @@ export default function Compare() {
                   been validated against real outcomes. Read the shapes and the dimension
                   differences rather than the totals alone.
                   {withRent === 0
-                    ? " Rent sensitivity is missing for every location — no benchmark covers these spots."
+                    ? " Rent sensitivity is missing for every location: no benchmark covers these spots."
                     : withRent < scored.length
                       ? " Rent sensitivity is inferred for some locations and missing for others, so weigh that dimension carefully."
                       : " Rent figures are researched benchmarks unless you entered a quote, so treat that dimension as indicative."}
@@ -281,7 +281,7 @@ export default function Compare() {
               </div>
 
               <div className="tiny muted">
-                Business type and radius apply to every location — comparing different categories
+                Business type and radius apply to every location. Comparing different categories
                 or radii would not be a comparison.
               </div>
             </div>

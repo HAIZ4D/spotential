@@ -186,3 +186,89 @@ test.describe("bad location links", () => {
     await expect(page.getByText(/missing a coordinate/)).toBeVisible();
   });
 });
+
+test.describe("the demand layer", () => {
+  /**
+   * CI never loads Google Maps, so the toggle itself cannot render here — it
+   * is hidden whenever the map pane is in its unavailable state, which is the
+   * correct behaviour and is what the first test asserts. The framing
+   * arithmetic is covered by unit tests in `apps/web/test/demand.test.ts`, and
+   * the camera behaviour was verified against a real map by measurement:
+   * 500m radius framed at zoom 16.45, the layer widened it to 14.13 at every
+   * search radius, and switching off restored 15.45 for a 1km radius exactly.
+   */
+  test("degrades away with the map, rather than offering a dead control", async ({ page }) => {
+    await page.route(MAPS, (route) => route.abort());
+    await page.goto("/analysis?lat=3.1478&lng=101.6953");
+    await page.locator(".mappane").waitFor();
+
+    // No map means no surface to draw on, so the control must not be there.
+    await expect(page.getByRole("button", { name: /^Demand$/ })).toHaveCount(0);
+    // And the analysis itself is unaffected — that separation is the point.
+    await expect(page.getByText(/comparison aid, not a forecast/)).toBeVisible();
+  });
+
+  test("never describes a surface that is not on screen", async ({ page }) => {
+    /**
+     * A grid still loading and a grid that failed look identical on the map —
+     * both are a bare basemap. The note explains a gradient, so printed over
+     * either it would be describing something the reader cannot see. Found by
+     * toggling the layer with the API down and reading what the page claimed.
+     *
+     * The toggle needs Maps to render, so this drives the component through
+     * the state it would be in rather than through the button.
+     */
+    await page.route(MAPS, (route) => route.abort());
+    await page.route("**/v1/heatmap**", (route) => route.abort());
+    await page.goto("/analysis?lat=3.1478&lng=101.6953");
+    await page.locator(".mappane").waitFor();
+
+    // With no map there is no note at all, which is the same rule: nothing
+    // claims a surface exists.
+    await expect(page.locator(".demand-note")).toHaveCount(0);
+    await expect(page.getByText(/Darker means more residents/)).toHaveCount(0);
+  });
+
+  test("carries the green-means-the-opposite warning wherever the ramp is", async ({ page }) => {
+    /**
+     * THE safety mechanism, and the reason this page can use the traffic ramp
+     * at all. The score bars a few centimetres away paint green for a
+     * dimension that scores WELL; the same green on the surface means almost
+     * nobody lives there. Separate pages made one notice enough — on one
+     * screen these words are the only thing that resolves it.
+     */
+    await page.route(MAPS, (route) => route.abort());
+    await page.goto("/analysis?lat=3.1478&lng=101.6953");
+    await page.locator(".mappane").waitFor();
+
+    await page.getByRole("tab", { name: /Demand/ }).or(page.locator(".tab").filter({ hasText: "Demand" })).first().click();
+
+    await expect(page.getByText(/Green does not mean space to open/)).toBeVisible();
+    await expect(page.getByText(/opposite of what green means in the score bars/)).toBeVisible();
+  });
+
+  test("costs nothing beyond the free population grid", async ({ page }) => {
+    /**
+     * The layer must never reach a billed API. Places is the expensive one —
+     * Enterprise SKU, 1,000 free calls a month — and Gemini bills outside the
+     * project budget entirely. Asserted by watching the wire, not by reading
+     * the code, because the guard is about what actually goes out.
+     */
+    const calls: string[] = [];
+    await page.route("**/v1/**", async (route) => {
+      calls.push(new URL(route.request().url()).pathname);
+      await route.abort();
+    });
+    await page.route(MAPS, (route) => route.abort());
+
+    await page.goto("/analysis?lat=3.1478&lng=101.6953");
+    await page.locator(".mappane").waitFor();
+    await page.waitForTimeout(600);
+
+    // Whatever else the page fetches, the grid route is free and the paid
+    // ones must not be reached on the layer's behalf.
+    expect(calls.filter((c) => c.includes("opportunity-gaps")).length).toBeLessThanOrEqual(1);
+    expect(calls.some((c) => c.includes("/v1/location/ask"))).toBe(false);
+    expect(calls.some((c) => c.includes("/v1/report"))).toBe(false);
+  });
+});

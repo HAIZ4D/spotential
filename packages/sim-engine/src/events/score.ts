@@ -183,7 +183,7 @@ function affordabilityScore(inputs: EventScoreInputs, entryPriceRm: number | nul
       note:
         ratio > 1
           ? `${priceText} is above the RM${vendor.boothBudgetRm.toLocaleString("en-MY")} budget you set.`
-          : `${priceText} — ${Math.round(ratio * 100)}% of your stated booth budget.`,
+          : `${priceText}, ${Math.round(ratio * 100)}% of your stated booth budget.`,
     };
   }
 
@@ -203,7 +203,7 @@ function affordabilityScore(inputs: EventScoreInputs, entryPriceRm: number | nul
   return {
     score,
     kind: "proxy",
-    note: `${priceText} for ${days} day${days === 1 ? "" : "s"} — roughly ${Math.round(share * 100)}% of what a typical ${preset.label.toLowerCase()} might take over that run. Set a budget for a sharper read.`,
+    note: `${priceText} for ${days} day${days === 1 ? "" : "s"}, roughly ${Math.round(share * 100)}% of what a typical ${preset.label.toLowerCase()} might take over that run. Set a budget for a sharper read.`,
   };
 }
 
@@ -287,7 +287,7 @@ function travelScore(inputs: EventScoreInputs): {
   return {
     score,
     kind: "direct",
-    note: `${rounded}km from your base${rounded <= 25 ? " — a local run" : rounded >= 150 ? " — expect to stay over" : ""}.`,
+    note: `${rounded}km from your base${rounded <= 25 ? ", a local run" : rounded >= 150 ? ", expect to stay over" : ""}.`,
   };
 }
 
@@ -323,7 +323,7 @@ function catchmentScore(inputs: EventScoreInputs): {
   return {
     score: r2(clamp(percentile * 100)),
     kind: "direct",
-    note: `${Math.round(catchment).toLocaleString("en-MY")} residents within ${radius}m — denser than ${Math.round(percentile * 100)}% of where Malaysians live. Supporting context only: events draw from far beyond their own doorstep.`,
+    note: `${Math.round(catchment).toLocaleString("en-MY")} residents within ${radius}m, denser than ${Math.round(percentile * 100)}% of where Malaysians live. Supporting context only: events draw from far beyond their own doorstep.`,
   };
 }
 
@@ -370,7 +370,7 @@ function visitorDrawScore(inputs: EventScoreInputs): {
   return {
     score,
     kind: "proxy",
-    note: `${visitors.toLocaleString("en-MY")} visitors expected across ${event.totalSlots} booths — about ${Math.round(perBooth)} per booth. The organizer's own estimate, not a measurement.`,
+    note: `${visitors.toLocaleString("en-MY")} visitors expected across ${event.totalSlots} booths, about ${Math.round(perBooth)} per booth. The organizer's own estimate, not a measurement.`,
   };
 }
 

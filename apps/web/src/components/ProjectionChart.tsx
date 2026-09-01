@@ -36,8 +36,8 @@ export function ProjectionChart({ result }: { result: SimulationResult }) {
         <h2>First 12 months</h2>
         <div className="stack" style={{ alignItems: "flex-end", gap: 2 }}>
           <span className="tiny muted">
-            <span style={{ color: "var(--navy)" }}>—</span> monthly profit &nbsp;
-            <span style={{ color: "var(--gold)" }}>—</span> cash in bank
+            <span style={{ color: "var(--navy)" }}>&#9679;</span> monthly profit &nbsp;
+            <span style={{ color: "var(--gold)" }}>&#9679;</span> cash in bank
           </span>
         </div>
       </header>
@@ -144,7 +144,7 @@ export function ProjectionChart({ result }: { result: SimulationResult }) {
           Lowest cash point <strong>{formatCurrency(cash.troughAmount)}</strong> in month{" "}
           {cash.troughMonth}. You need{" "}
           <strong>{formatCurrency(cash.peakCashRequirement)}</strong> of runway, not just the
-          initial investment — the rent deposit and the ramp-period losses land before any of it
+          initial investment. The rent deposit and the ramp-period losses land before any of it
           comes back.
         </p>
       </div>

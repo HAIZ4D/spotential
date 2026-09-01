@@ -11,7 +11,6 @@ import { Footer } from "./components/Footer.js";
  */
 const Analysis = lazy(() => import("./routes/Analysis.js"));
 const Compare = lazy(() => import("./routes/Compare.js"));
-const Heatmap = lazy(() => import("./routes/Heatmap.js"));
 /** Events never loads the Maps bundle, so it stays out of the main chunk too. */
 const Events = lazy(() => import("./routes/Events.js"));
 const EventDetail = lazy(() => import("./routes/EventDetail.js"));
@@ -27,6 +26,12 @@ const EventDetail = lazy(() => import("./routes/EventDetail.js"));
 function RedirectToSimulator() {
   const { search } = useLocation();
   return <Navigate to={{ pathname: "/simulator", search }} replace />;
+}
+
+/** Old City Demand links land on the page that absorbed it. */
+function RedirectToAnalysis() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: "/analysis", search }} replace />;
 }
 
 export default function App() {
@@ -51,14 +56,16 @@ export default function App() {
             </Suspense>
           }
         />
-        <Route
-          path="/heatmap"
-          element={
-            <Suspense fallback={<div style={{ padding: 24 }}>Loading city demand…</div>}>
-              <Heatmap />
-            </Suspense>
-          }
-        />
+        {/**
+          * City Demand folded into the Location page.
+          *
+          * A REDIRECT rather than a 404: the URL is this product's persistence
+          * layer — every view is a shareable link — so a `/heatmap` link
+          * someone already sent has to land somewhere useful rather than on
+          * the simulator via the catch-all. The query string rides along for
+          * the same reason it does on the `/` redirect.
+          */}
+        <Route path="/heatmap" element={<RedirectToAnalysis />} />
         <Route
           path="/events"
           element={

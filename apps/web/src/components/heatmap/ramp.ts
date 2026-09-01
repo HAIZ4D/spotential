@@ -55,15 +55,36 @@ const STOPS: { at: number; rgb: [number, number, number] }[] = [
   { at: 1, rgb: [214,  35,  35] },
 ];
 
+/**
+ * A SINGLE-HUE ramp, for drawing this same surface on the Location page.
+ *
+ * `/analysis` already paints `.dim-bar-fill.green` for a dimension that scores
+ * well, inches from the map. The ramp above means the opposite by green — the
+ * heatmap page says so outright: "Green does not mean space to open. It means
+ * almost nobody lives there." Separate pages is what makes that notice enough;
+ * on one screen the same colour would say "good" and "empty" at once.
+ *
+ * One hue removes the question. Pale to deep navy reads as more people or
+ * fewer people and carries no verdict, so it cannot collide with the score
+ * colours sitting beside it. The national calibration is untouched — this is
+ * the same percentile from `percentileFor`, painted differently.
+ */
+const MONO_STOPS: { at: number; rgb: [number, number, number] }[] = [
+  { at: 0, rgb: [232, 238, 248] },
+  { at: 0.35, rgb: [176, 197, 231] },
+  { at: 0.6, rgb: [104, 141, 201] },
+  { at: 0.82, rgb: [40, 86, 163] },
+  { at: 1, rgb: [0, 48, 135] },
+];
+
 const mix = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
 
-/** Continuous colour for a percentile in 0–1. */
-export function colourAt(percentile: number): string {
+function sample(stops: { at: number; rgb: [number, number, number] }[], percentile: number): string {
   const p = Math.min(1, Math.max(0, percentile));
 
-  for (let i = 0; i < STOPS.length - 1; i += 1) {
-    const low = STOPS[i]!;
-    const high = STOPS[i + 1]!;
+  for (let i = 0; i < stops.length - 1; i += 1) {
+    const low = stops[i]!;
+    const high = stops[i + 1]!;
     if (p <= high.at) {
       const span = high.at - low.at;
       const t = span > 0 ? (p - low.at) / span : 0;
@@ -72,8 +93,18 @@ export function colourAt(percentile: number): string {
     }
   }
 
-  const last = STOPS[STOPS.length - 1]!;
+  const last = stops[stops.length - 1]!;
   return `rgb(${last.rgb[0]}, ${last.rgb[1]}, ${last.rgb[2]})`;
+}
+
+/** Continuous colour for a percentile in 0-1. */
+export function colourAt(percentile: number): string {
+  return sample(STOPS, percentile);
+}
+
+/** The same percentile on the single-hue ramp. */
+export function colourAtMono(percentile: number): string {
+  return sample(MONO_STOPS, percentile);
 }
 
 export const colourForPopulation = (population: number) => colourAt(percentileFor(population));

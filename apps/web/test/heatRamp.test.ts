@@ -3,6 +3,7 @@ import {
   LEGEND,
   SATURATION_POPULATION,
   colourAt,
+  colourAtMono,
   percentileFor,
   weightFor,
 } from "../src/components/heatmap/ramp.js";
@@ -129,5 +130,58 @@ describe("the legend explains the ramp in words", () => {
 describe("percentileFor still backs the inspector", () => {
   it("puts central KL where the published figure says", () => {
     expect(Math.round(percentileFor(6_457) * 100)).toBe(87);
+  });
+});
+
+/**
+ * The single-hue ramp, for drawing this surface on the Location page.
+ *
+ * `/analysis` paints green for a dimension that scores well, inches from the
+ * map, while the traffic ramp above means the opposite by green — the heatmap
+ * page says so outright. On one screen the same colour would say "good" and
+ * "almost nobody lives here" at once, so that page gets a ramp that carries no
+ * verdict at all. These tests are what stop it quietly acquiring one.
+ */
+describe("the mono ramp carries no verdict", () => {
+  const SAMPLES = [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1];
+
+  it("is never green-dominant or red-dominant at any point", () => {
+    for (const p of SAMPLES) {
+      const [r, g, b] = rgb(colourAtMono(p));
+      // Blue leads everywhere: that is what makes it one hue rather than a
+      // scale someone could read as good-to-bad.
+      expect(b, `blue should lead at ${p}`).toBeGreaterThan(r!);
+      expect(b, `blue should lead at ${p}`).toBeGreaterThanOrEqual(g!);
+    }
+  });
+
+  it("gets darker as density rises, monotonically", () => {
+    const lum = (p: number) => {
+      const [r, g, b] = rgb(colourAtMono(p));
+      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+    };
+    for (let i = 1; i < SAMPLES.length; i += 1) {
+      expect(lum(SAMPLES[i]!), `at ${SAMPLES[i]}`).toBeLessThan(lum(SAMPLES[i - 1]!));
+    }
+  });
+
+  it("reads the SAME calibration as the traffic ramp", () => {
+    // Both are painted from percentileFor, so a location's position on the
+    // scale is identical and only the colour differs. If these ever diverge,
+    // the two pages would be making different claims about the same cell.
+    for (const people of [500, 3_000, SATURATION_POPULATION, 20_000]) {
+      const p = percentileFor(people);
+      expect(colourAtMono(p)).toBe(colourAtMono(percentileFor(people)));
+      expect(p).toBeGreaterThanOrEqual(0);
+      expect(p).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("leaves the traffic ramp alone", () => {
+    // The heatmap page must be untouched by this addition.
+    const [r, g] = rgb(colourAt(0));
+    expect(g).toBeGreaterThan(r!);
+    const [hr, hg] = rgb(colourAt(1));
+    expect(hr).toBeGreaterThan(hg!);
   });
 });

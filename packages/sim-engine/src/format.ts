@@ -17,20 +17,20 @@ function nf(minimumFractionDigits: number, maximumFractionDigits: number): Intl.
 }
 
 export function formatCurrency(value: number): string {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "not available";
   const digits = Math.abs(value) >= CENTS_THRESHOLD ? 0 : 2;
   return `RM ${nf(digits, digits).format(value)}`;
 }
 
 /** Always two decimals. For per-unit figures like a RM5.76 cost of goods. */
 export function formatCurrencyPrecise(value: number): string {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "not available";
   return `RM ${nf(2, 2).format(value)}`;
 }
 
 /** Signed, for delta chips against the pinned baseline. */
 export function formatCurrencyDelta(value: number): string {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "not available";
   if (value === 0) return "no change";
   const sign = value > 0 ? "+" : "−";
   return `${sign}${formatCurrency(Math.abs(value))}`;
@@ -38,12 +38,12 @@ export function formatCurrencyDelta(value: number): string {
 
 /** @param value a fraction, e.g. 0.123 renders as "12.3%". */
 export function formatPercent(value: number, digits = 1): string {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "not available";
   return `${nf(digits, digits).format(value * 100)}%`;
 }
 
 export function formatNumber(value: number, digits = 0): string {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "not available";
   return nf(digits, digits).format(value);
 }
 
@@ -57,5 +57,5 @@ export function formatMonthBand(
   if (low === null || high === null || low === high) {
     return `${point} ${point === 1 ? "month" : "months"}`;
   }
-  return `${low}–${high} months`;
+  return `${low} to ${high} months`;
 }

@@ -72,7 +72,7 @@ export function VendorPanel({ vendor, onChange }: VendorPanelProps) {
               );
             }}
           >
-            <option value="">Not set — travel not scored</option>
+            <option value="">Not set, travel not scored</option>
             {BASES.map((d) => (
               <option key={d.id} value={d.label}>
                 {d.label}

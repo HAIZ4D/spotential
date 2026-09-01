@@ -210,7 +210,7 @@ export default function EventDetail() {
             <div className="body">
               {event.packages.length === 0 ? (
                 <p className="muted">
-                  The organizer has not published booth pricing. Ask them what a stall costs —
+                  The organizer has not published booth pricing. Ask them what a stall costs.
                   every figure on this page follows from it.
                 </p>
               ) : (
@@ -340,7 +340,7 @@ export default function EventDetail() {
                 <div className="notice info">
                   <span>
                     A comparison aid, not a forecast. Weights reflect how far each signal can be
-                    trusted — the organizer's own turnout estimate carries the least.
+                    trusted, and the organizer's own turnout estimate carries the least.
                   </span>
                 </div>
               </div>

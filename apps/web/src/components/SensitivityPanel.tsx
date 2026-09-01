@@ -28,14 +28,14 @@ export function SensitivityPanel({ result }: { result: SimulationResult }) {
               <span style={{ width: `${(entry.spread / widest) * 100}%` }} />
             </span>
             <span className="months">
-              {label(entry.paybackAtPlus20)}–{label(entry.paybackAtMinus20)} mo
+              {label(entry.paybackAtPlus20)} to {label(entry.paybackAtMinus20)} mo
             </span>
           </div>
         ))}
 
         {sensitivity[0] && (
           <p className="small muted" style={{ margin: "12px 0 0" }}>
-            <strong>{en.levers[sensitivity[0].field]}</strong> is the strongest lever here — a 20%
+            <strong>{en.levers[sensitivity[0].field]}</strong> is the strongest lever here. A 20%
             move swings break-even by {sensitivity[0].spread} month
             {sensitivity[0].spread === 1 ? "" : "s"}. Levers are ranked by impact, not by how easy
             they are to pull.

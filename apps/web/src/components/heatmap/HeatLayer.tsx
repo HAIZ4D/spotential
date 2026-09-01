@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useMap } from "@vis.gl/react-google-maps";
 import type { HeatmapCell } from "../../lib/api.js";
-import { colourAt, weightFor } from "./ramp.js";
+import { colourAt, colourAtMono, weightFor } from "./ramp.js";
 
 /**
  * The population surface, as a real heat gradient.
@@ -43,7 +43,7 @@ import { colourAt, weightFor } from "./ramp.js";
 export const INFLUENCE_METRES = 1_500;
 
 /**
- * Area of one resolution-8 cell. Malaysian cells measure 0.714–0.880 km² and
+ * Area of one resolution-8 cell. Malaysian cells measure 0.714-0.880 km² and
  * populated ones cluster near the top of that; the exact figure only sets the
  * gain below, which is a smoothing choice rather than a reported number.
  */
@@ -68,27 +68,62 @@ export const CELL_AREA_M2 = 0.86e6;
 export const KERNEL_GAIN = CELL_AREA_M2 / ((Math.PI * INFLUENCE_METRES * INFLUENCE_METRES) / 3);
 
 /** 256-entry lookup, built once: colourAt() per pixel would be far too slow. */
-const GRADIENT = (() => {
+const buildLut = (at: (percentile: number) => string) => {
   const lut = new Uint8ClampedArray(256 * 3);
   for (let i = 0; i < 256; i += 1) {
-    const rgb = colourAt(i / 255).match(/\d+/g);
+    const rgb = at(i / 255).match(/\d+/g);
     lut[i * 3] = Number(rgb?.[0] ?? 0);
     lut[i * 3 + 1] = Number(rgb?.[1] ?? 0);
     lut[i * 3 + 2] = Number(rgb?.[2] ?? 0);
   }
   return lut;
-})();
+};
+
+const GRADIENTS = {
+  /** The heatmap page's ramp. Default, so that page is unaffected. */
+  traffic: buildLut(colourAt),
+  /**
+   * Single hue, for drawing this surface beside the score colours on
+   * `/analysis`, where green already means "this dimension scores well".
+   */
+  mono: buildLut(colourAtMono),
+} as const;
+
+export type HeatRamp = keyof typeof GRADIENTS;
 
 /** Below this the surface fades out entirely rather than tinting empty land. */
 const FLOOR = 8;
 
-export function HeatLayer({ cells }: { cells: HeatmapCell[] }) {
+/**
+ * Opacity is a legibility budget, not a style choice.
+ *
+ * Central KL's median cell is top-decile nationally, so most of a city frame
+ * is legitimately saturated — at the original 84% ceiling the basemap vanished
+ * and the page stopped being a tool. The heatmap page settled at ~67%. The
+ * Location map needs the basemap MORE, not less: streets place the competitor
+ * pins and the two rings, so it takes a lower ceiling again.
+ *
+ * Alpha out of 255, not a fraction: `traffic` is the exact 170 this shipped
+ * with, and rounding a 0.67 would have moved it to 171 — a change to the
+ * heatmap page smuggled in by a refactor that was supposed to leave it alone.
+ */
+const CEILING = { traffic: 170, mono: 128 } as const;
+
+export function HeatLayer({
+  cells,
+  ramp = "traffic",
+}: {
+  cells: HeatmapCell[];
+  ramp?: HeatRamp;
+}) {
   const map = useMap();
 
   useEffect(() => {
     if (!map || typeof google === "undefined" || cells.length === 0) return;
 
     const gmap = map;
+    const gradient = GRADIENTS[ramp];
+    const ceiling = CEILING[ramp];
 
     const canvas = document.createElement("canvas");
     canvas.style.position = "absolute";
@@ -187,9 +222,9 @@ export function HeatLayer({ cells }: { cells: HeatmapCell[] }) {
             px[i + 3] = 0;
             continue;
           }
-          px[i] = GRADIENT[alpha * 3] as number;
-          px[i + 1] = GRADIENT[alpha * 3 + 1] as number;
-          px[i + 2] = GRADIENT[alpha * 3 + 2] as number;
+          px[i] = gradient[alpha * 3] as number;
+          px[i + 1] = gradient[alpha * 3 + 1] as number;
+          px[i + 2] = gradient[alpha * 3 + 2] as number;
           /**
            * Opacity, and it has to leave the basemap legible.
            *
@@ -200,8 +235,12 @@ export function HeatLayer({ cells }: { cells: HeatmapCell[] }) {
            * heat layer you cannot read street names through is a picture
            * rather than a tool. Capped well below opaque, and the faint end
            * stays faint so "almost nobody lives here" reads as bare map.
+           *
+           * The ceiling is per-ramp: the Location map carries competitor pins
+           * and two rings that have to stay readable against it, so it gets a
+           * lower one still.
            */
-          px[i + 3] = Math.min(170, 24 + alpha * 0.58);
+          px[i + 3] = Math.min(ceiling, 24 + alpha * 0.58);
         }
 
         ctx.putImageData(image, 0, 0);
@@ -211,7 +250,7 @@ export function HeatLayer({ cells }: { cells: HeatmapCell[] }) {
     const overlay = new HeatOverlay();
     overlay.setMap(gmap);
     return () => overlay.setMap(null);
-  }, [map, cells]);
+  }, [map, cells, ramp]);
 
   return null;
 }

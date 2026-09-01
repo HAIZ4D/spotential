@@ -102,7 +102,7 @@ export function CellInspector({
         </div>
 
         <div className="small">
-          Denser than <strong>{percentile}%</strong> of where Malaysians live — the same scale the
+          Denser than <strong>{percentile}%</strong> of where Malaysians live, the same scale the
           Success Score uses.
         </div>
 
@@ -123,14 +123,14 @@ export function CellInspector({
 
         {nearby.length === 0 && amenitiesAvailable && (
           <div className="tiny muted">
-            No rail, mall, university or hospital inside this cell — turn layers on to see the wider
+            No rail, mall, university or hospital inside this cell. Turn layers on to see the wider
             city.
           </div>
         )}
 
         {benchmark ? (
           <div className="small">
-            Rent benchmark <strong>{benchmark.label}</strong> — RM{benchmark.rentMedianPsf}/sqft.{" "}
+            Rent benchmark <strong>{benchmark.label}</strong>, RM{benchmark.rentMedianPsf}/sqft.{" "}
             <span className="muted">
               {benchmark.source}, reviewed {benchmark.reviewed}.
             </span>

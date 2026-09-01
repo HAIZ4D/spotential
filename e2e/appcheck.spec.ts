@@ -34,7 +34,7 @@ test.describe("with Firebase and reCAPTCHA blocked", () => {
     await transactions.fill("144");
     await transactions.blur();
     await expect(page.getByTestId("headline-profit")).toHaveText("RM 25,015");
-    await expect(page.getByTestId("headline-breakeven")).toHaveText("8–13 months");
+    await expect(page.getByTestId("headline-breakeven")).toHaveText("8 to 13 months");
   });
 
   test("share links and CSV still work without any Google service", async ({ page }) => {

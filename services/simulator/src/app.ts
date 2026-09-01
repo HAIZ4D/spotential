@@ -592,7 +592,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     if (east - west > MAX_SPAN_DEGREES || north - south > MAX_SPAN_DEGREES) {
       return reply.status(400).send({
         error: "bounds_too_large",
-        message: `Request at most ${MAX_SPAN_DEGREES} degrees per side — about 33km.`,
+        message: `Request at most ${MAX_SPAN_DEGREES} degrees per side, about 33km.`,
       });
     }
 
@@ -747,7 +747,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     if (east - west > MAX_SPAN_DEGREES || north - south > MAX_SPAN_DEGREES) {
       return reply.status(400).send({
         error: "bounds_too_large",
-        message: `Request at most ${MAX_SPAN_DEGREES} degrees per side — about 165km.`,
+        message: `Request at most ${MAX_SPAN_DEGREES} degrees per side, about 165km.`,
       });
     }
 

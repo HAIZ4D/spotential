@@ -8,6 +8,9 @@ import {
 } from "recharts";
 import { formatPercent, type LocationScore, type ScoreKind } from "@spotential/sim-engine";
 import { bandFor } from "./analysis/ScoreRing.js";
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 
 /**
  * The Overall Success Score — Feature 1d.
@@ -82,16 +85,50 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
   const rentDimension = score.dimensions.find((d) => d.key === "rent");
   const overall = band(score.overall);
 
+  const barsRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * The bars grow from nothing.
+   *
+   * `useGSAP` with a scope rather than a raw effect: killing a `from` tween
+   * freezes its targets wherever they reached instead of putting them back,
+   * and under StrictMode's double mount that leaves every bar at zero width.
+   * `revertOnUpdate` re-runs it cleanly when the score changes.
+   *
+   * Width, not transform: these are inside a track with `overflow: hidden`,
+   * so a scaled bar would still paint outside its own rail.
+   */
+  useGSAP(
+    () => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      gsap.from(".dim-bar-fill", {
+        width: 0,
+        duration: 0.55,
+        stagger: 0.05,
+        ease: "power2.out",
+      });
+    },
+    { dependencies: [score], scope: barsRef, revertOnUpdate: true },
+  );
+
   const body = (
     <>
-        <div className="notice info" style={{ marginBottom: 12 }}>
-          <span>
-            This is a <strong>comparison score, not a forecast</strong>. Nothing here has been
-            validated against real business outcomes — it blends measured competition against
-            inferred demand. A score means little alone; it earns its keep when you score two sites
-            and compare the shapes below.
-          </span>
-        </div>
+        {/**
+          * One line, not a filled box.
+          *
+          * The caveat is the honesty the whole product rests on, so it stays.
+          * But it had been sitting in the best space on the page, above the
+          * data, in a coloured panel, every single visit — which is how a
+          * warning stops being read. The hero carries the short form; this is
+          * for a caller rendering the card on its own.
+          */}
+        {!bare && (
+          <p className="score-caveat">
+            A <strong>comparison aid, not a forecast</strong>. Nothing in it has been checked
+            against real business outcomes. It blends measured competition against inferred demand,
+            and it earns its keep when you score two sites and compare them.
+          </p>
+        )}
 
         {/* The radar lives in the hero on the location page, beside the ring.
             Kept here for any caller rendering the full card on its own. */}
@@ -104,7 +141,7 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
             down at a glance. Same device as the PDF and /compare, so all
             three surfaces read alike. The table below still holds every
             figure, weight and basis. */}
-        <div className="dim-bars">
+        <div className="dim-bars" ref={barsRef}>
           {score.dimensions.map((d) => {
             const measured = d.kind !== "unavailable";
             return (
@@ -126,7 +163,17 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
           })}
         </div>
 
-        <div className="table-scroll" style={{ marginTop: 8 }}>
+        {/**
+          * The working, folded away.
+          *
+          * This table is the FOURTH statement of the same five numbers: ring,
+          * bars, then every figure again with its weight and basis. All of it
+          * is worth having and none of it is worth reading first, which is
+          * exactly what a disclosure is for.
+          */}
+        <details className="score-working">
+          <summary>How this was scored</summary>
+          <div className="table-scroll">
           <table>
             <thead>
               <tr>
@@ -166,12 +213,8 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
               })}
             </tbody>
           </table>
-        </div>
+          </div>
 
-        <details style={{ marginTop: 12 }}>
-          <summary className="small muted" style={{ cursor: "pointer" }}>
-            How the score is weighted, and what it cannot tell you
-          </summary>
           <div className="stack tiny muted" style={{ marginTop: 8 }}>
             <span>
               Weights reflect <strong>how much each signal can be trusted</strong>, not how much
@@ -180,12 +223,12 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
             </span>
             <span>
               <strong>Competitor count peaks rather than slopes.</strong> Fewer rivals is better
-              only up to a point — zero competitors is an unproven pitch, not an open one.
+              only up to a point. Zero competitors is an unproven pitch, not an open one.
             </span>
             <span>
               <strong>Competitor quality scores inversely:</strong> well-rated incumbents are
-              harder to displace. It is genuinely ambiguous — it also signals a market that pays
-              for quality — which is why it carries the lowest weight.
+              harder to displace. It is genuinely ambiguous, because it also signals a market that pays
+              for quality, which is why it carries the lowest weight.
             </span>
             <span>
               {/* Feature 1e filled this axis in, but only where a benchmark
@@ -199,7 +242,7 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
                 </>
               ) : rentDimension?.kind === "proxy" ? (
                 <>
-                  <strong>Rent is a researched benchmark</strong>, not a transacted figure —
+                  <strong>Rent is a researched benchmark</strong>, not a transacted figure.
                   Malaysia does not publish those in machine-readable form. It carries the smallest
                   weight of the five; enter a real quote to firm it up.
                 </>
@@ -217,6 +260,8 @@ export function SuccessScore({ score, bare = false }: { score: LocationScore; ba
             </span>
           </div>
         </details>
+
+
     </>
   );
 

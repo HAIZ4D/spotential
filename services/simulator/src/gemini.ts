@@ -133,7 +133,7 @@ const TOOLS = [
       {
         name: "decline_out_of_scope",
         description:
-          "Use when the question cannot be answered by changing scenario parameters — for example choosing a different city, judging whether the business is a good idea, or anything needing data this simulator does not hold.",
+          "Use when the question cannot be answered by changing scenario parameters: for example choosing a different city, judging whether the business is a good idea, or anything needing data this simulator does not hold.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -331,7 +331,7 @@ You will be given a table that has ALREADY been analysed. Every figure in it was
 Rules:
 - Use ONLY the figures given. Do not calculate, estimate, or introduce any number that is not in the data.
 - Recommend a concrete concept in one short sentence, then justify it in one or two more.
-- Categories marked "no-presence" have ZERO outlets. That is NOT evidence of opportunity — it may equally mean there is no appetite for it here. Never build a recommendation on one; mention it at most as something to investigate.
+- Categories marked "no-presence" have ZERO outlets. That is NOT evidence of opportunity. It may equally mean there is no appetite for it here. Never build a recommendation on one; mention it at most as something to investigate.
 - Categories marked "saturated" are crowded. Say so plainly rather than hedging.
 - "Reviews per outlet" is a proxy for how busy existing operators are, not a measure of demand. Do not describe it as demand.
 - Write for an owner-operator, not an analyst. No bullet points, no preamble, no headings.`;

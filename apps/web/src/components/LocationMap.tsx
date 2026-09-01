@@ -14,6 +14,7 @@ export function LocationMap({
   onPick,
   fitRadiusMetres,
   children,
+  onBoundsChange,
 }: {
   location: PickedLocation;
   onPick: (next: { lat: number; lng: number }) => void;
@@ -29,6 +30,14 @@ export function LocationMap({
   fitRadiusMetres?: number | undefined;
   /** Competitor pins and the radius circle are layered in by the caller. */
   children?: ReactNode;
+  /**
+   * Reports the visible box whenever the camera settles.
+   *
+   * The demand layers describe what is on screen, so they need the real
+   * viewport rather than a box derived from the search radius — that is what
+   * lets zooming out give a city view instead of a fixed neighbourhood.
+   */
+  onBoundsChange?: (bounds: { west: number; south: number; east: number; north: number }) => void;
 }) {
   // Padding so the ring is not flush against the frame edge.
   const latPad = fitRadiusMetres ? (fitRadiusMetres * 1.18) / 110_574 : 0;
@@ -80,6 +89,7 @@ export function LocationMap({
 
       {children}
       <RecenterOn location={location} />
+      {onBoundsChange ? <ReportBounds onChange={onBoundsChange} /> : null}
     </Map>
   );
 }
@@ -96,6 +106,40 @@ function RecenterOn({ location }: { location: PickedLocation }) {
     if (!map) return;
     map.panTo({ lat: location.lat, lng: location.lng });
   }, [map, location.lat, location.lng]);
+
+  return null;
+}
+
+/**
+ * Reports the visible box on `idle`, not on every camera frame.
+ *
+ * `bounds_changed` fires continuously through a pan and a zoom animation;
+ * `idle` fires once the camera has settled, which is the only moment the box
+ * is worth acting on. Anything downstream is debounced and bucketed on top of
+ * this, because a slow drag still settles many times.
+ */
+function ReportBounds({
+  onChange,
+}: {
+  onChange: (bounds: { west: number; south: number; east: number; north: number }) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || typeof google === "undefined") return;
+
+    const report = () => {
+      const b = map.getBounds();
+      if (!b) return;
+      const sw = b.getSouthWest();
+      const ne = b.getNorthEast();
+      onChange({ west: sw.lng(), south: sw.lat(), east: ne.lng(), north: ne.lat() });
+    };
+
+    report();
+    const listener = map.addListener("idle", report);
+    return () => listener.remove();
+  }, [map, onChange]);
 
   return null;
 }

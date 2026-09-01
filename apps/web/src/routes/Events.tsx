@@ -347,7 +347,7 @@ export default function Events() {
             </h1>
             <p>
               Spotential scores every listing against what you sell, what you can spend, how far
-              you would travel and how many other stalls will chase the same shoppers — then puts
+              you would travel and how many other stalls will chase the same shoppers, then puts
               the best matches first. A comparison aid, not a prediction.
             </p>
           </div>

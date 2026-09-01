@@ -84,7 +84,7 @@ export class StaticMapFetcher {
     if (!allowed.allowed) {
       return {
         dataUri: null,
-        note: "Map omitted — today's map limit was reached. Every figure in this report is unaffected.",
+        note: "Map omitted: today's map limit was reached. Every figure in this report is unaffected.",
       };
     }
 
@@ -134,7 +134,7 @@ export class StaticMapFetcher {
     } catch {
       return {
         dataUri: null,
-        note: "Map unavailable — the map service could not be reached. Every figure in this report is unaffected.",
+        note: "Map unavailable: the map service could not be reached. Every figure in this report is unaffected.",
       };
     }
   }
@@ -143,5 +143,5 @@ export class StaticMapFetcher {
 /** Used when no key is configured: reports still render, and /health says why. */
 export const NO_MAP: MapResult = {
   dataUri: null,
-  note: "Map omitted — no map key is configured for this deployment.",
+  note: "Map omitted: no map key is configured for this deployment.",
 };

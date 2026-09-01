@@ -41,7 +41,7 @@ export function formatRun(event: EventListing): string {
   const end = new Date(event.endDate);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "Dates to be confirmed";
   if (event.startDate === event.endDate) return DATE_YEAR.format(start);
-  return `${DATE.format(start)} – ${DATE_YEAR.format(end)}`;
+  return `${DATE.format(start)} to ${DATE_YEAR.format(end)}`;
 }
 
 export function EventCard({ event, score }: { event: EventListing; score?: EventScore }) {
@@ -158,7 +158,7 @@ export function EventCard({ event, score }: { event: EventListing; score?: Event
       data-event={event.id}
     >
       <Link to={`/events/${event.slug}`} className="evc-hit">
-        <span className="sr-only">{event.name} — view details</span>
+        <span className="sr-only">{event.name}, view details</span>
       </Link>
 
       <div className="evc-media">

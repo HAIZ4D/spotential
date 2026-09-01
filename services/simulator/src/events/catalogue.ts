@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { resolveDataDir } from "../dataDir.js";
 import type { EventListing } from "@spotential/sim-engine";
 
 /**
@@ -30,7 +30,7 @@ import type { EventListing } from "@spotential/sim-engine";
  * the image's data directory and fail silently in production while every test
  * passed, because tests pass `dataDir` explicitly.
  */
-const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "data");
+const DATA_DIR = resolveDataDir(import.meta.url);
 
 interface CatalogueFile {
   version: number;

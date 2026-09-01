@@ -1,4 +1,17 @@
-export type SectionId = "overview" | "competition" | "people" | "rent" | "gaps" | "ask";
+/**
+ * "demand" is the population grid — how many people live right here, from
+ * Kontur. Deliberately not folded into "people", which is DOSM district
+ * demographics: who lives in the district. Different source, different
+ * question, and merging them would blur what each figure can be asked.
+ */
+export type SectionId =
+  | "overview"
+  | "competition"
+  | "people"
+  | "demand"
+  | "rent"
+  | "gaps"
+  | "ask";
 
 export interface SectionTab {
   id: SectionId;
@@ -55,7 +68,7 @@ export function SectionTabs({
           {tab.label}
           {tab.state && (
             <span className="sr-only">
-              {tab.state === "warn" ? " — data could not be loaded" : " — no data for this spot"}
+              {tab.state === "warn" ? ", data could not be loaded" : ", no data for this spot"}
             </span>
           )}
           {tab.badge && <span className="tab-badge">{tab.badge}</span>}

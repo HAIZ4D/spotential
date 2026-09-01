@@ -50,7 +50,7 @@ export function ApplyPanel({ event }: { event: EventListing }) {
             <span>
               <strong>Applications are not open for this event yet.</strong> Booth pricing and
               slot counts here are curated estimates rather than an organizer's published terms,
-              so there is nothing to apply to — contact the organizer directly if you have found
+              so there is nothing to apply to. Contact the organizer directly if you have found
               this event elsewhere. Applying opens when organizers publish their events here.
             </span>
           </div>
@@ -198,7 +198,7 @@ function ApplyForm({
         <div className="notice info">
           <span>
             <strong>Application sent.</strong> {event.organizerName} has your details and will
-            reply directly. Spotential does not confirm booths or take payment — anything after
+            reply directly. Spotential does not confirm booths or take payment. Anything after
             this happens between you and the organizer.
           </span>
         </div>
@@ -218,7 +218,7 @@ function ApplyForm({
           >
             {event.packages.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.label} — RM{p.priceRm.toLocaleString("en-MY")} ({p.sizeLabel})
+                {p.label}, RM{p.priceRm.toLocaleString("en-MY")} ({p.sizeLabel})
               </option>
             ))}
           </select>

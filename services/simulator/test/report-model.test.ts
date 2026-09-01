@@ -292,8 +292,11 @@ describe("comparison report", () => {
       .find((t) => t.title === "Dimension by dimension")!
       .rows.find((r) => r.cells[0] === "Rent sensitivity")!;
 
-    expect(rentRow.cells[1]).toBe("—");
-    expect(rentRow.cells[2]).toBe("—");
+    // Words, not a dash. A lone em dash means nothing to a reader who has not
+    // been told what it means, and this is the copy that gets forwarded to a
+    // landlord or a bank.
+    expect(rentRow.cells[1]).toBe("not scored");
+    expect(rentRow.cells[2]).toBe("not scored");
     expect(rentRow.cells.at(-1)).toBe("no data either side");
   });
 

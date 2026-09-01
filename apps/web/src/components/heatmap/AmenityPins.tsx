@@ -35,7 +35,7 @@ export function AmenityPins({ layers, active }: { layers: AmenityLayer[]; active
           new google.maps.Marker({
             map,
             position: { lat: point.lat, lng: point.lng },
-            title: point.name ? `${point.name} — ${layer.label}` : layer.label,
+            title: point.name ? `${point.name}, ${layer.label}` : layer.label,
             label: {
               text: GLYPHS[layer.id] ?? "•",
               fontSize: "11px",
@@ -89,7 +89,7 @@ export function RentPins({
       const marker = new google.maps.Marker({
         map,
         position: district.centre,
-        title: `${district.label} — RM${district.rentMedianPsf}/sqft (${district.source})`,
+        title: `${district.label}, RM${district.rentMedianPsf}/sqft (${district.source})`,
         label: {
           text: `RM${district.rentMedianPsf}`,
           fontSize: "10px",

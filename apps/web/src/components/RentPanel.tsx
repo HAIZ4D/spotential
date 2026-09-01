@@ -82,7 +82,7 @@ export function RentPanel({
           <div className="notice info">
             <span>
               No rent benchmark covers this spot. Coverage is 23 trading areas across KL, Selangor,
-              Penang and Johor — enter the rent you were quoted below and this fills in properly.
+              Penang and Johor. Enter the rent you were quoted below and this fills in properly.
             </span>
           </div>
         )}

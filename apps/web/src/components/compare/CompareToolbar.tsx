@@ -38,7 +38,7 @@ export function CompareToolbar({
       <div className="grow cmp-chips">
         {locations.length === 0 ? (
           <span className="small muted">
-            Nothing to compare yet — open a spot on the Location page and use &ldquo;Add to
+            Nothing to compare yet. Open a spot on the Location page and use &ldquo;Add to
             comparison&rdquo;.
           </span>
         ) : (

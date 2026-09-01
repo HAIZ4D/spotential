@@ -27,7 +27,12 @@ async function goto(page: Page, path: string) {
   await page.locator(".navbar").waitFor({ state: "visible" });
 }
 
-const NAV = ["Events", "Simulator", "Location", "Compare", "City Demand"];
+/**
+ * Four now, not five. City Demand was folded into Location, which is also why
+ * the masthead-overflow guard below still matters: five items clipped the bar
+ * at 375px once, so the scroller stays even though the count came back down.
+ */
+const NAV = ["Events", "Simulator", "Location", "Compare"];
 
 /** Below 900px the bar collapses behind a menu button. */
 async function openIfCompact(page: Page) {

@@ -58,7 +58,7 @@ export function ParityBadge({
       ✓ server agrees
     </span>
   ) : (
-    <span className="pill red" title="Client and server disagree — this is a bug, please report it.">
+    <span className="pill red" title="Client and server disagree. This is a bug, please report it.">
       ✗ server disagrees
     </span>
   );

@@ -329,7 +329,7 @@ function failureOf(error: unknown): { reason: string; detail: string } {
       cause ? `cause ${cause.name}: ${cause.message}` : "",
     ]
       .filter(Boolean)
-      .join(" — ")
+      .join(", ")
       .slice(0, 300),
   };
 }

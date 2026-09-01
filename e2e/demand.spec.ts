@@ -1,12 +1,20 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * City demand heatmap.
+ * The Demand panel, which absorbed the City Demand page.
  *
- * The assertions are mostly about what this page refuses to claim. It maps
- * where people live, not where to open — competition is the half that costs
- * money and it is absent. A page that let someone read "green means open here"
- * would be worse than not shipping it.
+ * These assertions moved here rather than being deleted with that page. They
+ * are mostly about what the surface refuses to claim: it maps where people
+ * live, not where to open — competition is the half that costs money and it is
+ * absent. Letting someone read "green means open here" would be worse than not
+ * shipping it, and on THIS page the risk is higher, because green a few
+ * centimetres away in the score bars means the opposite.
+ *
+ * Three tests did not survive the move, because the behaviour did not: the
+ * city picker (you reach a city by moving the pin), the through-link to
+ * scoring a spot (you are already on that page), and the inspector's
+ * before-you-click empty state (it follows the pin, so there is nothing to
+ * click first).
  *
  * CI calls neither Google Maps nor Overpass. Both are blocked and the page is
  * asserted to degrade, exactly as the Places rule already works.
@@ -101,9 +109,17 @@ async function stub(
   });
 }
 
+
+/** Opens the Location page and switches to the Demand panel. */
+async function openDemand(page: Page) {
+  await page.goto("/analysis?lat=3.1478&lng=101.6953");
+  await page.locator(".mappane").waitFor();
+  await page.locator(".tab").filter({ hasText: "Demand" }).click();
+}
+
 test("says plainly that it maps people, not opportunity", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   // Scoped to the warning notice deliberately. The phrase also appears in the
   // caption below it, and it is the NOTICE that has to carry this — a caption
@@ -117,7 +133,7 @@ test("says plainly that it maps people, not opportunity", async ({ page }) => {
 
 test("credits both free data sources", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   // CC BY and ODbL both oblige attribution, and it is also the answer to
   // "what did this cost". The site footer carries these too, so this is
@@ -134,7 +150,7 @@ test("credits both free data sources", async ({ page }) => {
 
 test("shows a density legend calibrated nationally, not a good-to-bad ramp", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   await expect(page.getByText("top 5% nationally")).toBeVisible();
   await expect(page.getByText("national median")).toBeVisible();
@@ -152,7 +168,7 @@ test("shows a density legend calibrated nationally, not a good-to-bad ramp", asy
  */
 test("says in words which end of the ramp is which", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   // Not swatches alone: both ends named in plain language, in the legend.
   const legend = page.locator(".legend");
@@ -168,7 +184,7 @@ test("says in words which end of the ramp is which", async ({ page }) => {
 
 test("puts the hottest row of the legend first", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   // Read top-down, the first thing anyone sees must be that red means most.
   const rows = page.locator(".legend-row");
@@ -181,7 +197,7 @@ const card = (page: Page, title: string) =>
 
 test("summarises what was actually loaded", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   // Three cells totalling 13,320 people, median 3,100, densest 9,800.
   const summary = card(page, "In view");
@@ -193,7 +209,7 @@ test("summarises what was actually loaded", async ({ page }) => {
 
 test("ranks the densest areas by name, not by coordinate", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   // Names come free from OpenStreetMap place nodes; reverse geocoding is billable.
   const top = page.getByRole("button", { name: /Bukit Bintang/ });
@@ -203,7 +219,7 @@ test("ranks the densest areas by name, not by coordinate", async ({ page }) => {
 
 test("counts the dense layers but refuses to draw them", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   // 1,026 bus stops is a useful number and a useless picture.
   const bus = page.getByRole("button", { name: /Bus stops/ });
@@ -217,23 +233,16 @@ test("counts the dense layers but refuses to draw them", async ({ page }) => {
 
 test("puts rent on the same screen as demand", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   // Free — the benchmarks already ship in the bundle. Demand and cost together
   // is the actual decision.
   await expect(page.getByRole("button", { name: /Rent benchmarks/ })).toBeVisible();
 });
 
-test("invites a cell inspection before one is chosen", async ({ page }) => {
-  await stub(page);
-  await page.goto("/heatmap");
-
-  await expect(page.getByText(/Click any hexagon/)).toBeVisible();
-});
-
 test("keeps the population map working when OpenStreetMap is busy", async ({ page }) => {
   await stub(page, { amenities: "throttled" });
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   await expect(page.getByText(/OpenStreetMap is busy right now/)).toBeVisible();
   // The thing that must survive: the density surface and its summary.
@@ -243,7 +252,7 @@ test("keeps the population map working when OpenStreetMap is busy", async ({ pag
 
 test("keeps working when the amenities route errors outright", async ({ page }) => {
   await stub(page, { amenities: "error" });
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   await expect(card(page, "In view").getByText("13,320")).toBeVisible();
   await expect(page.locator(".notice.warn").getByText(/where people live/)).toBeVisible();
@@ -256,7 +265,7 @@ test("requests only a bounded box around the chosen city", async ({ page }) => {
     if (request.url().includes("/v1/heatmap")) url = request.url();
   });
 
-  await page.goto("/heatmap");
+  await openDemand(page);
   await expect(card(page, "In view").getByText("13,320")).toBeVisible();
 
   const params = new URL(url).searchParams;
@@ -266,45 +275,17 @@ test("requests only a bounded box around the chosen city", async ({ page }) => {
   expect(span).toBeLessThan(0.2);
 });
 
-test("switching city refetches for the new box", async ({ page }) => {
-  await stub(page);
-  const boxes: string[] = [];
-  page.on("request", (request) => {
-    if (request.url().includes("/v1/heatmap")) {
-      boxes.push(new URL(request.url()).searchParams.get("west")!);
-    }
-  });
-
-  await page.goto("/heatmap");
-  await expect(card(page, "In view").getByText("13,320")).toBeVisible();
-
-  await page.getByLabel("City").selectOption("George Town");
-  await expect.poll(() => boxes.length).toBeGreaterThan(1);
-  expect(boxes[0]).not.toBe(boxes[1]);
-});
-
 test("degrades to a notice when the grid is not loaded", async ({ page }) => {
   await stub(page, { fail: true });
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   await expect(page.getByText(/Could not load the population grid/)).toBeVisible();
   await expect(page.getByText(/Every other page is unaffected/)).toBeVisible();
 });
 
-test("offers a way through to scoring an actual spot", async ({ page }) => {
-  await stub(page);
-  await page.goto("/heatmap");
-
-  // Clicking a ranked area selects that cell, which exposes the analysis link.
-  await page.getByRole("button", { name: /Bukit Bintang/ }).click();
-
-  const link = page.getByRole("link", { name: /Score this spot/ });
-  await expect(link).toHaveAttribute("href", /\/analysis\?lat=3\.1464/);
-});
-
 test("a selected cell reports its national percentile", async ({ page }) => {
   await stub(page);
-  await page.goto("/heatmap");
+  await openDemand(page);
 
   await page.getByRole("button", { name: /Bukit Bintang/ }).click();
 
@@ -315,4 +296,27 @@ test("a selected cell reports its national percentile", async ({ page }) => {
   // score can never describe the same spot differently.
   await expect(inspector.getByText(/of where Malaysians live/)).toBeVisible();
   await expect(inspector.getByText(/same scale the Success Score uses/)).toBeVisible();
+});
+
+test("an old City Demand link still lands somewhere useful", async ({ page }) => {
+  /**
+   * The URL is this product's persistence layer — every view is a shareable
+   * link — so `/heatmap` links are already out in the world. Removing the page
+   * without a redirect would drop them through the catch-all onto the
+   * simulator, which answers a completely different question.
+   */
+  await stub(page);
+  await page.goto("/heatmap?lat=3.1478&lng=101.6953");
+
+  await expect(page).toHaveURL(/\/analysis/);
+  // The query string rides along, exactly as it does on the "/" redirect.
+  await expect(page).toHaveURL(/lat=3\.1478/);
+});
+
+test("the page it replaced is gone from the navigation", async ({ page }) => {
+  await stub(page);
+  await page.goto("/analysis?lat=3.1478&lng=101.6953");
+
+  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: /City Demand/i })).toHaveCount(0);
+  await expect(page.locator("footer").getByRole("link", { name: /City demand/i })).toHaveCount(0);
 });

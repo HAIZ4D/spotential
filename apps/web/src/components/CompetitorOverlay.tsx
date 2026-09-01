@@ -136,7 +136,7 @@ export function CompetitorPins({
           key={c.id}
           position={{ lat: c.drawLat, lng: c.drawLng }}
           title={
-            `${c.name} — ${c.rating ?? "unrated"} (${c.reviewCount} reviews), ${c.distanceMetres}m` +
+            `${c.name}, ${c.rating ?? "unrated"} (${c.reviewCount} reviews), ${c.distanceMetres}m` +
             (c.fanned ? " · pin nudged apart from others at the same address" : "")
           }
         >
@@ -167,11 +167,23 @@ export function RadiusCircle({
   centre,
   radiusMetres,
   completeToMetres = null,
+  fitRadiusMetres,
 }: {
   centre: LatLng;
   radiusMetres: number;
   /** Null when nothing was truncated — then one ring is the honest picture. */
   completeToMetres?: number | null;
+  /**
+   * What to FRAME to, when that is not the search radius.
+   *
+   * The population surface is meaningless at the search framing — a 500m
+   * circle spans about one and a half Kontur cells — so switching it on has to
+   * widen the view. That could have been a second call to `setZoom`, and then
+   * two things would own the camera and race whenever both changed. Instead
+   * the one effect below keeps sole ownership and simply reads a different
+   * number. The RING still draws at `radiusMetres`; only the framing moves.
+   */
+  fitRadiusMetres?: number | undefined;
 }) {
   const map = useMap();
   const fittedRadius = useRef<number | null>(null);
@@ -189,12 +201,13 @@ export function RadiusCircle({
    */
   useEffect(() => {
     if (!map || typeof google === "undefined") return;
-    if (fittedRadius.current === radiusMetres) return;
-    fittedRadius.current = radiusMetres;
+    const framing = fitRadiusMetres ?? radiusMetres;
+    if (fittedRadius.current === framing) return;
+    fittedRadius.current = framing;
 
     const bounds = new google.maps.Circle({
       center: { lat: centre.lat, lng: centre.lng },
-      radius: radiusMetres,
+      radius: framing,
     }).getBounds();
     if (!bounds) return;
 
@@ -223,7 +236,7 @@ export function RadiusCircle({
          * the width — the next level up would overflow. Fractional zoom closes
          * that gap, so the search area fills the pane at any radius.
          */
-        const span = 2 * radiusMetres * 1.12;
+        const span = 2 * framing * 1.12;
         const metresPerPx = (156_543.03392 * Math.cos((centre.lat * Math.PI) / 180)) / 2 ** 16;
         const fitted = 16 + Math.log2((div.clientWidth * metresPerPx) / span);
         if (Number.isFinite(fitted)) map.setZoom(Math.min(19, fitted));
@@ -234,7 +247,7 @@ export function RadiusCircle({
 
     frame = requestAnimationFrame(attempt);
     return () => cancelAnimationFrame(frame);
-  }, [map, centre.lat, centre.lng, radiusMetres]);
+  }, [map, centre.lat, centre.lng, radiusMetres, fitRadiusMetres]);
 
   useEffect(() => {
     if (!map || typeof google === "undefined") return;

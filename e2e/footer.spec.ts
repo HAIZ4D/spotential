@@ -11,7 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 const MAPS = "https://maps.googleapis.com/**";
-const ROUTES = ["/events", "/simulator", "/analysis", "/compare", "/heatmap"];
+const ROUTES = ["/events", "/simulator", "/analysis", "/compare"];
 
 async function goto(page: Page, path: string) {
   await page.route(MAPS, (route) => route.abort());

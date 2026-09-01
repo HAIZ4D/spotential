@@ -28,7 +28,7 @@ test.describe("instant recalculation", () => {
     // seven days a week.
     const profit = page.getByTestId(HEADLINE.profit);
     await expect(profit).toHaveText("RM 38,418");
-    await expect(page.getByTestId(HEADLINE.breakEven)).toHaveText("6–8 months");
+    await expect(page.getByTestId(HEADLINE.breakEven)).toHaveText("6 to 8 months");
     await expect(page.getByTestId(HEADLINE.cash)).toHaveText("RM 223,790");
 
     // Drag demand down 20%: 180 -> 144.
@@ -37,7 +37,7 @@ test.describe("instant recalculation", () => {
     await transactions.blur();
 
     await expect(profit).toHaveText("RM 25,015");
-    await expect(page.getByTestId(HEADLINE.breakEven)).toHaveText("8–13 months");
+    await expect(page.getByTestId(HEADLINE.breakEven)).toHaveText("8 to 13 months");
   });
 
   test("raising the price lowers the cost-of-goods percentage (SPEC 4.3)", async ({ page }) => {

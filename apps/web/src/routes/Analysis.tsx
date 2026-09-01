@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { APIProvider, useApiLoadingStatus, APILoadingStatus } from "@vis.gl/react-google-maps";
+import { APIProvider, useApiLoadingStatus, useMap, APILoadingStatus } from "@vis.gl/react-google-maps";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import {
   rentSensitivity,
+  formatNumber,
+  listDistricts,
   resolveRent,
   roundForCache,
   scoreLocation,
   sectorOf,
   type BusinessCategory,
+  type DistrictPreset,
 } from "@spotential/sim-engine";
 import { Masthead } from "../components/Masthead.js";
 import { AddressSearch } from "../components/AddressSearch.js";
@@ -19,28 +22,48 @@ import {
 } from "../components/CompetitorPanels.js";
 import { OpportunityGaps } from "../components/OpportunityGaps.js";
 import { DemographicsPanel } from "../components/DemographicsPanel.js";
-import { ScoreRadar, SuccessScore } from "../components/SuccessScore.js";
+import { SuccessScore } from "../components/SuccessScore.js";
 import { RentPanel } from "../components/RentPanel.js";
 import { ScoreRing } from "../components/analysis/ScoreRing.js";
 import { Verdict } from "../components/analysis/Verdict.js";
 import { StatChips, type Chip } from "../components/analysis/StatChips.js";
 import { SectionTabs, type SectionId, type SectionTab } from "../components/analysis/SectionTabs.js";
 import { MapPane } from "../components/analysis/MapPane.js";
+import { HeatLayer } from "../components/heatmap/HeatLayer.js";
+import { AmenityPins, RentPins } from "../components/heatmap/AmenityPins.js";
+import { rankAreas } from "../components/heatmap/CitySummary.js";
+import { DemandSection } from "../components/analysis/DemandSection.js";
 import { MapLegend } from "../components/analysis/MapLegend.js";
 import { Toolbar } from "../components/analysis/Toolbar.js";
 import { ReportButton } from "../components/ReportButton.js";
 import { LocationChat } from "../components/LocationChat.js";
 import {
+  getAmenities,
+  getHeatmap,
   getProperties,
   postCompetitors,
   postDemographics,
   postOpportunityGaps,
   type CompetitorsResponse,
   type DemographicsResponse,
+  type AmenityLayer,
   type GapsResponse,
+  type HeatmapCell,
   type ReportLocation,
 } from "../lib/api.js";
 import { appendToComparison, comparisonHref } from "../lib/compareUrl.js";
+import {
+  bucketBounds,
+  canFetchAmenities,
+  amenityBoxFor,
+  canFetchGrid,
+  cellAt,
+  cellsWithin,
+  demandBounds,
+  framingRadius,
+  padBounds,
+  type Bounds,
+} from "../lib/demand.js";
 import { useDebounced } from "../lib/useDebounced.js";
 import {
   DEFAULT_LOCATION,
@@ -113,6 +136,45 @@ export default function Analysis() {
 
   /** Shared by the competitor list and the map pins, which sit side by side. */
   const [hoveredCompetitor, setHoveredCompetitor] = useState<string | null>(null);
+
+  /**
+   * The population surface under the pin, showing where the catchment came
+   * from — this page's "people within 500m" is computed from that same grid.
+   */
+  const [demand, setDemand] = useState(false);
+
+  /**
+   * The visible map box, reported on every camera settle.
+   *
+   * The demand layers describe WHAT IS ON SCREEN, so they follow the real
+   * viewport rather than a fixed box around the pin — that is what lets
+   * zooming out give a city view, which is what City Demand was for.
+   */
+  const [view, setView] = useState<Bounds | null>(null);
+
+  /** Which amenity layers are drawn, and whether rent benchmarks show. */
+  const [activeLayers, setActiveLayers] = useState<Set<string>>(() => new Set());
+  const [showRentPins, setShowRentPins] = useState(false);
+
+  /**
+   * Where to move the CAMERA when a ranked area or rent pin is chosen.
+   *
+   * Never the pin: exploring the city must not silently re-point the analysis.
+   * The score, the score ring and every panel still describe the marker.
+   */
+  const [flyTo, setFlyTo] = useState<{ lat: number; lng: number } | null>(null);
+  const onBoundsChange = useCallback((next: Bounds) => setView(next), []);
+
+  /**
+   * Two booleans, one owner each. `demand` draws the surface; this also turns
+   * on when the tab is open, so opening it loads the data without the tab
+   * having to reach into the map's state.
+   */
+  const demandActive = demand || section === "demand";
+
+  // Bounds move on every pixel of a pan. Bucketed to ~110m for the query key
+  // and debounced on top, so a drag collapses into one or two fetches.
+  const settledView = useDebounced(view, 350);
 
   // Same pattern as the simulator's share links: replaceState on a debounce,
   // so dragging the pin does not stack up history entries.
@@ -189,6 +251,84 @@ export default function Analysis() {
     staleTime: 60 * 60 * 1000,
     retry: 1,
   });
+
+  /**
+   * The population grid, only while the surface is on.
+   *
+   * Free to serve — a precomputed blob, no Places and no Gemini — so the whole
+   * layer costs one cached request. Keyed on the ROUNDED centre so nudging the
+   * pin does not refetch a grid that covers several kilometres either way.
+   */
+  const gridBox = settledView ? padBounds(settledView) : demandBounds(settled);
+
+  const grid = useQuery({
+    queryKey: ["analysis-grid", bucketBounds(gridBox)],
+    queryFn: ({ signal }) => getHeatmap(gridBox, signal),
+    enabled: demandActive && canFetchGrid(gridBox),
+    staleTime: 60 * 60 * 1000,
+    // Keeps the current surface on screen while a wider one loads, rather than
+    // blanking the map between zoom levels.
+    placeholderData: (prev) => prev,
+  });
+
+  /**
+   * Transit, malls, hospitals and the rest — free, from a versioned snapshot
+   * for the four shipped cities and a cached Overpass call elsewhere.
+   *
+   * Skipped rather than attempted past the 0.3-degree cap: firing it anyway
+   * spends a round trip to be told 400, and reads to the user as a broken
+   * layer rather than one that is simply out of range.
+   */
+  // Snapped to a seeded city box where possible, so the four shipped cities
+  // answer from the in-image snapshot instead of a live Overpass call.
+  const amenityBox = amenityBoxFor(settledView ?? demandBounds(settled));
+  const amenities = useQuery({
+    queryKey: ["analysis-amenities", bucketBounds(amenityBox)],
+    queryFn: ({ signal }) => getAmenities(amenityBox, signal),
+    enabled: demandActive && canFetchAmenities(amenityBox),
+    staleTime: 24 * 60 * 60 * 1000,
+    retry: 1,
+    placeholderData: (prev) => prev,
+  });
+
+  /**
+   * Everything the demand panel reports, computed from WHAT IS ON SCREEN.
+   *
+   * The grid is deliberately fetched past the frame so the blur has no visible
+   * edge — but the totals, the median, the ranked areas and the rent pins all
+   * claim to describe the view, so they are computed from the view. Counting
+   * the padding would quietly make every figure describe a bigger area than
+   * the one being looked at.
+   */
+  const gridCells = grid.data?.cells ?? [];
+  const amenityLayers = amenities.data?.layers ?? [];
+
+  const inView = useMemo(
+    () => (settledView ? cellsWithin(gridCells, settledView) : gridCells),
+    [gridCells, settledView],
+  );
+
+  /** The cell the PIN is in — not one the reader had to click for. */
+  const pinCell = useMemo(() => cellAt(gridCells, location), [gridCells, location.lat, location.lng]);
+
+  const rankedAreas = useMemo(
+    () => rankAreas(inView, amenities.data?.places ?? []),
+    [inView, amenities.data],
+  );
+
+  const rentDistricts = useMemo(
+    () =>
+      settledView
+        ? listDistricts().filter(
+            (d) =>
+              d.centre.lat >= settledView.south &&
+              d.centre.lat <= settledView.north &&
+              d.centre.lng >= settledView.west &&
+              d.centre.lng <= settledView.east,
+          )
+        : [],
+    [settledView],
+  );
 
   // Feature 1e. Entirely local — a table lookup and a break-even, no request
   // and no cost. Null when no benchmark covers the pin and no rent was typed.
@@ -367,6 +507,26 @@ export default function Analysis() {
       ...(demographics.isError ? { state: "warn" as const } : {}),
     },
     {
+      id: "demand",
+      label: "Demand",
+      /**
+       * Residents in the VISIBLE map, which is what the panel leads with —
+       * and deliberately a different figure from People's 500m catchment.
+       * Zoomed out it answers "how big is this city"; zoomed in, "how busy is
+       * this street". Both are honest because both name their own area.
+       */
+      /**
+       * No badge until the grid is loaded, and NO "missing data" state either.
+       * The dot means a section could not get its data; here it simply has not
+       * been asked for yet, and saying "no data for this spot" over a grid that
+       * covers all of Malaysia would be plainly false.
+       */
+      ...(demandActive && inView.length > 0
+        ? { badge: formatNumber(inView.reduce((sum, c) => sum + c.population, 0)) }
+        : {}),
+      ...(grid.isError ? { state: "warn" as const } : {}),
+    },
+    {
       id: "rent",
       label: "Rent",
       ...(rent ? { badge: `RM${Math.round(rent.monthlyRent / 1000)}k` } : { state: "none" as const }),
@@ -389,18 +549,36 @@ export default function Analysis() {
         <main className="cockpit-info">
           {/* The hero the old page never had: the score, the shape and the
               verdict in one block, before anything else. */}
+          {/**
+            * The hero states the answer once.
+            *
+            * It used to say the same thing four ways: this ring, a radar of
+            * the same five dimensions, bars of the same five below, and a
+            * table of the same five under those. The radar went first because
+            * it was the worst of them — with two dimensions unscored it drew a
+            * thin sliver that reads as a terrible location rather than as
+            * missing data. It survives on /compare, where overlaying two
+            * shapes is the entire point.
+            *
+            * The heading is the PLACE, not its coordinates. Those are still
+            * on the page, once, small, under the map where the shareable link
+            * lives.
+            */}
           <div className="hero">
-            <div className="hero-place">Analysing</div>
+            <p className="hero-eyebrow">Location report</p>
             <h2 className="hero-name">{location.label}</h2>
 
             {score ? (
-              <>
-                <div className="hero-top">
-                  <ScoreRing score={score.overall} />
-                  <ScoreRadar score={score} />
+              <div className="hero-answer">
+                <ScoreRing score={score.overall} />
+                <div className="hero-said">
+                  <Verdict score={score} />
+                  <p className="hero-caveat">
+                    A comparison aid, not a forecast. Nothing in it has been checked against real
+                    business outcomes.
+                  </p>
                 </div>
-                <Verdict score={score} />
-              </>
+              </div>
             ) : (
               <p className="hero-verdict">
                 {competitors.isError
@@ -416,10 +594,10 @@ export default function Analysis() {
 
           <div className="section-body" id={`section-${section}`} role="tabpanel">
             {section === "overview" && (
+              /* No card header: the tab above it already says Overview, and a
+                 panel titled "Location profile" under a tab called "Overview"
+                 is the page naming itself twice. */
               <section className="card">
-                <header>
-                  <h2>Location profile</h2>
-                </header>
                 <div className="body">
                   {score ? (
                     <SuccessScore score={score} bare />
@@ -440,6 +618,31 @@ export default function Analysis() {
               />
             )}
             {section === "people" && <DemographicsSection query={demographics} />}
+
+            {section === "demand" && (
+              <DemandSection
+                cells={inView}
+                pinCell={pinCell}
+                layers={amenityLayers}
+                amenitiesAvailable={amenities.data?.available ?? false}
+                amenitiesInRange={canFetchAmenities(amenityBox)}
+                amenityReason={amenities.data?.reason ?? null}
+                rentCount={rentDistricts.length}
+                areas={rankedAreas}
+                active={activeLayers}
+                onToggle={setActiveLayers}
+                showRent={showRentPins}
+                onShowRent={setShowRentPins}
+                surfaceOn={demand}
+                onSurface={setDemand}
+                onFlyTo={setFlyTo}
+                loading={grid.isLoading}
+                failed={grid.isError}
+                attribution={grid.data?.attribution ?? null}
+                vintage={grid.data?.vintage ?? null}
+                amenityAttribution={amenities.data?.attribution ?? null}
+              />
+            )}
             {section === "gaps" && <GapSection query={gaps} />}
 
             {section === "rent" && (
@@ -540,6 +743,20 @@ export default function Analysis() {
             radiusMetres={radiusMetres}
             competitors={competitors.data}
             hoveredCompetitor={hoveredCompetitor}
+            demand={demand}
+            demandActive={demandActive}
+            onDemandChange={setDemand}
+            demandCells={grid.data?.cells}
+            demandState={
+              grid.data ? "ready" : grid.isError ? "failed" : "loading"
+            }
+            amenityLayers={amenityLayers}
+            activeLayers={activeLayers}
+            rentDistricts={rentDistricts}
+            showRentPins={showRentPins}
+            setFlyTo={setFlyTo}
+            flyTo={flyTo}
+            onBoundsChange={onBoundsChange}
             shell={shell}
           />
         </APIProvider>
@@ -559,6 +776,28 @@ export default function Analysis() {
   );
 }
 
+/**
+ * Moves the CENTRE only — never the zoom.
+ *
+ * The heatmap page's own FlyTo sets a zoom level too, which here would make it
+ * a second owner of the camera alongside `RadiusCircle`'s framing effect, and
+ * the two would race whenever both fired. Panning is safe because it composes:
+ * whatever the zoom is, the centre simply moves.
+ *
+ * And it never touches the PIN. Flying to a dense area is exploration; the
+ * analysis subject changes only by clicking or dragging the marker.
+ */
+function PanTo({ target }: { target: { lat: number; lng: number } | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !target) return;
+    map.panTo({ lat: target.lat, lng: target.lng });
+  }, [map, target]);
+
+  return null;
+}
+
 function MapAwareBody({
   location,
   onPick,
@@ -566,6 +805,18 @@ function MapAwareBody({
   radiusMetres,
   competitors,
   hoveredCompetitor,
+  demand,
+  demandActive,
+  onDemandChange,
+  demandCells,
+  demandState,
+  amenityLayers,
+  activeLayers,
+  rentDistricts,
+  showRentPins,
+  setFlyTo,
+  flyTo,
+  onBoundsChange,
   shell,
 }: {
   location: PickedLocation;
@@ -575,6 +826,25 @@ function MapAwareBody({
   competitors: CompetitorsResponse | undefined;
   /** The competitor row under the cursor, so its pin can stand out. */
   hoveredCompetitor: string | null;
+  /**
+   * The population surface. Owned by the parent because it widens the fit
+   * radius and gates the grid fetch, neither of which belongs to the map card.
+   */
+  demand: boolean;
+  /** Drives the FRAMING: the tab or the toggle both widen the view. */
+  demandActive: boolean;
+  onDemandChange: (next: boolean) => void;
+  /** Undefined until the grid arrives; the layer simply does not render yet. */
+  demandCells: HeatmapCell[] | undefined;
+  /** Loading and failed look identical on the map; the note must not. */
+  demandState: "loading" | "ready" | "failed";
+  amenityLayers: AmenityLayer[];
+  activeLayers: Set<string>;
+  rentDistricts: DistrictPreset[];
+  showRentPins: boolean;
+  setFlyTo: (point: { lat: number; lng: number }) => void;
+  flyTo: { lat: number; lng: number } | null;
+  onBoundsChange: (bounds: Bounds) => void;
   shell: (mapPane: ReactNode, searchNode: ReactNode) => ReactNode;
 }) {
   const status = useApiLoadingStatus();
@@ -614,13 +884,58 @@ function MapAwareBody({
       <MapPane
         location={location}
         onPick={onPick}
-        fitRadiusMetres={radiusMetres}
+        /**
+         * ONE owner for the zoom.
+         *
+         * CompetitorOverlay already frames the map imperatively and re-fits
+         * only when this value changes. Widening the view here rather than
+         * calling setZoom from the toggle means the surface and the radius
+         * control cannot fight over the camera — there is only ever one number
+         * asking for a framing.
+         */
+        /**
+         * Widened by demandACTIVE, not by the shading toggle.
+         *
+         * Opening the Demand tab is asking an area question, and at the search
+         * framing exactly one 693m cell is in view — so "residents", "median
+         * cell" and "densest cell" all print the same number and the panel
+         * reads as broken. The tab gets the area view; the toggle beside it
+         * only decides whether the area is coloured in.
+         */
+        fitRadiusMetres={framingRadius(radiusMetres, demandActive)}
+        demand={demand}
+        onDemandChange={onDemandChange}
+        demandState={demandState}
+        onBoundsChange={onBoundsChange}
         overlays={
           <>
+            {/* First, so it paints under the rings and pins. HeatLayer draws
+                into the overlay pane, below the markers, so the pins stay
+                clickable through it. */}
+            {/* The traffic ramp, as on the page this replaces. Green means the
+                OPPOSITE here of what it means in the score bars, which is why
+                the Demand tab carries the notice that says so. */}
+            {demand && demandCells ? <HeatLayer cells={demandCells} ramp="traffic" /> : null}
+            <AmenityPins layers={amenityLayers} active={activeLayers} />
+            <RentPins
+              districts={rentDistricts}
+              show={showRentPins}
+              onSelect={(district) => setFlyTo(district.centre)}
+            />
+            <PanTo target={flyTo} />
             <RadiusCircle
               centre={location}
               radiusMetres={radiusMetres}
               completeToMetres={competitors?.completeToMetres ?? null}
+              /**
+               * THE camera. MapPane's `fitRadiusMetres` above only seeds
+               * `defaultBounds`, which is applied once at mount — this is the
+               * live one, and changing the wrong one moves nothing.
+               *
+               * The ring still draws at the search radius; only the framing
+               * widens, and it widens for the tab as well as the toggle.
+               */
+              fitRadiusMetres={framingRadius(radiusMetres, demandActive)}
             />
             {competitors && (
               <CompetitorPins
@@ -823,8 +1138,8 @@ function MapUnavailableBody({ reason }: { reason: string }) {
 function NoGeocoderCard() {
   return (
     <span className="small muted">
-      Address search needs Google Maps. You can still open a spot by coordinates —{" "}
-      <code>?lat=3.1478&amp;lng=101.6953</code> — or drag the pin.
+      Address search needs Google Maps. You can still open a spot by coordinates,{" "}
+      <code>?lat=3.1478&amp;lng=101.6953</code>, or drag the pin.
     </span>
   );
 }

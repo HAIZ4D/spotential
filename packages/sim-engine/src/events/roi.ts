@@ -180,24 +180,24 @@ function verdictFor(
   if (capturePct <= 1) {
     return {
       verdict: "comfortable",
-      note: `${volume} — ${share}. Achievable for most stalls if the turnout holds.`,
+      note: `${volume}. ${share}. Achievable for most stalls if the turnout holds.`,
     };
   }
   if (capturePct <= 3) {
     return {
       verdict: "workable",
-      note: `${volume} — ${share}. Realistic, but the booth is not cheap relative to the crowd.`,
+      note: `${volume}. ${share}. Realistic, but the booth is not cheap relative to the crowd.`,
     };
   }
   if (capturePct <= 8) {
     return {
       verdict: "demanding",
-      note: `${volume} — ${share}. That is a high conversion rate to merely break even.`,
+      note: `${volume}. ${share}. That is a high conversion rate to merely break even.`,
     };
   }
   return {
     verdict: "impossible",
-    note: `${volume} — ${share}. Well beyond normal event conversion; this booth is unlikely to pay for itself.`,
+    note: `${volume}. ${share}. Well beyond normal event conversion; this booth is unlikely to pay for itself.`,
   };
 }
 

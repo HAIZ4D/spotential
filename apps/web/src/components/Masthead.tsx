@@ -41,7 +41,6 @@ const NAV: NavItem[] = [
   { to: "/simulator", label: "Simulator" },
   { to: "/analysis", label: "Location" },
   { to: "/compare", label: "Compare" },
-  { to: "/heatmap", label: "City Demand" },
 ];
 
 const isActive = (item: NavItem, pathname: string): boolean =>
@@ -289,7 +288,7 @@ export function Masthead({ subtitle, children }: { subtitle: string; children?: 
           </span>
           {/* The accessible name for the home link, and the page context the
               visible capsule has no room for. */}
-          <span className="sr-only">Spotential home — {subtitle}</span>
+          <span className="sr-only">Spotential home, {subtitle}</span>
         </Link>
 
         {/* One collapse container holding the links AND the auth actions.

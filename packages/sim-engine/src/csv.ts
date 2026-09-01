@@ -29,7 +29,7 @@ export function projectionToCsv(inputs: ScenarioInputs, result: SimulationResult
 
   const lines: string[] = [];
 
-  lines.push(row(["Spotential — What-if Simulator"]));
+  lines.push(row(["Spotential What-if Simulator"]));
   lines.push(row(["Business type", category.label]));
   lines.push(row(["District", district.label]));
   lines.push(row(["Generated", new Date().toISOString().slice(0, 10)]));

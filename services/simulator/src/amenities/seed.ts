@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { resolveDataDir } from "../dataDir.js";
 import type { AmenityLayer, Bounds, NamedPlace } from "./overpass.js";
 import { cacheKey } from "./store.js";
 
@@ -33,7 +33,7 @@ import { cacheKey } from "./store.js";
  * the snapshot silently failed to load in production while every test passed,
  * because the tests pass `dataDir` explicitly. Matches population.ts.
  */
-const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "data");
+const DATA_DIR = resolveDataDir(import.meta.url);
 
 interface SeedCity {
   label: string;

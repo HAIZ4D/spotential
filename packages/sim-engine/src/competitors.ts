@@ -99,7 +99,7 @@ export interface DensityBand {
   count: number;
 }
 
-/** Counts per band. Bands are cumulative-exclusive: 0–250, 250–500, 500–1000. */
+/** Counts per band. Bands are cumulative-exclusive: 0-250, 250-500, 500-1000. */
 export function densityByBand(competitors: CompetitorWithDistance[]): DensityBand[] {
   let lower = 0;
   return DENSITY_BANDS.map((upToMetres) => {

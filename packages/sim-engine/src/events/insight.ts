@@ -95,13 +95,13 @@ export function matchInsight(score: EventScore): MatchInsight {
 
   let headline: string;
   if (good && bad) {
-    headline = `Strong on ${dimensionWord(strength!)} — ${good} — but ${bad}.`;
+    headline = `Strong on ${dimensionWord(strength!)}: ${good}, but ${bad}.`;
   } else if (good) {
     headline = `A good fit: ${good}.`;
   } else if (bad) {
     headline = `Worth a closer look: ${bad}.`;
   } else {
-    headline = "A middling match on every measure — nothing stands out either way.";
+    headline = "A middling match on every measure. Nothing stands out either way.";
   }
 
   return { headline, strength, drag, tone };

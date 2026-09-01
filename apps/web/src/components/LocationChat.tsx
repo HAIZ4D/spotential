@@ -78,7 +78,7 @@ export function LocationChat({
         // The model proposes; the page's own cached fetch executes. It has not
         // seen the new view, so it must not describe it.
         onAdjust({ category: response.category, radiusMetres: response.radiusMetres });
-        reply = `${response.why} The panels are updating — ask again once they have.`;
+        reply = `${response.why} The panels are updating. Ask again once they have.`;
       } else if (response.kind === "declined") {
         reply = `${response.reason}${response.suggestion ? ` ${response.suggestion}` : ""}`;
       } else {
@@ -115,7 +115,7 @@ export function LocationChat({
         {turns.length === 0 && (
           <div className="notice info">
             <span>
-              Answers can only cite figures shown on this page. The assistant does not calculate —
+              Answers can only cite figures shown on this page. The assistant does not calculate.
               if a question needs a number nobody measured, it says so rather than estimating.
             </span>
           </div>

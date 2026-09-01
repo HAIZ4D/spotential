@@ -618,6 +618,18 @@ test("typing in the search box actually types", async ({ page }) => {
    * every keystroke wrote a parameter nothing read back. The input was
    * controlled by a value that never changed, and the field appeared frozen.
    */
+  /**
+   * Wait for the list before typing.
+   *
+   * `pressSequentially` sends real keystrokes, and any that land before React
+   * has hydrated the controlled input go nowhere — the field then settles a
+   * character or two short and the assertion below fails on a value that looks
+   * almost right. It passed alone and failed about one full-suite run in
+   * three, which is the worst kind of flake: the field being frozen is exactly
+   * the bug this test exists to catch, so a false red here is expensive.
+   */
+  await expect(page.locator(".evc").first()).toBeVisible();
+
   const box = page.getByPlaceholder("Event, venue or organizer");
   await box.click();
   await box.pressSequentially("terang", { delay: 30 });

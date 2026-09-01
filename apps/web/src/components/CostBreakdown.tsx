@@ -65,7 +65,7 @@ export function CostBreakdown({ result }: { result: SimulationResult }) {
 
         <details style={{ marginTop: 12 }}>
           <summary className="small muted" style={{ cursor: "pointer" }}>
-            Staff cost detail — employer contributions
+            Staff cost detail: employer contributions
           </summary>
           <div className="table-scroll" style={{ marginTop: 8 }}>
             <table>
@@ -95,7 +95,7 @@ export function CostBreakdown({ result }: { result: SimulationResult }) {
           </div>
           <p className="tiny muted" style={{ marginTop: 6 }}>
             Employee-side EPF, SOCSO and EIS come out of the employee&rsquo;s own wage and are
-            already inside the figure above — they are not an extra employer cost. Statutory rates
+            already inside the figure above, so they are not an extra employer cost. Statutory rates
             reviewed 2026-08-12.
           </p>
         </details>

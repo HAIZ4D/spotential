@@ -54,7 +54,7 @@ export function CompetitorList({
     <section className="card">
       <header>
         <h2>Competitors nearby</h2>
-        <span className="pill muted" title={fromCache ? "Served from cache — no API call" : "Freshly fetched"}>
+        <span className="pill muted" title={fromCache ? "Served from cache, no API call" : "Freshly fetched"}>
           {competitors.length} within {formatNumber(data.radiusMetres)}m
         </span>
       </header>
@@ -78,7 +78,7 @@ export function CompetitorList({
             <span>
               Google returns at most 20 places per search, and this area filled that quota within{" "}
               {formatNumber(data.completeToMetres)}m. Treat this as the <strong>20 nearest</strong>,
-              not the full picture — there are very likely more beyond{" "}
+              not the full picture. There are very likely more beyond{" "}
               {formatNumber(data.completeToMetres)}m.
             </span>
           </div>
@@ -87,7 +87,7 @@ export function CompetitorList({
         {competitors.length === 0 ? (
           <div className="notice info">
             No competitors of this type found within the radius. Either a genuine gap, or the
-            category is not how Google labels them here — try a wider radius.
+            category is not how Google labels them here. Try a wider radius.
           </div>
         ) : (
           <>
@@ -197,7 +197,7 @@ export function CompetitorScatter({ data }: { data: CompetitorsResponseShape }) 
           </ResponsiveContainer>
         </div>
         <p className="tiny muted" style={{ margin: "8px 0 0" }}>
-          Red marks the established operators — well rated with many reviews. Those are the ones
+          Red marks the established operators, well rated with many reviews. Those are the ones
           you would be taking custom from.
         </p>
       </div>
@@ -229,7 +229,7 @@ export function CompetitionDensity({ data }: { data: CompetitorsResponseShape })
           return (
             <div className="sens-row" key={band.upToMetres}>
               <span className={unknown ? "muted" : undefined}>
-                {from}–{band.upToMetres}m
+                {from} to {band.upToMetres}m
               </span>
               <span className="sens-bar">
                 {!unknown && <span style={{ width: `${(band.count / max) * 100}%` }} />}
@@ -244,7 +244,7 @@ export function CompetitionDensity({ data }: { data: CompetitorsResponseShape })
         {completeToMetres !== null && (
           <p className="tiny muted" style={{ margin: "10px 0 0" }}>
             Google capped the search at 20 results, which ran out at{" "}
-            {formatNumber(completeToMetres)}m. Bands past that are unknown, not empty — a dense
+            {formatNumber(completeToMetres)}m. Bands past that are unknown, not empty. A dense
             area cannot be read as a quiet one just because the quota ran out.
           </p>
         )}

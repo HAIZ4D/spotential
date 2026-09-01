@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { resolveDataDir } from "./dataDir.js";
 import { distanceMetres, type LatLng } from "@spotential/sim-engine";
 
 /**
@@ -21,7 +21,7 @@ import { distanceMetres, type LatLng } from "@spotential/sim-engine";
  * scans a few hundred hexagons rather than 147,936.
  */
 
-const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "data");
+const DATA_DIR = resolveDataDir(import.meta.url);
 
 export interface Catchment {
   radiusMetres: number;
@@ -43,8 +43,8 @@ export interface Catchment {
  * KNOWN INACCURACY, measured 2026-08-14 and deliberately not yet changed.
  *
  * This is H3's GLOBAL AVERAGE resolution-8 area. Real cells vary: across
- * Malaysia they run 0.714–0.880 km², and every populated city measures around
- * 0.84–0.87 — so this constant is about 16% too small where it actually gets
+ * Malaysia they run 0.714-0.880 km², and every populated city measures around
+ * 0.84-0.87 — so this constant is about 16% too small where it actually gets
  * used. The equal-area radius below is therefore ~484m when the true figure
  * near KL is ~523m.
  *

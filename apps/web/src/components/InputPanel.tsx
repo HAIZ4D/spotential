@@ -95,7 +95,7 @@ export function InputPanel({ scenario }: { scenario: ScenarioState }) {
                         step={0.5}
                         suffix={<span className="source">%</span>}
                         aiTouched={touched("cogsPct")}
-                        source={`RM${result.derived.cogsPerUnit.toFixed(2)} per transaction — held constant when you change price`}
+                        source={`RM${result.derived.cogsPerUnit.toFixed(2)} per transaction, held constant when you change price`}
                       />
             <LeverRank field="cogsPct" sensitivity={result.sensitivity} />
           </div>
@@ -286,10 +286,10 @@ export function InputPanel({ scenario }: { scenario: ScenarioState }) {
               suffix={<span className="source">%</span>}
               source={
                 sectorOf(inputs.businessCategory) !== "fnb"
-                  ? "Seeded at 0. Service tax scope outside F&B changed in 2025 and is not carried here without a source — confirm your own registration position before changing it."
+                  ? "Seeded at 0. Service tax scope outside F&B changed in 2025 and is not carried here without a source. Confirm your own registration position before changing it."
                   : result.steady.sstApplies
                     ? `Service tax ${formatCurrency(result.steady.serviceTax)}/month`
-                    : "Below the threshold — no service tax applies yet."
+                    : "Below the threshold, so no service tax applies yet."
               }
             />
           )}
@@ -298,7 +298,7 @@ export function InputPanel({ scenario }: { scenario: ScenarioState }) {
             <span>
               Charge 10% service charge
               <div className="tiny muted">
-                Collected from customers and passed to staff — it never reaches profit.
+                Collected from customers and passed to staff, so it never reaches profit.
               </div>
             </span>
             <input

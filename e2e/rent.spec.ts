@@ -89,9 +89,14 @@ test("says so plainly where no benchmark covers the pin", async ({ page }) => {
 
   await expect(panel.getByText(/No rent benchmark covers this spot/)).toBeVisible();
 
-  // And the score must show an empty axis rather than a zero. That lives in
-  // the profile, so the test opens it exactly as a reader would.
+  /**
+   * And the score must show an empty axis rather than a zero. The dimension
+   * NOTE saying so now sits inside the score working, which is a disclosure —
+   * so the test opens it exactly as a reader would, rather than asserting
+   * against text the page deliberately folds away.
+   */
   await openSection(page, "Overview");
+  await page.locator(".score-working > summary").click();
   await expect(
     page.getByRole("main").getByText(/enter the rent you were quoted/i).first(),
   ).toBeVisible();
@@ -180,11 +185,18 @@ test("the rent axis joins the score without displacing the others", async ({ pag
   await page.goto(AT_KLCC);
   await openSection(page, "Overview");
 
-  const score = page.locator("section.card", { hasText: "Location profile" });
-  await expect(score.getByRole("table").getByText("Rent sensitivity")).toBeVisible();
+  /**
+   * "Location profile" as a card heading is gone: the tab above it already
+   * says Overview, and the page was naming itself twice. The table is behind
+   * the score working now, so this opens it the way a reader would.
+   */
+  await page.locator(".score-working > summary").click();
+  const table = page.getByRole("table").first();
+
+  await expect(table.getByText("Rent sensitivity")).toBeVisible();
   // Still all five dimensions, and competition still the heaviest.
-  await expect(score.getByRole("table").getByText("Competition")).toBeVisible();
-  await expect(score.getByRole("table").getByText("Est. monthly demand")).toBeVisible();
+  await expect(table.getByText("Competition")).toBeVisible();
+  await expect(table.getByText("Est. monthly demand")).toBeVisible();
 });
 
 /**

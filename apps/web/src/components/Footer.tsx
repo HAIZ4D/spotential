@@ -25,7 +25,6 @@ const SECTIONS: { title: string; links: { to: string; label: string }[] }[] = [
     links: [
       { to: "/analysis", label: "Score a location" },
       { to: "/compare", label: "Compare sites" },
-      { to: "/heatmap", label: "City demand" },
     ],
   },
   {
@@ -100,7 +99,7 @@ export function Footer() {
           </Link>
           <p className="ft-tagline">Know the spot. Know the potential.</p>
           <p className="ft-blurb">
-            Location intelligence for Malaysian MSMEs — score a site, compare two, and see what a
+            Location intelligence for Malaysian MSMEs. Score a site, compare two, and see what a
             booth or a shopfront would really cost before you sign anything.
           </p>
         </div>
@@ -126,21 +125,21 @@ export function Footer() {
               shown, so these are not optional and do not move. */}
           <ul className="ft-sources">
             <li>
-              Population grid —{" "}
+              Population grid:{" "}
               <a href="https://data.humdata.org/dataset/kontur-population-malaysia" target="_blank" rel="noreferrer">
                 Kontur Population
               </a>{" "}
               (CC BY 4.0)
             </li>
             <li>
-              Places of interest —{" "}
+              Places of interest:{" "}
               <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
                 © OpenStreetMap contributors
               </a>{" "}
               (ODbL)
             </li>
-            <li>Demographics — Department of Statistics Malaysia</li>
-            <li>Competitors and maps — Google Maps Platform</li>
+            <li>Demographics: Department of Statistics Malaysia</li>
+            <li>Competitors and maps: Google Maps Platform</li>
           </ul>
         </div>
       </div>

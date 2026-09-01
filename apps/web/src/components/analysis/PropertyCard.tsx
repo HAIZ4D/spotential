@@ -1,5 +1,5 @@
-import { useState } from "react";
 import type { PropertyListing } from "../../lib/api.js";
+import { PhotoBox } from "./PhotoBox.js";
 
 /**
  * One real retail unit, currently advertised for rent.
@@ -22,33 +22,6 @@ import type { PropertyListing } from "../../lib/api.js";
  * cheaper and the more defensible arrangement. A 404 falls back to an initial
  * tile, the same device the competitor list uses when there is no image.
  */
-function Thumbnail({ listing }: { listing: PropertyListing }) {
-  const [failed, setFailed] = useState(false);
-  const initial = listing.title.trim().charAt(0).toUpperCase() || "?";
-
-  if (!listing.thumbnailUrl || failed) {
-    return (
-      <span className="plist-thumb plist-thumb-fallback" aria-hidden="true">
-        {initial}
-      </span>
-    );
-  }
-
-  return (
-    <img
-      className="plist-thumb"
-      src={listing.thumbnailUrl}
-      alt=""
-      loading="lazy"
-      decoding="async"
-      // referrerPolicy keeps our URLs out of their logs; the CDN serves
-      // without a referrer, which was checked before relying on it.
-      referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
 export function PropertyCard({ listing }: { listing: PropertyListing }) {
   const meta = [listing.sizeLabel, listing.transitLabel].filter(Boolean).join(" · ");
 
@@ -63,9 +36,9 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
         // eye gets from the layout — otherwise it announces only the title.
         aria-label={`${listing.title}, ${listing.rentLabel}${
           listing.psfLabel ? `, ${listing.psfLabel}` : ""
-        } — opens on PropertyGuru`}
+        }, opens on PropertyGuru`}
       >
-        <Thumbnail listing={listing} />
+        <PhotoBox id={listing.id} label={listing.title} src={listing.thumbnailUrl ?? null} shape="wide" />
 
         <div className="plist-body">
           <div className="plist-top">

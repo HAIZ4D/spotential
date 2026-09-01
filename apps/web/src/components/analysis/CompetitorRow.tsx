@@ -1,4 +1,5 @@
 import { formatNumber, type CompetitorWithDistance } from "@spotential/sim-engine";
+import { PhotoBox } from "./PhotoBox.js";
 
 /**
  * One competitor, as a row rather than four table cells.
@@ -55,7 +56,6 @@ export function CompetitorRow({
   const { name, rating, reviewCount, distanceMetres, priceLevel, primaryType } = competitor;
   const closed = competitor.businessStatus === "CLOSED_PERMANENTLY";
 
-  const initial = name.trim().charAt(0).toUpperCase() || "?";
   const marks = priceLevel ? PRICE_MARKS[priceLevel] : undefined;
   const type = typeLabel(primaryType);
 
@@ -74,9 +74,7 @@ export function CompetitorRow({
       onMouseLeave={() => onHover(null)}
     >
       <span className="clist-rank">{rank}</span>
-      <span className="clist-tile" aria-hidden="true">
-        {initial}
-      </span>
+      <PhotoBox id={competitor.id} label={name} />
 
       <div className="clist-main">
         <div className="clist-name">

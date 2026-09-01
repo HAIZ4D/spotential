@@ -864,36 +864,59 @@ button:disabled {
 }
 
 /* ---------- Hero ---------- */
+/* ---------- Location hero ----------
+   Restraint is the brief. One accent, a strict rhythm, no decoration: the
+   score, what it means, and the four figures the score does not itself show.
+   Everything that restated the same number went. */
 .hero {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, var(--navy-tint) 0%, var(--bg) 62%);
-  padding: 18px;
+  background: var(--bg);
+  padding: 26px 26px 22px;
   box-shadow: var(--shadow-lift);
 }
-.hero-top {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 20px;
-  /* Was `center`, which left a band of dead space beneath the ring because
-     the radar beside it is much taller. Top-aligned, the verdict tucks in
-     directly under the ring where the eye already is. */
-  align-items: start;
-}
-.hero-place {
-  font-size: 11px;
+.hero-eyebrow {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--ink-3);
-  font-weight: 700;
+  color: var(--ink-2);
 }
+/* The PLACE, at the size the most important thing on a page should be. It
+   used to be the raw coordinates, which name nothing to a reader. */
 .hero-name {
-  font-size: 20px;
-  font-weight: 680;
-  letter-spacing: -0.02em;
-  margin: 2px 0 0;
+  font-size: 30px;
+  line-height: 1.14;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  margin: 8px 0 0;
   color: var(--ink);
   overflow-wrap: anywhere;
+  max-width: 22ch;
+}
+
+.hero-answer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.hero-said {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+/* Quiet, and still there. A caveat in a coloured panel above the data every
+   single visit is a caveat nobody reads by the third one. */
+.hero-caveat {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-2);
 }
 .hero-verdict {
   font-size: 14px;
@@ -4265,6 +4288,150 @@ ul.tight {
   }
 }
 
+/* ---- Demand layer toggle (Location map) ----
+   Sits in the map head beside the Map / Street View control. Pressed state is
+   carried by aria-pressed, so the styling and the accessible state cannot drift
+   apart the way a class-only toggle can. */
+.demand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: var(--control-md);
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.demand-toggle:hover {
+  border-color: rgba(0, 48, 135, 0.28);
+  color: var(--navy);
+}
+.demand-toggle[aria-pressed="true"] {
+  border-color: var(--navy);
+  background: var(--navy-tint);
+  color: var(--navy);
+}
+/* A miniature of the ramp it switches on, so the control says what it draws
+   rather than only naming it. Same stops as STOPS in ramp.ts — if that ramp
+   changes, this has to change with it or the control misdescribes the map. */
+.demand-swatch {
+  width: 30px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #228b54, #7cbe4b 28%, #d6de3e 46%, #facc15 62%, #f48519 82%, #d62323);
+  box-shadow: inset 0 0 0 1px rgba(0, 48, 135, 0.16);
+  flex: none;
+}
+
+/* The surface is population, and this page is full of colours that mean
+   good and bad. The note says which this is not. */
+.demand-note {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 12px 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.demand-note b {
+  color: var(--navy);
+  font-weight: 700;
+}
+/* A failed grid is a statement about missing data, not an error in the
+   analysis — amber rather than red, and the copy says the score is unaffected. */
+.demand-note.is-failed b {
+  color: #8a5a00;
+}
+
+/* ---------- Photo boxes ----------
+   The image slot on a competitor row and a property card. No API will hand us
+   these pictures — Place photos are an enterprise SKU billed per image per
+   page load, and the property CDN refuses our server — so the FALLBACK is the
+   normal state and it is designed rather than apologetic. */
+.photobox {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface);
+  flex: none;
+}
+.photobox-square {
+  width: 44px;
+  height: 44px;
+}
+.photobox-wide {
+  width: 96px;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  border-radius: 12px;
+}
+.photobox img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Brand palette only. A borrowed storefront would imply we know what this
+   place looks like, on a page whose whole argument is that its figures came
+   from somewhere checkable. */
+.photobox-tile {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 750;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.photobox-wide .photobox-tile {
+  font-size: 18px;
+}
+
+/* ---------- The working, folded away ---------- */
+.score-caveat {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.score-working {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.score-working > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+  min-height: var(--control-md);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+}
+.score-working > summary::-webkit-details-marker {
+  display: none;
+}
+.score-working > summary::before {
+  content: "▸";
+  font-size: 10px;
+  transition: transform 0.18s ease;
+}
+.score-working[open] > summary::before {
+  transform: rotate(90deg);
+}
+.score-working > summary:hover {
+  color: var(--navy);
+}
+
 /* ---------- Touch targets ----------
 
    LAST IN THE FILE, deliberately.
@@ -4300,7 +4467,8 @@ ul.tight {
      these two stayed at 36px against a 44px floor until the selectors matched.
      Same trap the button/tab rules above already record. */
   .navbar .nav-login,
-  .navbar .nav-signup {
+  .navbar .nav-signup,
+  .demand-toggle {
     min-height: var(--control-lg);
   }
 

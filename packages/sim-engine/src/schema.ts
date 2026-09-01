@@ -84,7 +84,7 @@ export function parseScenarioInputs(raw: unknown): ParseResult {
       continue;
     }
     if (value < bound.min || value > bound.max) {
-      errors.push(`${field}: ${value} is outside ${bound.min}–${bound.max}`);
+      errors.push(`${field}: ${value} is outside ${bound.min} to ${bound.max}`);
       continue;
     }
     if (bound.integer && !Number.isInteger(value)) {
@@ -103,7 +103,7 @@ export function parseScenarioInputs(raw: unknown): ParseResult {
       continue;
     }
     if (value < bound.min || value > bound.max) {
-      errors.push(`${field}: ${value} is outside ${bound.min}–${bound.max}`);
+      errors.push(`${field}: ${value} is outside ${bound.min} to ${bound.max}`);
       continue;
     }
     optionals[field] = value;
