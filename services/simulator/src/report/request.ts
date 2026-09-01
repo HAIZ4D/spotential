@@ -10,6 +10,7 @@ import {
   type ScenarioInputs,
 } from "@spotential/sim-engine";
 import type { LocationReportInput } from "./model.js";
+import type { GapFacts } from "../chat/facts.js";
 
 /**
  * Report request validation — Feature 4.
@@ -148,6 +149,64 @@ export function categoryOf(value: unknown): BusinessCategory | null {
   return typeof value === "string" && value in CATEGORY_PRESETS
     ? (value as BusinessCategory)
     : null;
+}
+
+/**
+ * Gap analysis, sanitised.
+ *
+ * Accepted as an INPUT at the same trust level as the rival list above: the
+ * server cannot re-derive it without paying Places again, and the caller has
+ * just fetched it from this very service. It is used only as narration
+ * material for the AI briefing and is never scored, so the worst a
+ * hand-edited request can do is change some prose about itself.
+ *
+ * Capped hard. Fifteen categories is the real ceiling; anything longer is
+ * someone trying to stuff the model's context.
+ */
+const MAX_GAP_ROWS = 20;
+
+export function gapsOf(value: unknown): GapFacts | null {
+  if (typeof value !== "object" || value === null) return null;
+  const raw = value as Record<string, unknown>;
+
+  const rows = Array.isArray(raw["ranked"]) ? (raw["ranked"] as unknown[]) : [];
+  const ranked = rows.slice(0, MAX_GAP_ROWS).flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const row = entry as Record<string, unknown>;
+    const label = text(row["label"], "").slice(0, MAX_LABEL).trim();
+    if (!label) return [];
+    return [
+      {
+        label,
+        outlets: count(row["outlets"]),
+        outletsAreMinimum: row["outletsAreMinimum"] === true,
+        reviewsPerOutlet: Number.isFinite(Number(row["reviewsPerOutlet"]))
+          ? Number(row["reviewsPerOutlet"])
+          : null,
+        averageRating: Number.isFinite(Number(row["averageRating"]))
+          ? Number(row["averageRating"])
+          : null,
+        verdict: text(row["verdict"], "unknown").slice(0, 32),
+      },
+    ];
+  });
+
+  if (ranked.length === 0) return null;
+
+  const absent = Array.isArray(raw["noPresence"]) ? (raw["noPresence"] as unknown[]) : [];
+  const noPresence = absent.slice(0, MAX_GAP_ROWS).flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const label = text((entry as Record<string, unknown>)["label"], "").slice(0, MAX_LABEL).trim();
+    return label ? [{ label }] : [];
+  });
+
+  const top = raw["topOpportunity"];
+  const topLabel =
+    typeof top === "object" && top !== null
+      ? text((top as Record<string, unknown>)["label"], "").slice(0, MAX_LABEL).trim()
+      : "";
+
+  return { ranked, noPresence, topOpportunity: topLabel ? { label: topLabel } : null };
 }
 
 export const RADIUS_RANGE = { min: 100, max: 2_000 } as const;

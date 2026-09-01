@@ -12,7 +12,11 @@ import { expect, type Page } from "@playwright/test";
  * to open its section fails loudly instead of quietly asserting against a
  * panel that is simply not rendered.
  */
-export type Section = "Overview" | "Competition" | "People" | "Rent" | "Gaps" | "Ask";
+/**
+ * "Ask" is gone. The AI panel it opened lives in the page itself now, above
+ * the tab rail, so there is nothing to select and nothing to wait for.
+ */
+export type Section = "Overview" | "Competition" | "People" | "Rent" | "Gaps";
 
 export async function openSection(page: Page, section: Section): Promise<void> {
   const tab = page.getByRole("tab", { name: new RegExp(`^${section}`) });

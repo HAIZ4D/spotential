@@ -132,7 +132,14 @@ test("ranks categories and names the best opportunity", async ({ page }) => {
 
   await expect(page.getByText("Opportunity gaps")).toBeVisible();
   await expect(page.getByText("best: Bubble tea / dessert")).toBeVisible();
-  await expect(page.getByText(/clearest opening on this street/)).toBeVisible();
+  /**
+   * The write-up is no longer here. It moved to the Spotential AI panel at the
+   * top of the page, which sees the competitors, catchment and rent as well —
+   * and which, unlike this one, still writes something when no category stands
+   * out. This section keeps the evidence; `brief.spec.ts` covers the prose.
+   */
+  await expect(page.locator(".gap-narrative")).toHaveCount(0);
+  await expect(page.getByRole("table")).toBeVisible();
 });
 
 test("shows a capped category as a minimum and marks it saturated", async ({ page }) => {

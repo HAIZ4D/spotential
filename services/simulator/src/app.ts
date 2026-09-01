@@ -24,12 +24,19 @@ import {
   type VendorProfile,
 } from "@spotential/sim-engine";
 import type { BusinessCategory } from "@spotential/sim-engine";
-import { extractPatch, narrate, narrateGaps, type GeminiConfig } from "./gemini.js";
+import { extractPatch, narrate, type GeminiConfig } from "./gemini.js";
 import { QuotaTracker } from "./quota.js";
 import { searchNearby, type PlacesConfig } from "./places.js";
 import { findCompetitors } from "./competitors/service.js";
 import { detectGaps } from "./competitors/gaps.js";
 import { InMemoryCompetitorStore, type CompetitorStore } from "./competitors/store.js";
+import { briefLocation } from "./chat/brief.js";
+import { buildFacts } from "./chat/facts.js";
+import {
+  briefingKey,
+  InMemoryBriefingStore,
+  type BriefingStore,
+} from "./chat/store.js";
 import type { DemographicsLookup } from "./demographics.js";
 import { AppCheckVerifier, callerIdOf, type AppCheckConfig } from "./appcheck.js";
 import { NO_MAP, StaticMapFetcher } from "./staticmap.js";
@@ -41,6 +48,7 @@ import {
 } from "./report/index.js";
 import {
   categoryOf,
+  gapsOf,
   filenameOf,
   locationOf,
   parseReportRequest,
@@ -89,6 +97,16 @@ export interface AppOptions {
   places?: PlacesConfig | undefined;
   /** Defaults to in-memory, which is correct for tests and local development. */
   competitorStore?: CompetitorStore | undefined;
+  /**
+   * Caches the AI briefing. Defaults to in-memory.
+   *
+   * Unlike the application store this one is ALLOWED to downgrade: a lost
+   * briefing costs one Flash call to regenerate, and the page still renders
+   * its derived summary meanwhile. It is reported on /health all the same,
+   * because "silently in memory" is how the competitor cache once re-billed
+   * Places on every cold start.
+   */
+  briefingStore?: BriefingStore | undefined;
   /** Separate ceiling from the AI quota: this one guards Places spend. */
   placesQuota?: QuotaTracker | undefined;
   /**
@@ -189,6 +207,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       gemini: options.gemini ? options.gemini.transport.name : "none",
       geminiModel: options.gemini?.transport.model ?? null,
       competitorCache: options.competitorStore ? "provided" : "in-memory",
+      briefCache: options.briefingStore ? "provided" : "in-memory",
       places: options.places?.apiKey ? "configured" : "none",
       demographics: options.demographics ? `districts:${options.demographics.districtCount}` : "none",
       appCheck: options.appCheck ? "enforced" : "off",
@@ -330,6 +349,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   });
 
   const competitorStore = options.competitorStore ?? new InMemoryCompetitorStore();
+  const briefingStore = options.briefingStore ?? new InMemoryBriefingStore();
   // Deliberately separate from the AI quota, and it counts only UNCACHED
   // searches — a cache hit costs nothing, so rate-limiting it would just make
   // the product worse for no saving.
@@ -483,15 +503,19 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
         { allowFetch, sector },
       );
 
-      // Only worth a Pro call if there is actually something to write about.
-      const narrative =
-        options.gemini && analysis.topOpportunity
-          ? await narrateGaps(options.gemini, analysis)
-          : "";
-
+      /**
+       * NO GEMINI CALL HERE ANY MORE.
+       *
+       * This used to run a Pro write-up on every request, uncached, and only
+       * when `analysis.topOpportunity` was non-null — so it spent on the easy
+       * case and stayed silent on the hard one, where every category is
+       * saturated and the table most needs explaining. Interpretation moved to
+       * /v1/location/brief, which sees the competitors, catchment and rent too
+       * and is cached. This route is now pure arithmetic and cannot fail on an
+       * AI call.
+       */
       return {
         ...analysis,
-        narrative,
         searchSkipped: !analysis.fromCache && !allowFetch,
         placesConfigured: Boolean(options.places?.apiKey),
       };
@@ -924,6 +948,117 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       return reply.status(502).send({
         error: "ai_failed",
         message: "Could not reach the assistant. Every figure on the page is unaffected.",
+      });
+    }
+  });
+
+
+  /**
+   * The Spotential AI briefing.
+   *
+   * One AI surface for the whole location report, rendered in the page rather
+   * than behind a tab. It replaces two: the gap write-up that went silent
+   * whenever every category was saturated, and a chat panel nobody opened.
+   *
+   * GAPS ARRIVE AS AN INPUT, at the same trust level /v1/report already accepts
+   * the competitor list: the server cannot re-derive them without paying
+   * Places again, so they are accepted, capped and sanitised, and used ONLY as
+   * narration material. Nothing here is scored, so a hand-edited request can
+   * change the prose and can never change a figure this app stands behind.
+   */
+  app.post("/v1/location/brief", paidRoute, async (request, reply) => {
+    const raw = (request.body as Record<string, unknown> | undefined) ?? {};
+
+    const category = categoryOf(raw["category"]);
+    const radiusMetres = radiusOf(raw["radiusMetres"]);
+    if (!category || radiusMetres === null) {
+      return reply
+        .status(400)
+        .send({ error: "invalid_context", message: "A valid business type and radius are required." });
+    }
+
+    const location = locationOf(raw["location"], category, radiusMetres);
+    if (!location) {
+      return reply
+        .status(400)
+        .send({ error: "invalid_location", message: "location.point must be a valid coordinate." });
+    }
+
+    if (!options.gemini) {
+      return reply.status(503).send({
+        error: "ai_unavailable",
+        message: "The analysis is not configured on this deployment.",
+      });
+    }
+
+    // Measured server-side, same as the report and ask routes. Never taken
+    // from the body: it is a measurement, and the client cannot assert it.
+    const grounded: LocationReportInput = {
+      ...location,
+      catchment: options.population?.catchment(location.point, radiusMetres).population ?? null,
+    };
+
+    const gaps = gapsOf(raw["gaps"]);
+    const facts = buildFacts(grounded, gaps);
+    const key = briefingKey(facts);
+
+    /**
+     * CACHE BEFORE QUOTA. A hit spends nothing, so charging a caller's AI
+     * quota for it would throttle people for reading a page twice.
+     */
+    try {
+      const hit = await briefingStore.find(key);
+      if (hit) return { kind: "brief", briefing: hit.briefing, cached: true };
+    } catch (error) {
+      // A cache read failing is not worth failing the request over.
+      request.log.warn({ err: error }, "briefing cache read failed");
+    }
+
+    const callerId = callerIdOf(request);
+    const allowed = quota.check(callerId);
+    if (!allowed.allowed) {
+      return reply.status(429).send({ error: "quota_exceeded", message: allowed.reason });
+    }
+    quota.record(callerId);
+
+    try {
+      const outcome = await briefLocation(options.gemini, grounded, gaps);
+
+      if (outcome.kind === "brief") {
+        try {
+          await briefingStore.save({ key, briefing: outcome.briefing, generatedAt: Date.now() });
+        } catch (error) {
+          // Serving an uncached briefing beats failing on a write.
+          request.log.warn({ err: error }, "briefing cache write failed");
+        }
+        return { ...outcome, cached: false };
+      }
+
+      /**
+       * A refusal is never cached: it is a property of one model reply, not of
+       * this location, and the next attempt may well pass the guard.
+       *
+       * Logged with its cause, because the two refusal routes look identical
+       * to a caller and need completely different fixes. A populated
+       * `unsupported` means the guard fired and the model invented a figure;
+       * an empty one means the reply would not parse at all, which in practice
+       * has meant the response was truncated. "Refused" alone is not
+       * diagnosable, the same lesson the Overpass failures already taught.
+       */
+      request.log.warn(
+        {
+          unsupported: outcome.unsupported,
+          cause: outcome.unsupported.length > 0 ? "guard" : "unparseable",
+        },
+        "briefing refused",
+      );
+      return outcome;
+    } catch (error) {
+      // The AI layer failing must never suggest the figures on screen are wrong.
+      request.log.error({ err: error }, "location briefing failed");
+      return reply.status(502).send({
+        error: "ai_failed",
+        message: "Could not reach the analysis. Every figure on the page is unaffected.",
       });
     }
   });

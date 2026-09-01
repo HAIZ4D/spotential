@@ -193,7 +193,7 @@ const [geminiTransport, stores, demographics, population, amenitiesSeed, events]
     createEvents(),
   ]);
 
-const { competitorStore, listingsStore, amenitiesStore, applicationStore } = stores;
+const { competitorStore, listingsStore, amenitiesStore, applicationStore, briefingStore } = stores;
 
 /**
  * The Firebase project, used to verify ID tokens on the apply route.
@@ -216,6 +216,7 @@ const app = buildApp({
   staticMaps,
   population,
   listingsStore,
+  briefingStore,
   // The real network call. Kept out of buildApp so tests never touch a third
   // party, and so an unconfigured deployment reports "none" instead of
   // quietly reaching out to PropertyGuru from a test run.
@@ -253,6 +254,7 @@ const app = buildApp({
     staticMaps: staticMaps ? "configured" : "none",
     population: population ? `hexagons:${population.hexagonCount}` : "none",
     listingsCache: listingsStore ? "firestore" : "in-memory",
+    briefCache: briefingStore ? "firestore" : "in-memory",
     listings: "propertyguru",
     amenitiesCache: amenitiesStore ? "firestore" : "in-memory",
     amenities: "overpass",
@@ -291,16 +293,18 @@ async function createStores() {
     const { FirestoreListingsStore } = await import("./properties/store.js");
     const { FirestoreAmenitiesStore } = await import("./amenities/store.js");
     const { FirestoreApplicationStore } = await import("./events/store.js");
+    const { FirestoreBriefingStore } = await import("./chat/store.js");
     const firestore = new Firestore(explicitProject ? { projectId: explicitProject } : {});
     // Do NOT read firestore.projectId here: it throws "Client is not yet ready
     // to issue requests" until credentials resolve, and the catch below would
     // swallow that into a silent in-memory fallback. The logging meant to
     // expose failures caused one.
-    console.log("[cache] competitor, listings and amenities caches backed by Firestore.");
+    console.log("[cache] competitor, listings, amenities and briefing caches backed by Firestore.");
     return {
       competitorStore: new FirestoreCompetitorStore(firestore as never),
       listingsStore: new FirestoreListingsStore(firestore as never),
       amenitiesStore: new FirestoreAmenitiesStore(firestore as never),
+      briefingStore: new FirestoreBriefingStore(firestore as never),
       // Not a cache. See the note in app.ts on why there is no in-memory
       // fallback for this one.
       applicationStore: new FirestoreApplicationStore(firestore as never),

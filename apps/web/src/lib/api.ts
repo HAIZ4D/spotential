@@ -146,7 +146,6 @@ export interface GapsResponse {
   sector?: "fnb" | "retail" | "services";
   noPresence: CategoryGap[];
   topOpportunity: CategoryGap | null;
-  narrative: string;
   radiusMetres: number;
   fromCache: boolean;
   categoriesFetched: number;
@@ -290,6 +289,57 @@ export type ChatResponse =
   | { kind: "adjust"; category: BusinessCategory | null; radiusMetres: number | null; why: string }
   | { kind: "declined"; reason: string; suggestion: string }
   | { kind: "refused"; reason: string };
+
+/**
+ * The Spotential AI briefing.
+ *
+ * One AI surface for the whole location report. `gaps` is passed up because
+ * the page has already fetched it and the server cannot re-derive it without
+ * paying Places again — it is sanitised server-side and used only as narration
+ * material, never scored.
+ */
+export interface Briefing {
+  headline: string;
+  readings: string[];
+  watchOut: string;
+  nextStep: string;
+}
+
+export type BriefResponse =
+  | { kind: "brief"; briefing: Briefing; cached: boolean }
+  /** The model cited a figure the page never measured, so nothing is shown. */
+  | { kind: "refused"; reason: string; unsupported: number[] };
+
+export async function postLocationBrief(
+  body: {
+    category: BusinessCategory;
+    radiusMetres: number;
+    location: ReportLocation;
+    gaps: {
+      ranked: CategoryGap[];
+      noPresence: CategoryGap[];
+      topOpportunity: CategoryGap | null;
+    } | null;
+  },
+  signal?: AbortSignal,
+): Promise<BriefResponse> {
+  const response = await fetch(`${SIMULATOR_URL}/v1/location/brief`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(await authHeaders()) },
+    body: JSON.stringify(body),
+    ...(signal ? { signal } : {}),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new ApiError(
+      payload.message ?? "Could not reach the analysis. Every figure on the page is unaffected.",
+      response.status,
+    );
+  }
+
+  return (await response.json()) as BriefResponse;
+}
 
 export async function postLocationAsk(
   body: {

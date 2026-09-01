@@ -31,12 +31,34 @@ const KIND_WORD = {
   unavailable: "not available",
 } as const;
 
+/**
+ * Gap analysis, passed IN rather than recomputed.
+ *
+ * Deliberately a second argument instead of a field on `LocationReportInput`:
+ * that type also feeds the PDF, which has no gap data and should not grow a
+ * field it always leaves null. Everything here comes from `detectGaps`, so the
+ * figures are the engine's own — the model narrates them and never derives
+ * anything from them.
+ */
+export interface GapFacts {
+  ranked: {
+    label: string;
+    outlets: number;
+    outletsAreMinimum: boolean;
+    reviewsPerOutlet: number | null;
+    averageRating: number | null;
+    verdict: string;
+  }[];
+  noPresence: { label: string }[];
+  topOpportunity: { label: string } | null;
+}
+
 const WORKING_AGE = [
   "15-19", "20-24", "25-29", "30-34", "35-39",
   "40-44", "45-49", "50-54", "55-59", "60-64",
 ];
 
-export function buildFacts(input: LocationReportInput): string {
+export function buildFacts(input: LocationReportInput, gaps?: GapFacts | null): string {
   const category = CATEGORY_PRESETS[input.category];
   const lines: string[] = [];
 
@@ -166,6 +188,48 @@ export function buildFacts(input: LocationReportInput): string {
     lines.push(
       "No rent benchmark covers this location, and the user has not entered one.",
       "Rent is therefore excluded from the score rather than guessed.",
+    );
+  }
+
+  /**
+   * CATEGORY SATURATION.
+   *
+   * The section that exists because of a real reporting failure: the write-up
+   * used to be skipped entirely when `topOpportunity` was null, which is
+   * exactly when every category is crowded — so the one screen that most
+   * needed explaining was guaranteed to get none. "Everything is saturated" is
+   * a finding, and it is stated here as one.
+   */
+  if (gaps && gaps.ranked.length > 0) {
+    lines.push("", "CATEGORY SATURATION NEARBY");
+
+    const saturated = gaps.ranked.filter((row) => row.verdict === "saturated").length;
+    lines.push(
+      gaps.topOpportunity
+        ? `Least crowded relative to its demand: ${gaps.topOpportunity.label}.`
+        : "NO CATEGORY STANDS OUT as an opening here.",
+      saturated === gaps.ranked.length
+        ? `Every one of the ${formatNumber(gaps.ranked.length)} categories compared is already crowded. That is itself the finding, and it should be said plainly rather than softened into a recommendation.`
+        : `${formatNumber(saturated)} of ${formatNumber(gaps.ranked.length)} categories compared are already crowded.`,
+    );
+
+    for (const row of gaps.ranked) {
+      lines.push(
+        `- ${row.label}: ${row.outletsAreMinimum ? `${formatNumber(row.outlets)} or more` : formatNumber(row.outlets)} outlets, ` +
+          `${row.reviewsPerOutlet === null ? "reviews per outlet not known" : `${formatNumber(row.reviewsPerOutlet)} reviews per outlet`}, ` +
+          `${row.averageRating === null ? "unrated" : `average rating ${row.averageRating}`}, verdict ${row.verdict}.`,
+      );
+    }
+
+    if (gaps.noPresence.length > 0) {
+      lines.push(
+        `Categories with NO outlets at all nearby: ${gaps.noPresence.map((row) => row.label).join(", ")}.`,
+        "Zero outlets is NOT evidence of an opening. It may mean untapped demand, or that there is no appetite for it here, and this data cannot tell the two apart. These are excluded from the ranking.",
+      );
+    }
+
+    lines.push(
+      "Reviews per outlet stands in for how busy operators are. It is a proxy for demand, not a measurement of it, and the ranking is RELATIVE to the other categories at this spot rather than to the city.",
     );
   }
 

@@ -52,7 +52,11 @@ async function stubChat(page: Page, body: unknown, status = 200) {
   );
 }
 
-const chat = (page: Page) => page.locator("section.card", { hasText: "Ask about this location" });
+/**
+ * The panel, not a tab. It renders with the report, so every test here simply
+ * navigates and the surface is already on screen.
+ */
+const chat = (page: Page) => page.locator(".aipanel");
 const box = (page: Page) => chat(page).getByLabel("Ask about this location");
 
 const AT_KLCC = "/analysis?lat=3.1578&lng=101.7123&q=KLCC";
@@ -64,14 +68,15 @@ test.beforeEach(async ({ page }) => {
 test("states up front that it cannot calculate", async ({ page }) => {
   await stubChat(page, { kind: "answer", text: "ok" });
   await page.goto(AT_KLCC);
-  await openSection(page, "Ask");
 
-  // Same promise, now the section lede rather than a filled notice box. The
-  // wording gained "already" and lost a sentence break the dash pass created.
-  await expect(
-    chat(page).getByText(/can only cite figures already shown on this page/),
-  ).toBeVisible();
-  await expect(chat(page).getByText(/does not\s+calculate/)).toBeVisible();
+  /**
+   * Same promise, third home. It was a filled notice box, then a section lede,
+   * and now the standing caveat on the AI panel. What has to survive every
+   * move is the claim itself: answers are limited to figures already on the
+   * page, and anything else is refused rather than estimated.
+   */
+  await expect(chat(page).getByText(/cite only figures already on this page/)).toBeVisible();
+  await expect(chat(page).getByText(/refused rather than estimated/)).toBeVisible();
 });
 
 test("waits for the analysis before accepting a question", async ({ page }) => {
@@ -79,7 +84,6 @@ test("waits for the analysis before accepting a question", async ({ page }) => {
   // Competitors never resolve, so there is nothing to be grounded on.
   await page.route("**/v1/competitors", () => {});
   await page.goto(AT_KLCC);
-  await openSection(page, "Ask");
 
   await expect(box(page)).toBeDisabled();
   await expect(box(page)).toHaveAttribute("placeholder", /Waiting for the analysis/);
@@ -97,7 +101,6 @@ test("sends the page's own data and no score, then shows the answer", async ({ p
   });
 
   await page.goto(AT_KLCC);
-  await openSection(page, "Ask");
   await expect(box(page)).toBeEnabled();
   await box(page).fill("why did it score that?");
   await chat(page).getByRole("button", { name: "Ask" }).click();
@@ -115,7 +118,6 @@ test("sends the page's own data and no score, then shows the answer", async ({ p
 test("offers openers that map onto what the data holds", async ({ page }) => {
   await stubChat(page, { kind: "answer", text: "Competition is the weakest dimension." });
   await page.goto(AT_KLCC);
-  await openSection(page, "Ask");
 
   await chat(page).getByRole("button", { name: "How crowded is it here?" }).click();
   await expect(chat(page).getByText(/Competition is the weakest dimension/)).toBeVisible();
@@ -131,7 +133,6 @@ test("shows a refusal rather than an invented figure", async ({ page }) => {
   });
 
   await page.goto(AT_KLCC);
-  await openSection(page, "Ask");
   await box(page).fill("what percent of revenue is rent?");
   await chat(page).getByRole("button", { name: "Ask" }).click();
 
@@ -146,7 +147,6 @@ test("passes on a decline with the nearest thing it can answer", async ({ page }
   });
 
   await page.goto(AT_KLCC);
-  await openSection(page, "Ask");
   await box(page).fill("how busy is Ramadan?");
   await chat(page).getByRole("button", { name: "Ask" }).click();
 
@@ -163,7 +163,6 @@ test("a view change moves the control rather than answering", async ({ page }) =
   });
 
   await page.goto(AT_KLCC);
-  await openSection(page, "Ask");
   await expect(page.getByLabel("Search radius")).toHaveValue("500");
 
   await box(page).fill("what about 1km?");
@@ -183,7 +182,6 @@ test("says the figures are unaffected when the assistant fails", async ({ page }
   );
 
   await page.goto(AT_KLCC);
-  await openSection(page, "Ask");
   await box(page).fill("why so low?");
   await chat(page).getByRole("button", { name: "Ask" }).click();
 
@@ -203,7 +201,6 @@ test("says the figures are unaffected when the assistant fails", async ({ page }
 test("keeps the conversation and can clear it", async ({ page }) => {
   await stubChat(page, { kind: "answer", text: "Competition is the weakest dimension." });
   await page.goto(AT_KLCC);
-  await openSection(page, "Ask");
 
   await box(page).fill("first question");
   await chat(page).getByRole("button", { name: "Ask" }).click();

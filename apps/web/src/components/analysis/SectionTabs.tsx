@@ -13,8 +13,7 @@ export type SectionId =
   | "people"
   | "demand"
   | "rent"
-  | "gaps"
-  | "ask";
+  | "gaps";
 
 export interface SectionTab {
   id: SectionId;
@@ -123,9 +122,27 @@ export function SectionTabs({
     if (!rail || !thumb) return;
 
     const observer = new ResizeObserver(() => {
-      if (gsap.isTweening(thumb)) return;
       const to = target();
-      if (to) gsap.set(thumb, to);
+      if (!to) return;
+
+      /**
+       * RE-AIM MID-FLIGHT rather than ignoring the change.
+       *
+       * The first version returned early while a tween was running, to stop
+       * `gsap.set` snapping the thumb to the end of a slide in progress. But
+       * the resize that matters most arrives exactly then: a badge lands as
+       * its figure resolves, which widens a tab a few frames into the slide.
+       * Skipping left the thumb finishing at the width it aimed for BEFORE the
+       * badge existed, with no further resize to correct it — a permanently
+       * mismatched thumb, not a momentary one.
+       *
+       * Re-targeting keeps the motion continuous and still lands correctly.
+       */
+      if (gsap.isTweening(thumb)) {
+        gsap.to(thumb, { ...to, duration: 0.2, ease: "power2.out", overwrite: true });
+        return;
+      }
+      gsap.set(thumb, to);
     });
     observer.observe(rail);
     for (const el of rail.querySelectorAll(".tab")) observer.observe(el);

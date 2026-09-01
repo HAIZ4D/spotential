@@ -130,7 +130,8 @@ describe("POST /v1/opportunity-gaps", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().placesConfigured).toBe(false);
     expect(res.json().topOpportunity).toBeNull();
-    expect(res.json().narrative).toBe("");
+    // The write-up moved to /v1/location/brief; this route is arithmetic only.
+    expect(res.json()).not.toHaveProperty("narrative");
   });
 
   it("does not disturb the other routes", async () => {
@@ -138,8 +139,8 @@ describe("POST /v1/opportunity-gaps", () => {
   });
 });
 
-describe("the write-up never blocks the analysis", () => {
-  it("still returns the ranked table when Gemini is unreachable", async () => {
+describe("the gaps route never calls Gemini", () => {
+  it("returns the ranked table without touching the model at all", async () => {
     const store = new InMemoryCompetitorStore();
     await store.save({
       key: "seed",
@@ -151,20 +152,25 @@ describe("the write-up never blocks the analysis", () => {
       truncated: false,
     });
 
-    // A transport that always fails: narrateGaps must swallow it.
+    /**
+     * A transport that THROWS IF TOUCHED.
+     *
+     * This route used to run a Pro write-up on every request, uncached, and
+     * only when a top opportunity existed — spending on the easy case and
+     * staying silent on the hard one. Interpretation lives in
+     * /v1/location/brief now, so any call from here is a regression, and this
+     * asserts it by making the call itself impossible rather than by reading
+     * the code.
+     */
+    const request = vi.fn(async () => {
+      throw new Error("the gaps route must not call Gemini");
+    });
+
     const app = buildApp({
       competitorStore: store,
       places: { apiKey: "not-a-real-key" },
       placesQuota: new QuotaTracker({ perCallerPerDay: 0, globalPerDay: 0 }),
-      gemini: {
-        transport: {
-          name: "ai-studio",
-          model: "test",
-          async request() {
-            throw new Error("gemini down");
-          },
-        },
-      },
+      gemini: { transport: { name: "ai-studio", model: "test", request } },
     });
 
     const res = await app.inject({
@@ -174,8 +180,9 @@ describe("the write-up never blocks the analysis", () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json().narrative).toBe("");
-    // The table is the product; losing the prose must not lose the analysis.
+    expect(request).not.toHaveBeenCalled();
+    expect(res.json()).not.toHaveProperty("narrative");
+    // The table is the product.
     expect(res.json()).toHaveProperty("ranked");
     await app.close();
   });

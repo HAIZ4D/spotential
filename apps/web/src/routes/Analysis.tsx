@@ -38,7 +38,7 @@ import { DemandSection } from "../components/analysis/DemandSection.js";
 import { MapLegend } from "../components/analysis/MapLegend.js";
 import { Toolbar } from "../components/analysis/Toolbar.js";
 import { ReportButton } from "../components/ReportButton.js";
-import { LocationChat } from "../components/LocationChat.js";
+import { SpotentialAI, deriveSummary } from "../components/analysis/SpotentialAI.js";
 import {
   getAmenities,
   getHeatmap,
@@ -566,7 +566,6 @@ export default function Analysis() {
       ...(rent ? { badge: `RM${Math.round(rent.monthlyRent / 1000)}k` } : { state: "none" as const }),
     },
     { id: "gaps", label: "Gaps", ...(gaps.isError ? { state: "warn" as const } : {}) },
-    { id: "ask", label: "Ask" },
   ];
 
   const shell = (mapPane: ReactNode, searchNode: ReactNode) => (
@@ -634,6 +633,28 @@ export default function Analysis() {
 
             <StatChips chips={chips} />
           </header>
+
+          {/* IN THE REPORT, NOT IN A TAB. The interpretation of everything
+              below is the first thing read, and it is never a click away. */}
+          <SpotentialAI
+            category={category}
+            radiusMetres={radiusMetres}
+            location={reportLocation}
+            gaps={gaps.data}
+            ready={Boolean(competitors.data)}
+            derived={deriveSummary({
+              score,
+              competitors: competitors.data,
+              gaps: gaps.data,
+              radiusMetres,
+            })}
+            // The model proposes a view change; the page's own cached fetch
+            // executes it, so it never spends Places money itself.
+            onAdjust={({ category: next, radiusMetres: nextRadius }) => {
+              if (next) setCategory(next);
+              if (nextRadius) setRadiusMetres(nextRadius);
+            }}
+          />
 
           <SectionTabs tabs={tabs} active={section} onSelect={setSection} />
 
@@ -710,20 +731,6 @@ export default function Analysis() {
               />
             )}
 
-            {section === "ask" && (
-              <LocationChat
-                category={category}
-                radiusMetres={radiusMetres}
-                ready={Boolean(competitors.data)}
-                location={reportLocation}
-                // The model proposes a view change; the page's own cached fetch
-                // executes it, so the chatbot never spends Places money itself.
-                onAdjust={({ category: next, radiusMetres: nextRadius }) => {
-                  if (next) setCategory(next);
-                  if (nextRadius) setRadiusMetres(nextRadius);
-                }}
-              />
-            )}
           </div>
         </main>
 

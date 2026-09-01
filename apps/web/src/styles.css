@@ -1356,28 +1356,357 @@ button:disabled {
   border-color: rgba(0, 48, 135, 0.6);
 }
 
-/* The one piece of GENERATED prose on the Location page, marked as such.
-   Everything else here is derived from the figures beside it and cannot
-   disagree with them; this can, so it says who wrote it. */
-.gap-narrative {
-  margin: 0 0 14px;
-  padding: 12px 14px;
+
+/* ---------- Spotential AI ---------- */
+/**
+ * The one AI surface, sitting in the report rather than behind a tab.
+ *
+ * Navy and gold, matching the tab rail directly beneath it, so the two read as
+ * one system rather than two components that happened to land together. The
+ * ground is dark, which means every colour inside has a new one and each was
+ * measured on painted pixels rather than assumed.
+ */
+.aipanel {
+  position: relative;
+  margin: 14px 0 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(150deg, #00327f 0%, #002458 60%, #001c46 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 48, 135, 0.2),
+    0 18px 40px -28px rgba(0, 48, 135, 0.8);
+}
+
+/* A gold hairline along the top edge, travelling while the model works. It is
+   a background position, never a transform: GSAP owns transforms here. */
+.aipanel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--gold) 20%,
+    #ffd97a 50%,
+    var(--gold) 80%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  background-position: 100% 0;
+  opacity: 0.55;
+}
+.aipanel.is-thinking::before {
+  opacity: 1;
+  animation: ai-sheen 1.9s linear infinite;
+}
+@keyframes ai-sheen {
+  to { background-position: -120% 0; }
+}
+
+.ai-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 18px 0;
+}
+.ai-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.ai-state {
+  font-size: 11px;
+  /* 7.4:1 on this navy. Plain white here would compete with the name. */
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* Three gold bars. Static unless the panel is working. */
+.ai-mark {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+.ai-mark i {
+  width: 3px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--gold);
+  display: block;
+}
+.aipanel.is-thinking .ai-mark i {
+  animation: ai-bar 1s ease-in-out infinite;
+}
+.aipanel.is-thinking .ai-mark i:nth-child(2) { animation-delay: 0.14s; }
+.aipanel.is-thinking .ai-mark i:nth-child(3) { animation-delay: 0.28s; }
+@keyframes ai-bar {
+  0%, 100% { height: 5px; }
+  50% { height: 14px; }
+}
+
+.ai-body {
+  padding: 11px 18px 16px;
+}
+
+/* Computed, never generated, and always present. */
+.ai-derived {
+  margin: 0;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--ink);
-  max-width: 70ch;
-  border: 1px dashed rgba(0, 48, 135, 0.22);
-  border-radius: var(--radius);
-  background: var(--surface);
+  color: rgba(255, 255, 255, 0.88);
+  max-width: 74ch;
 }
-.gap-narrative-tag {
+/* Demoted once the briefing arrives: same words at the same size as the
+   headline below would read as the page saying everything twice. */
+.aipanel.has-brief .ai-derived {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.62);
+}
+.ai-derived-tag {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  /* 0.5 measured 4.45:1 over the panel navy, which fails AA for 9.5px text.
+     Small uppercase labels are not large text. */
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.ai-headline {
+  margin: 13px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: #fff;
+  max-width: 62ch;
+}
+.ai-readings {
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+  max-width: 74ch;
+}
+.ai-readings li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.86);
+}
+.ai-readings li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.ai-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 9px;
+  margin-top: 14px;
+}
+.ai-card {
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+}
+.ai-card p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.9);
+}
+.ai-card-label {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ink-2);
+  color: var(--gold);
+}
+.ai-card.next .ai-card-label { color: #7fd6a2; }
+
+/* Holds the space the briefing is about to occupy. A placeholder is a promise,
+   so it is only shown while something is genuinely on its way. */
+.ai-skeleton {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ai-skeleton span {
+  height: 11px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.16),
+    rgba(255, 255, 255, 0.07)
+  );
+  background-size: 220% 100%;
+  animation: ai-shimmer 1.5s ease-in-out infinite;
+}
+.ai-skeleton span:nth-child(2) { width: 88%; animation-delay: 0.12s; }
+.ai-skeleton span:nth-child(3) { width: 62%; animation-delay: 0.24s; }
+@keyframes ai-shimmer {
+  to { background-position: -120% 0; }
+}
+
+.ai-unavailable {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.75);
+  max-width: 70ch;
+}
+
+/* ---- ask ---- */
+.ai-ask {
+  padding: 13px 18px 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.14);
+}
+.ai-log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+/* Specificity-matched against the app-wide `button:hover`, same as the
+   suggestion chips: on this navy its light `--surface` would erase the label. */
+.aipanel .ai-log-head button {
+  min-height: var(--control-sm);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+}
+@media (hover: hover) {
+  .aipanel .ai-log-head button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+  }
+}
+
+.ai-log {
+  max-height: 230px;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+.ai-turn-who {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: rgba(255, 255, 255, 0.62);
+}
+.ai-turn p {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.92);
+}
+.ai-turn.user p { color: var(--gold); }
+.ai-turn-pending {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.ai-form {
+  display: flex;
+  gap: 8px;
+}
+.ai-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-md);
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 13px;
+}
+.ai-form input::placeholder { color: rgba(255, 255, 255, 0.55); }
+.ai-form input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+/**
+ * Disabled, and legible about it.
+ *
+ * The shared `.cta` disabled style fades gold, which on white reads as
+ * unavailable and on this navy reads as a broken button. Stating both colours
+ * keeps "you cannot press this yet" separate from "something went wrong".
+ */
+.aipanel .ai-form button.cta:disabled {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 1;
+}
+
+.ai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+/* Specificity-matched against the app-wide `button:hover`, which sets a light
+   `--surface` background. On this navy that painted white text onto a
+   near-white panel once already, in the tab rail. */
+.ai-suggestions button,
+.aipanel .ai-suggestions button {
+  min-height: var(--control-sm);
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+}
+@media (hover: hover) {
+  .aipanel .ai-suggestions button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+  }
+}
+
+.ai-caveat {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.66);
+  max-width: 70ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aipanel::before,
+  .aipanel.is-thinking::before,
+  .aipanel.is-thinking .ai-mark i,
+  .ai-skeleton span {
+    animation: none;
+  }
 }
 
 /* ---------- Section lede ---------- */
@@ -4932,7 +5261,16 @@ ul.tight {
      Same trap the button/tab rules above already record. */
   .navbar .nav-login,
   .navbar .nav-signup,
-  .demand-toggle {
+  .demand-toggle,
+  /* SPECIFICITY-MATCHED, fifth time this trap has been paid for. The base
+     rules are `.aipanel .ai-suggestions button` (0,2,1) so a bare `button`
+     (0,0,1) in this block loses — a media query contributes no specificity,
+     and being last in the file only breaks ties. Measured on an emulated
+     Pixel: these sat at 30px against a 44px floor. */
+  .aipanel .ai-suggestions button,
+  .aipanel .ai-log-head button,
+  .aipanel .ai-form input,
+  .aipanel .ai-form button {
     min-height: var(--control-lg);
   }
 

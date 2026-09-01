@@ -101,7 +101,9 @@ test("shows the score and names the dimensions behind it", async ({ page }) => {
 
   // The hero names the PLACE, not its coordinates, and carries one number.
   await expect(page.getByRole("img", { name: /Success score \d+ out of 100/ })).toBeVisible();
-  await expect(page.getByText("out of 100")).toBeVisible();
+  // Scoped to the ring: the AI panel's computed line now says "out of 100" as
+  // well, which is correct on both counts and ambiguous to a bare text match.
+  await expect(page.locator(".ring-out-of")).toBeVisible();
 
   /**
    * The radar is gone from here on purpose. It restated the bars below it and

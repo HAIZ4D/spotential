@@ -51,6 +51,23 @@ async function stub(page: Page) {
       route.fulfill({ status: 503, contentType: "application/json", body: "{}" }),
     );
   }
+
+  /**
+   * Settle the AI panel, which sits directly ABOVE the rail.
+   *
+   * Left to reach the real service it resolves at its own pace, and the panel
+   * grows when it does — which moves the rail after a `boundingBox()` has been
+   * taken and leaves `mouse.move()` hovering whatever slid into that spot.
+   * That is a real page behaviour, but it is not what these tests are about,
+   * so it is made deterministic rather than waited out.
+   */
+  await page.route("**/v1/location/brief", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "ai_unavailable", message: "Not configured here." }),
+    }),
+  );
 }
 
 const AT_KL = "/analysis?lat=3.1478&lng=101.6953&q=Kuala%20Lumpur";
@@ -243,14 +260,20 @@ test("a hovered tab keeps its label readable", async ({ page }, testInfo) => {
 
   const tab = page.getByRole("tab", { name: /^People/ });
   await expect(tab).toBeVisible();
+  // The panel above has stopped growing once this renders.
+  await expect(page.locator(".ai-unavailable")).toBeVisible();
 
   /**
-   * Box FIRST, then place the pointer, then capture.
+   * SCROLL, then measure, then place the pointer, then capture. In that order.
    *
-   * `boundingBox()` scrolls the element into view, and any scroll leaves the
-   * mouse somewhere else — so hovering before measuring captured the RESTING
-   * tab and passed happily with the bug reinstated.
+   * Two separate races live here. Hovering before measuring loses the hover,
+   * because measuring can scroll and any scroll leaves the mouse somewhere
+   * else — that version passed happily with the bug reinstated. And measuring
+   * before scrolling yields viewport coordinates for an element below the
+   * fold, so `mouse.move()` lands on nothing: the Spotential AI panel now sits
+   * above this rail and pushed it off the first screen.
    */
+  await tab.scrollIntoViewIfNeeded();
   const box = (await tab.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await expect(tab).toHaveCSS("color", "rgb(255, 255, 255)");
@@ -347,7 +370,9 @@ test("the thumb slides in one direction without being interrupted", async ({ pag
     tick();
   });
 
-  await page.getByRole("tab", { name: /^Ask/ }).click();
+  // The furthest tab from Overview, which is what makes the travel worth
+  // measuring. It was "Ask" until that tab moved into the page itself.
+  await page.getByRole("tab", { name: /^Gaps/ }).click();
   await page.waitForTimeout(900);
 
   /**

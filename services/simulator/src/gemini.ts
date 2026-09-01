@@ -322,69 +322,6 @@ export async function extractPatch(
  * catch below returns an empty string, and the ranked table still renders —
  * the write-up is a bonus, never the product.
  */
-export const GAP_WRITEUP_MODEL = "gemini-3.1-pro-preview";
-
-const GAP_PROMPT = `You advise Malaysian small business owners on what kind of F&B outlet to open at a specific spot.
-
-You will be given a table that has ALREADY been analysed. Every figure in it was computed by a deterministic engine.
-
-Rules:
-- Use ONLY the figures given. Do not calculate, estimate, or introduce any number that is not in the data.
-- Recommend a concrete concept in one short sentence, then justify it in one or two more.
-- Categories marked "no-presence" have ZERO outlets. That is NOT evidence of opportunity. It may equally mean there is no appetite for it here. Never build a recommendation on one; mention it at most as something to investigate.
-- Categories marked "saturated" are crowded. Say so plainly rather than hedging.
-- "Reviews per outlet" is a proxy for how busy existing operators are, not a measure of demand. Do not describe it as demand.
-- Write for an owner-operator, not an analyst. No bullet points, no preamble, no headings.`;
-
-export async function narrateGaps(
-  config: GeminiConfig,
-  analysis: {
-    ranked: { label: string; outlets: number; outletsAreMinimum: boolean; reviewsPerOutlet: number | null; averageRating: number | null; verdict: string }[];
-    noPresence: { label: string }[];
-  },
-): Promise<string> {
-  const table = analysis.ranked
-    .map(
-      (r) =>
-        `${r.label}: ${r.outletsAreMinimum ? `${r.outlets}+` : r.outlets} outlets, ` +
-        `${r.reviewsPerOutlet ?? "n/a"} reviews per outlet, ` +
-        `avg rating ${r.averageRating ?? "unrated"}, ${r.verdict}`,
-    )
-    .join("\n");
-
-  const absent = analysis.noPresence.map((r) => r.label).join(", ") || "none";
-
-  try {
-    const { text } = await callGemini(
-      config,
-      {
-        systemInstruction: { parts: [{ text: GAP_PROMPT }] },
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `Categories present, best opportunity first:\n${table}\n\nCategories with no outlets at all (no signal either way): ${absent}\n\nWhat should they open here?`,
-              },
-            ],
-          },
-        ],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
-      },
-      // Pro for this one call. NOTE: verified available on AI Studio; if the
-      // deployment ever switches to GEMINI_BACKEND=vertex, re-probe Pro
-      // availability in asia-southeast1 first — Vertex model coverage is
-      // region-specific and 3.6-flash already 404s there.
-      GAP_WRITEUP_MODEL,
-    );
-    return text ?? "";
-  } catch {
-    // The ranked table is the product; the prose is a bonus. Losing Pro must
-    // not lose the analysis.
-    return "";
-  }
-}
-
 /**
  * Step 2: narrate a diff that has already been computed.
  *

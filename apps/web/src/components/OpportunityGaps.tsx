@@ -18,7 +18,7 @@ const VERDICT_STYLE: Record<string, { cls: string; label: string }> = {
 };
 
 export function OpportunityGaps({ data }: { data: GapsResponse }) {
-  const { ranked, noPresence, topOpportunity, narrative } = data;
+  const { ranked, noPresence, topOpportunity } = data;
 
   if (!data.placesConfigured) return null;
 
@@ -77,17 +77,11 @@ export function OpportunityGaps({ data }: { data: GapsResponse }) {
       <div className="body">
         <SectionLede eyebrow="Where the room is" headline={headline} facts={facts} />
 
-        {/* The write-up is the only GENERATED prose on this page, so it is kept
-            visibly separate from the lede above it. The lede is derived from
-            the same object the table renders and cannot disagree with it; this
-            can, which is why it is labelled and never carries a figure the
-            table does not also show. */}
-        {narrative && (
-          <p className="gap-narrative">
-            <span className="gap-narrative-tag">Written by Gemini</span>
-            {narrative}
-          </p>
-        )}
+        {/* The write-up used to sit here and is now the Spotential AI panel at
+            the top of the page. It was skipped entirely whenever there was no
+            top opportunity, which is exactly when every category is saturated
+            and this table is hardest to read. This section is the evidence;
+            the interpretation belongs above it, where it is always visible. */}
 
         <div className="table-scroll">
           <table>
