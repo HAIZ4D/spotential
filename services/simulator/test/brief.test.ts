@@ -390,3 +390,35 @@ describe("the opportunity block", () => {
     expect(facts.indexOf("Zero outlets is NOT evidence of an opening")).toBeGreaterThan(absent);
   });
 });
+
+describe("the cache key covers the shape, not just the facts", () => {
+  it("does not serve an entry written under a different briefing shape", async () => {
+    /**
+     * The production bug this exists to stop. The key was a hash of the fact
+     * sheet alone, so when the briefing grew an `opportunity` block the
+     * entries written by the previous revision were still served, and the new
+     * UI rendered a gap section with an empty heading. A cache key has to
+     * cover the SHAPE of what it stores as well as the inputs behind it.
+     */
+    const store = new InMemoryBriefingStore();
+    const facts = buildFacts(LOCATION, ALL_SATURATED);
+
+    // An entry keyed the OLD way: the facts hash with no shape marker.
+    const { createHash } = await import("node:crypto");
+    const legacyKey = createHash("sha256").update(facts).digest("hex").slice(0, 40);
+    await store.save({
+      key: legacyKey,
+      briefing: { headline: "stale", readings: ["stale"], watchOut: "", nextStep: "" } as never,
+      generatedAt: Date.now(),
+    });
+
+    stubFetch(GOOD);
+    const app = buildApp({ gemini: { transport: TRANSPORT }, briefingStore: store });
+    const res = await post(app, body());
+
+    // Regenerated rather than served stale, and the new field is present.
+    expect(res.json().cached).toBe(false);
+    expect(res.json().briefing.opportunity.verdict).not.toBe("");
+    await app.close();
+  });
+});

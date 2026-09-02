@@ -406,6 +406,11 @@ export function SpotentialAI({
               * numbered because they are steps, and because numbering
               * separates advice from the observations above at a glance.
               */}
+            {/* Guarded on the verdict rather than assumed present. The type
+                says it is required, but a cache written by an older revision
+                can still be served, and an empty heading is worse than no
+                section — it reads as "there is no gap", a claim nobody made. */}
+            {brief.briefing.opportunity?.verdict ? (
             <section className="ai-gap ai-reveal" aria-label="The opening, and how to take it">
               <h3 className="ai-gap-title">The opening, and how to take it</h3>
               <p className="ai-gap-verdict">{brief.briefing.opportunity.verdict}</p>
@@ -421,6 +426,7 @@ export function SpotentialAI({
                 </ol>
               )}
             </section>
+            ) : null}
 
             <div className="ai-cards">
               {brief.briefing.watchOut && (

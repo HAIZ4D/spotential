@@ -29,9 +29,28 @@ export interface BriefingStore {
   save(entry: CachedBriefing): Promise<void>;
 }
 
-/** Hex digest of the exact facts the model will be shown. Safe as a doc id. */
+/**
+ * THE SHAPE OF A BRIEFING, not just its content.
+ *
+ * Bump this whenever the `Briefing` type changes. Caught in production and
+ * nowhere else: the key was a hash of the fact sheet alone, so when the
+ * briefing grew an `opportunity` block, entries written by the previous
+ * revision were still served — and the new UI rendered a gap section with an
+ * empty heading for every location briefed in the past seven days.
+ *
+ * A cache key has to cover the SHAPE of what it stores as well as the inputs
+ * that produced it. Hashing the facts told us the figures had not moved; it
+ * could not know the reader now expects more fields than the writer wrote.
+ */
+const SHAPE_VERSION = "2-opportunity";
+
+/** Hex digest of the facts plus the shape version. Safe as a doc id. */
 export function briefingKey(facts: string): string {
-  return createHash("sha256").update(facts).digest("hex").slice(0, 40);
+  return createHash("sha256")
+    .update(`${SHAPE_VERSION}
+${facts}`)
+    .digest("hex")
+    .slice(0, 40);
 }
 
 const COLLECTION = "aiBriefings";
