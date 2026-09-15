@@ -1,457 +1,528 @@
 {
- "version": 2,
- "generated": "2026-08-31",
- "note": "Every listing has a real poster behind it. Dates, venue and hours come from the poster; booth pricing and slot counts are curated estimates. Applications are refused for these server-side until organizers publish their own events.",
- "events": [
-  {
-   "id": "evt-tjm-bayuemas",
-   "slug": "temu-janji-market-bayuemas",
-   "name": "Temu Janji Market",
-   "summary": "Weekend lifestyle market with a creative workshop stage, food and beverage lots and a kids activity zone.",
-   "eventType": "market",
-   "venueName": "Setia Bayuemas Welcome Centre, Klang",
-   "address": "Persiaran Setia Bayuemas, 41200 Klang",
-   "state": "Selangor",
-   "point": {
-    "lat": 3.0333,
-    "lng": 101.45
-   },
-   "startDate": "2026-09-05",
-   "endDate": "2026-09-06",
-   "dailyHours": "15:00 - 22:00",
-   "wantedCategories": [
-    "cafe_coffee_shop",
-    "bubble_tea_dessert",
-    "other_fnb",
-    "clothing_fashion",
-    "other_retail"
-   ],
-   "packages": [
+  "version": 2,
+  "generated": "2026-09-13",
+  "note": "Every listing has a real poster behind it. Dates, venue and hours come from the poster; booth pricing and slot counts are curated estimates. Applications are refused for these server-side until organizers publish their own events.",
+  "events": [
     {
-     "id": "std",
-     "label": "Market stall",
-     "priceRm": 480,
-     "sizeLabel": "2m x 2m",
-     "slots": 50,
-     "slotsAvailable": 11,
-     "includes": [
-      "Table",
-      "Power point"
-     ]
+      "id": "evt-johor-lotus",
+      "slug": "lotus-pop-fest",
+      "name": "Lotus's Pop Fest",
+      "summary": "Five-day pop culture and music festival: foodfest, streetwear and thrift, toys and collectibles, plus a nightly live concert.",
+      "eventType": "festival",
+      "venueName": "Lotus's Desa Tebrau",
+      "address": "Jalan Harmonium, Taman Desa Tebrau, 81100 Johor Bahru",
+      "state": "Johor",
+      "point": {
+        "lat": 1.5497,
+        "lng": 103.7699
+      },
+      "startDate": "2026-08-27",
+      "endDate": "2026-08-31",
+      "dailyHours": "10:00 - 22:00",
+      "wantedCategories": [
+        "bubble_tea_dessert",
+        "fast_casual_takeaway",
+        "other_fnb",
+        "clothing_fashion",
+        "phone_electronics",
+        "other_retail"
+      ],
+      "packages": [
+        {
+          "id": "con",
+          "label": "Concourse booth",
+          "priceRm": 950,
+          "sizeLabel": "3m x 3m",
+          "slots": 100,
+          "slotsAvailable": 21,
+          "includes": [
+            "Table",
+            "Power point",
+            "Mall marketing"
+          ]
+        }
+      ],
+      "totalSlots": 100,
+      "availableSlots": 21,
+      "expectedVisitors": null,
+      "vendorRequirements": [
+        "SSM registration",
+        "Mall vendor code of conduct",
+        "No open-flame cooking on site"
+      ],
+      "organizerName": "Impian Event x Lotus's",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
+      "reviewed": "2026-08-31"
     },
     {
-     "id": "wk",
-     "label": "Workshop booth",
-     "priceRm": 900,
-     "sizeLabel": "3m x 3m",
-     "slots": 10,
-     "slotsAvailable": 4,
-     "includes": [
-      "Table",
-      "Power point",
-      "Workshop slot on stage"
-     ]
-    }
-   ],
-   "totalSlots": 60,
-   "availableSlots": 15,
-   "expectedVisitors": 12000,
-   "vendorRequirements": [
-    "Own canopy for outdoor lots",
-    "Products must be self-made or self-branded"
-   ],
-   "organizerName": "Setia Bayuemas x Malayan Market",
-   "source": "seed",
-   "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
-   "reviewed": "2026-08-31"
-  },
-  {
-   "id": "evt-wanita-mendunia",
-   "slug": "karnival-wanita-mendunia",
-   "name": "Karnival Wanita Mendunia",
-   "summary": "One-day carnival curated with Malayan Market, pairing a pop-up vendor village with dialogue sessions and performances.",
-   "eventType": "carnival",
-   "venueName": "Kompleks Sukan Bandar Tun Razak",
-   "address": "Jalan Yaacob Latif, Bandar Tun Razak, 56000 Kuala Lumpur",
-   "state": "W.P. Kuala Lumpur",
-   "point": {
-    "lat": 3.1005,
-    "lng": 101.7217
-   },
-   "startDate": "2026-09-06",
-   "endDate": "2026-09-06",
-   "dailyHours": "08:30 - 18:30",
-   "wantedCategories": [
-    "cafe_coffee_shop",
-    "bubble_tea_dessert",
-    "other_fnb",
-    "clothing_fashion",
-    "other_retail"
-   ],
-   "packages": [
-    {
-     "id": "popup",
-     "label": "Pop-up stall",
-     "priceRm": 550,
-     "sizeLabel": "3m x 3m",
-     "slots": 45,
-     "slotsAvailable": 16,
-     "includes": [
-      "Canopy",
-      "Table",
-      "2 chairs",
-      "Power point"
-     ]
-    }
-   ],
-   "totalSlots": 45,
-   "availableSlots": 16,
-   "expectedVisitors": 8000,
-   "vendorRequirements": [
-    "Women-owned businesses prioritised",
-    "Halal certification for food vendors",
-    "SSM registration"
-   ],
-   "organizerName": "Polity Malaysia",
-   "source": "seed",
-   "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
-   "reviewed": "2026-08-31"
-  },
-  {
-   "id": "evt-lapan-pagi",
-   "slug": "lapan-pagi-club",
-   "name": "Lapan Pagi Club",
-   "summary": "Weekend lifestyle market for specialty coffee, bakes and slow living, with a community market, creative workshops and a kids corner.",
-   "eventType": "pop_up",
-   "venueName": "UEM Sunrise Gallery, Symphony Hills",
-   "address": "Persiaran Simfoni, Cyber 9, 63000 Cyberjaya",
-   "state": "Selangor",
-   "point": {
-    "lat": 2.9276,
-    "lng": 101.6559
-   },
-   "startDate": "2026-09-12",
-   "endDate": "2026-09-13",
-   "dailyHours": "08:00 - 18:00",
-   "wantedCategories": [
-    "cafe_coffee_shop",
-    "bubble_tea_dessert",
-    "other_fnb"
-   ],
-   "packages": [
-    {
-     "id": "std",
-     "label": "Morning stall",
-     "priceRm": 380,
-     "sizeLabel": "2.5m x 2.5m",
-     "slots": 30,
-     "slotsAvailable": 6,
-     "includes": [
-      "Table",
-      "Power point"
-     ]
-    }
-   ],
-   "totalSlots": 30,
-   "availableSlots": 6,
-   "expectedVisitors": 4500,
-   "vendorRequirements": [
-    "Specialty or artisanal focus",
-    "Own canopy",
-    "Compostable packaging only"
-   ],
-   "organizerName": "Malayan Market x Symphony Hills",
-   "source": "seed",
-   "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
-   "reviewed": "2026-08-31"
-  },
-  {
-   "id": "evt-hari-sukan-negara",
-   "slug": "hari-sukan-negara",
-   "name": "Hari Sukan Negara",
-   "summary": "National sports day at the boulevard: runs from 3km to 30km, an expo and a bazaar, with recreation, kids and food zones running alongside.",
-   "eventType": "carnival",
-   "venueName": "Dataran Putrajaya",
-   "address": "Presint 3, 62000 Putrajaya",
-   "state": "W.P. Putrajaya",
-   "point": {
-    "lat": 2.935,
-    "lng": 101.691
-   },
-   "startDate": "2026-10-10",
-   "endDate": "2026-10-11",
-   "dailyHours": "07:00 - 23:00",
-   "wantedCategories": [
-    "korean_restaurant",
-    "cafe_coffee_shop",
-    "casual_dining",
-    "bubble_tea_dessert",
-    "fast_casual_takeaway",
-    "clothing_fashion",
-    "other_retail",
-    "fitness_studio"
-   ],
-   "packages": [
-    {
-     "id": "bazaar",
-     "label": "Bazaar lot",
-     "priceRm": 1200,
-     "sizeLabel": "3m x 3m",
-     "slots": 120,
-     "slotsAvailable": 38,
-     "includes": [
-      "Canopy",
-      "Table",
-      "2 chairs",
-      "Power point"
-     ]
+      "id": "evt-tjm-bayuemas",
+      "slug": "temu-janji-market-bayuemas",
+      "name": "Temu Janji Market",
+      "summary": "Weekend lifestyle market with a creative workshop stage, food and beverage lots and a kids activity zone.",
+      "eventType": "market",
+      "venueName": "Setia Bayuemas Welcome Centre, Klang",
+      "address": "Persiaran Setia Bayuemas, 41200 Klang",
+      "state": "Selangor",
+      "point": {
+        "lat": 3.0333,
+        "lng": 101.45
+      },
+      "startDate": "2026-09-05",
+      "endDate": "2026-09-06",
+      "dailyHours": "15:00 - 22:00",
+      "wantedCategories": [
+        "cafe_coffee_shop",
+        "bubble_tea_dessert",
+        "other_fnb",
+        "clothing_fashion",
+        "other_retail"
+      ],
+      "packages": [
+        {
+          "id": "std",
+          "label": "Market stall",
+          "priceRm": 480,
+          "sizeLabel": "2m x 2m",
+          "slots": 50,
+          "slotsAvailable": 11,
+          "includes": [
+            "Table",
+            "Power point"
+          ]
+        },
+        {
+          "id": "wk",
+          "label": "Workshop booth",
+          "priceRm": 900,
+          "sizeLabel": "3m x 3m",
+          "slots": 10,
+          "slotsAvailable": 4,
+          "includes": [
+            "Table",
+            "Power point",
+            "Workshop slot on stage"
+          ]
+        }
+      ],
+      "totalSlots": 60,
+      "availableSlots": 15,
+      "expectedVisitors": 12000,
+      "vendorRequirements": [
+        "Own canopy for outdoor lots",
+        "Products must be self-made or self-branded"
+      ],
+      "organizerName": "Setia Bayuemas x Malayan Market",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
+      "reviewed": "2026-08-31"
     },
     {
-     "id": "expo",
-     "label": "Expo booth",
-     "priceRm": 2200,
-     "sizeLabel": "3m x 6m",
-     "slots": 30,
-     "slotsAvailable": 9,
-     "includes": [
-      "Shell scheme",
-      "Power",
-      "Fascia name",
-      "Listed in event guide"
-     ]
-    }
-   ],
-   "totalSlots": 150,
-   "availableSlots": 47,
-   "expectedVisitors": 200000,
-   "vendorRequirements": [
-    "SSM registration",
-    "Halal certification for food",
-    "No open-flame cooking on the boulevard"
-   ],
-   "organizerName": "Pure Events x Perbadanan Putrajaya",
-   "source": "seed",
-   "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
-   "reviewed": "2026-08-31"
-  },
-  {
-   "id": "evt-retro-bazaar",
-   "slug": "retro-bazaar-hobby-meet",
-   "name": "Retro Bazaar",
-   "summary": "Collector meet for retro gaming, vinyl, cassettes and hobby resellers. Buy, sell, gather and collect.",
-   "eventType": "bazaar",
-   "venueName": "ATO Gaming Cafe TTDI",
-   "address": "Jalan Tun Mohd Fuad, TTDI, 60000 Kuala Lumpur",
-   "state": "W.P. Kuala Lumpur",
-   "point": {
-    "lat": 3.139,
-    "lng": 101.63
-   },
-   "startDate": "2026-10-17",
-   "endDate": "2026-10-18",
-   "dailyHours": "12:00 - 20:00",
-   "wantedCategories": [
-    "phone_electronics",
-    "other_retail",
-    "clothing_fashion"
-   ],
-   "packages": [],
-   "totalSlots": 24,
-   "availableSlots": 9,
-   "expectedVisitors": null,
-   "vendorRequirements": [
-    "Retro, hobby or collectible stock only",
-    "No new-in-box mass retail goods"
-   ],
-   "organizerName": "ATO Collectors Club",
-   "source": "seed",
-   "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
-   "reviewed": "2026-08-31"
-  },
-  {
-   "id": "evt-heritage-matic",
-   "slug": "malaysia-food-heritage-festival",
-   "name": "Malaysia Food Heritage Festival",
-   "summary": "Five-day heritage food festival with demonstration kitchens, cultural performances and a curated vendor village.",
-   "eventType": "festival",
-   "venueName": "Malaysia Tourism Centre (MaTiC)",
-   "address": "109 Jalan Ampang, 50450 Kuala Lumpur",
-   "state": "W.P. Kuala Lumpur",
-   "point": {
-    "lat": 3.1595,
-    "lng": 101.7145
-   },
-   "startDate": "2026-11-05",
-   "endDate": "2026-11-09",
-   "dailyHours": "09:00 - 23:00",
-   "wantedCategories": [
-    "korean_restaurant",
-    "cafe_coffee_shop",
-    "casual_dining",
-    "bubble_tea_dessert",
-    "fast_casual_takeaway",
-    "other_fnb"
-   ],
-   "packages": [
-    {
-     "id": "her",
-     "label": "Heritage stall",
-     "priceRm": 2400,
-     "sizeLabel": "3m x 3m",
-     "slots": 50,
-     "slotsAvailable": 9,
-     "includes": [
-      "Table",
-      "Power point",
-      "Cold storage access",
-      "Cooking permit handled"
-     ]
+      "id": "evt-wanita-mendunia",
+      "slug": "karnival-wanita-mendunia",
+      "name": "Karnival Wanita Mendunia",
+      "summary": "One-day carnival curated with Malayan Market, pairing a pop-up vendor village with dialogue sessions and performances.",
+      "eventType": "carnival",
+      "venueName": "Kompleks Sukan Bandar Tun Razak",
+      "address": "Jalan Yaacob Latif, Bandar Tun Razak, 56000 Kuala Lumpur",
+      "state": "W.P. Kuala Lumpur",
+      "point": {
+        "lat": 3.1005,
+        "lng": 101.7217
+      },
+      "startDate": "2026-09-06",
+      "endDate": "2026-09-06",
+      "dailyHours": "08:30 - 18:30",
+      "wantedCategories": [
+        "cafe_coffee_shop",
+        "bubble_tea_dessert",
+        "other_fnb",
+        "clothing_fashion",
+        "other_retail"
+      ],
+      "packages": [
+        {
+          "id": "popup",
+          "label": "Pop-up stall",
+          "priceRm": 550,
+          "sizeLabel": "3m x 3m",
+          "slots": 45,
+          "slotsAvailable": 16,
+          "includes": [
+            "Canopy",
+            "Table",
+            "2 chairs",
+            "Power point"
+          ]
+        }
+      ],
+      "totalSlots": 45,
+      "availableSlots": 16,
+      "expectedVisitors": 8000,
+      "vendorRequirements": [
+        "Women-owned businesses prioritised",
+        "Halal certification for food vendors",
+        "SSM registration"
+      ],
+      "organizerName": "Polity Malaysia",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
+      "reviewed": "2026-08-31"
     },
     {
-     "id": "dem",
-     "label": "Demo kitchen slot",
-     "priceRm": 4500,
-     "sizeLabel": "6m x 4m",
-     "slots": 6,
-     "slotsAvailable": 1,
-     "includes": [
-      "Full kitchen fit-out",
-      "Stage demo session",
-      "Media coverage"
-     ]
-    }
-   ],
-   "totalSlots": 56,
-   "availableSlots": 10,
-   "expectedVisitors": 85000,
-   "vendorRequirements": [
-    "Halal certification mandatory",
-    "Minimum two years trading history",
-    "Traditional or heritage menu focus",
-    "SSM registration"
-   ],
-   "organizerName": "Heritage Malaysia Foundation",
-   "source": "seed",
-   "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
-   "reviewed": "2026-08-31"
-  },
-  {
-   "id": "evt-pesta-tempatan",
-   "slug": "pesta-tempatan-4x4",
-   "name": "Pesta Tempatan 4x4",
-   "summary": "Local produce festival built around the Rainforest Challenge and Pesta Kopi Tempatan Fest, with a 4x4 showcase at its centre.",
-   "eventType": "festival",
-   "venueName": "Kompleks Kraf Kuala Lumpur",
-   "address": "Jalan Conlay, 50450 Kuala Lumpur",
-   "state": "W.P. Kuala Lumpur",
-   "point": {
-    "lat": 3.1516,
-    "lng": 101.7132
-   },
-   "startDate": "2026-11-27",
-   "endDate": "2026-11-29",
-   "dailyHours": "10:00 - 22:00",
-   "wantedCategories": [
-    "cafe_coffee_shop",
-    "other_fnb",
-    "fast_casual_takeaway",
-    "other_retail",
-    "clothing_fashion"
-   ],
-   "packages": [
-    {
-     "id": "std",
-     "label": "Tempatan lot",
-     "priceRm": 850,
-     "sizeLabel": "3m x 3m",
-     "slots": 60,
-     "slotsAvailable": 23,
-     "includes": [
-      "Canopy",
-      "Table",
-      "Power point"
-     ]
+      "id": "evt-lapan-pagi",
+      "slug": "lapan-pagi-club",
+      "name": "Lapan Pagi Club",
+      "summary": "Weekend lifestyle market for specialty coffee, bakes and slow living, with a community market, creative workshops and a kids corner.",
+      "eventType": "pop_up",
+      "venueName": "UEM Sunrise Gallery, Symphony Hills",
+      "address": "Persiaran Simfoni, Cyber 9, 63000 Cyberjaya",
+      "state": "Selangor",
+      "point": {
+        "lat": 2.9276,
+        "lng": 101.6559
+      },
+      "startDate": "2026-09-12",
+      "endDate": "2026-09-13",
+      "dailyHours": "08:00 - 18:00",
+      "wantedCategories": [
+        "cafe_coffee_shop",
+        "bubble_tea_dessert",
+        "other_fnb"
+      ],
+      "packages": [
+        {
+          "id": "std",
+          "label": "Morning stall",
+          "priceRm": 380,
+          "sizeLabel": "2.5m x 2.5m",
+          "slots": 30,
+          "slotsAvailable": 6,
+          "includes": [
+            "Table",
+            "Power point"
+          ]
+        }
+      ],
+      "totalSlots": 30,
+      "availableSlots": 6,
+      "expectedVisitors": 4500,
+      "vendorRequirements": [
+        "Specialty or artisanal focus",
+        "Own canopy",
+        "Compostable packaging only"
+      ],
+      "organizerName": "Malayan Market x Symphony Hills",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
+      "reviewed": "2026-08-31"
     },
     {
-     "id": "kopi",
-     "label": "Pesta Kopi lot",
-     "priceRm": 1300,
-     "sizeLabel": "3m x 4.5m",
-     "slots": 20,
-     "slotsAvailable": 6,
-     "includes": [
-      "Canopy",
-      "Table",
-      "Power point",
-      "Water access",
-      "Listed in coffee trail"
-     ]
-    }
-   ],
-   "totalSlots": 80,
-   "availableSlots": 29,
-   "expectedVisitors": 35000,
-   "vendorRequirements": [
-    "Malaysian-made or locally sourced products",
-    "Own canopy weights",
-    "SSM registration"
-   ],
-   "organizerName": "Pesta Kopi x Rainforest Challenge",
-   "source": "seed",
-   "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
-   "reviewed": "2026-08-31"
-  },
-  {
-   "id": "evt-johor-lotus",
-   "slug": "lotus-pop-fest",
-   "name": "Lotus's Pop Fest",
-   "summary": "Five-day pop culture and music festival: foodfest, streetwear and thrift, toys and collectibles, plus a nightly live concert.",
-   "eventType": "festival",
-   "venueName": "Lotus's Desa Tebrau",
-   "address": "Jalan Harmonium, Taman Desa Tebrau, 81100 Johor Bahru",
-   "state": "Johor",
-   "point": {
-    "lat": 1.5497,
-    "lng": 103.7699
-   },
-   "startDate": "2026-08-27",
-   "endDate": "2026-08-31",
-   "dailyHours": "10:00 - 22:00",
-   "wantedCategories": [
-    "bubble_tea_dessert",
-    "fast_casual_takeaway",
-    "other_fnb",
-    "clothing_fashion",
-    "phone_electronics",
-    "other_retail"
-   ],
-   "packages": [
+      "id": "evt-weekend-race-market",
+      "slug": "weekend-race-market",
+      "name": "Weekend Race Market",
+      "summary": "A race-themed weekend market at the OSK Mori Park sales gallery, recruiting food and beverage and lifestyle vendors alongside a PS5 racing game and a creative workshop.",
+      "eventType": "market",
+      "venueName": "OSK Mori Park Sales Gallery, Shah Alam",
+      "address": "OSK Mori Park Sales Gallery, Shah Alam, Selangor",
+      "state": "Selangor",
+      "point": {
+        "lat": 3.0725,
+        "lng": 101.5185
+      },
+      "startDate": "2026-09-19",
+      "endDate": "2026-09-20",
+      "dailyHours": "14:00 - 22:00",
+      "wantedCategories": [
+        "cafe_coffee_shop",
+        "bubble_tea_dessert",
+        "other_fnb",
+        "clothing_fashion",
+        "other_retail"
+      ],
+      "packages": [],
+      "totalSlots": 35,
+      "availableSlots": 12,
+      "expectedVisitors": null,
+      "vendorRequirements": [
+        "Own canopy for outdoor lots",
+        "Products must be self-made or self-branded"
+      ],
+      "organizerName": "Malayan Market",
+      "source": "seed",
+      "sourceNote": "Dates, venue, opening hours and who is being recruited are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms. No turnout figure is published for this event, so none is shown.",
+      "reviewed": "2026-09-13"
+    },
     {
-     "id": "con",
-     "label": "Concourse booth",
-     "priceRm": 950,
-     "sizeLabel": "3m x 3m",
-     "slots": 100,
-     "slotsAvailable": 21,
-     "includes": [
-      "Table",
-      "Power point",
-      "Mall marketing"
-     ]
+      "id": "evt-santai-arabia",
+      "slug": "santai-connect-arabia",
+      "name": "Santai & Connect Arabia",
+      "summary": "An Arabian-themed evening market at IOI Galleria: a souk trading area alongside a magic and fire show and a darbuka drum procession.",
+      "eventType": "market",
+      "venueName": "IOI Galleria, Bandar Puteri Bangi",
+      "address": "IOI Galleria, Bandar Puteri Bangi, Selangor",
+      "state": "Selangor",
+      "point": {
+        "lat": 2.953,
+        "lng": 101.762
+      },
+      "startDate": "2026-09-26",
+      "endDate": "2026-09-27",
+      "dailyHours": "15:00 - 22:00",
+      "wantedCategories": [
+        "cafe_coffee_shop",
+        "bubble_tea_dessert",
+        "other_fnb",
+        "clothing_fashion",
+        "other_retail"
+      ],
+      "packages": [],
+      "totalSlots": 40,
+      "availableSlots": 16,
+      "expectedVisitors": null,
+      "vendorRequirements": [
+        "Own canopy for outdoor lots"
+      ],
+      "organizerName": "IOI Properties, Bandar Puteri Bangi",
+      "source": "seed",
+      "sourceNote": "Dates, venue, opening hours and who is being recruited are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms. No turnout figure is published for this event, so none is shown.",
+      "reviewed": "2026-09-13"
+    },
+    {
+      "id": "evt-hari-sukan-negara",
+      "slug": "hari-sukan-negara",
+      "name": "Hari Sukan Negara",
+      "summary": "National sports day at the boulevard: runs from 3km to 30km, an expo and a bazaar, with recreation, kids and food zones running alongside.",
+      "eventType": "carnival",
+      "venueName": "Dataran Putrajaya",
+      "address": "Presint 3, 62000 Putrajaya",
+      "state": "W.P. Putrajaya",
+      "point": {
+        "lat": 2.935,
+        "lng": 101.691
+      },
+      "startDate": "2026-10-10",
+      "endDate": "2026-10-11",
+      "dailyHours": "07:00 - 23:00",
+      "wantedCategories": [
+        "korean_restaurant",
+        "cafe_coffee_shop",
+        "casual_dining",
+        "bubble_tea_dessert",
+        "fast_casual_takeaway",
+        "clothing_fashion",
+        "other_retail",
+        "fitness_studio"
+      ],
+      "packages": [
+        {
+          "id": "bazaar",
+          "label": "Bazaar lot",
+          "priceRm": 1200,
+          "sizeLabel": "3m x 3m",
+          "slots": 120,
+          "slotsAvailable": 38,
+          "includes": [
+            "Canopy",
+            "Table",
+            "2 chairs",
+            "Power point"
+          ]
+        },
+        {
+          "id": "expo",
+          "label": "Expo booth",
+          "priceRm": 2200,
+          "sizeLabel": "3m x 6m",
+          "slots": 30,
+          "slotsAvailable": 9,
+          "includes": [
+            "Shell scheme",
+            "Power",
+            "Fascia name",
+            "Listed in event guide"
+          ]
+        }
+      ],
+      "totalSlots": 150,
+      "availableSlots": 47,
+      "expectedVisitors": 200000,
+      "vendorRequirements": [
+        "SSM registration",
+        "Halal certification for food",
+        "No open-flame cooking on the boulevard"
+      ],
+      "organizerName": "Pure Events x Perbadanan Putrajaya",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
+      "reviewed": "2026-08-31"
+    },
+    {
+      "id": "evt-retro-bazaar",
+      "slug": "retro-bazaar-hobby-meet",
+      "name": "Retro Bazaar",
+      "summary": "Collector meet for retro gaming, vinyl, cassettes and hobby resellers. Buy, sell, gather and collect.",
+      "eventType": "bazaar",
+      "venueName": "ATO Gaming Cafe TTDI",
+      "address": "Jalan Tun Mohd Fuad, TTDI, 60000 Kuala Lumpur",
+      "state": "W.P. Kuala Lumpur",
+      "point": {
+        "lat": 3.139,
+        "lng": 101.63
+      },
+      "startDate": "2026-10-17",
+      "endDate": "2026-10-18",
+      "dailyHours": "12:00 - 20:00",
+      "wantedCategories": [
+        "phone_electronics",
+        "other_retail",
+        "clothing_fashion"
+      ],
+      "packages": [],
+      "totalSlots": 24,
+      "availableSlots": 9,
+      "expectedVisitors": null,
+      "vendorRequirements": [
+        "Retro, hobby or collectible stock only",
+        "No new-in-box mass retail goods"
+      ],
+      "organizerName": "ATO Collectors Club",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
+      "reviewed": "2026-08-31"
+    },
+    {
+      "id": "evt-heritage-matic",
+      "slug": "malaysia-food-heritage-festival",
+      "name": "Malaysia Food Heritage Festival",
+      "summary": "Five-day heritage food festival with demonstration kitchens, cultural performances and a curated vendor village.",
+      "eventType": "festival",
+      "venueName": "Malaysia Tourism Centre (MaTiC)",
+      "address": "109 Jalan Ampang, 50450 Kuala Lumpur",
+      "state": "W.P. Kuala Lumpur",
+      "point": {
+        "lat": 3.1595,
+        "lng": 101.7145
+      },
+      "startDate": "2026-11-05",
+      "endDate": "2026-11-09",
+      "dailyHours": "09:00 - 23:00",
+      "wantedCategories": [
+        "korean_restaurant",
+        "cafe_coffee_shop",
+        "casual_dining",
+        "bubble_tea_dessert",
+        "fast_casual_takeaway",
+        "other_fnb"
+      ],
+      "packages": [
+        {
+          "id": "her",
+          "label": "Heritage stall",
+          "priceRm": 2400,
+          "sizeLabel": "3m x 3m",
+          "slots": 50,
+          "slotsAvailable": 9,
+          "includes": [
+            "Table",
+            "Power point",
+            "Cold storage access",
+            "Cooking permit handled"
+          ]
+        },
+        {
+          "id": "dem",
+          "label": "Demo kitchen slot",
+          "priceRm": 4500,
+          "sizeLabel": "6m x 4m",
+          "slots": 6,
+          "slotsAvailable": 1,
+          "includes": [
+            "Full kitchen fit-out",
+            "Stage demo session",
+            "Media coverage"
+          ]
+        }
+      ],
+      "totalSlots": 56,
+      "availableSlots": 10,
+      "expectedVisitors": 85000,
+      "vendorRequirements": [
+        "Halal certification mandatory",
+        "Minimum two years trading history",
+        "Traditional or heritage menu focus",
+        "SSM registration"
+      ],
+      "organizerName": "Heritage Malaysia Foundation",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
+      "reviewed": "2026-08-31"
+    },
+    {
+      "id": "evt-pesta-tempatan",
+      "slug": "pesta-tempatan-4x4",
+      "name": "Pesta Tempatan 4x4",
+      "summary": "Local produce festival built around the Rainforest Challenge and Pesta Kopi Tempatan Fest, with a 4x4 showcase at its centre.",
+      "eventType": "festival",
+      "venueName": "Kompleks Kraf Kuala Lumpur",
+      "address": "Jalan Conlay, 50450 Kuala Lumpur",
+      "state": "W.P. Kuala Lumpur",
+      "point": {
+        "lat": 3.1516,
+        "lng": 101.7132
+      },
+      "startDate": "2026-11-27",
+      "endDate": "2026-11-29",
+      "dailyHours": "10:00 - 22:00",
+      "wantedCategories": [
+        "cafe_coffee_shop",
+        "other_fnb",
+        "fast_casual_takeaway",
+        "other_retail",
+        "clothing_fashion"
+      ],
+      "packages": [
+        {
+          "id": "std",
+          "label": "Tempatan lot",
+          "priceRm": 850,
+          "sizeLabel": "3m x 3m",
+          "slots": 60,
+          "slotsAvailable": 23,
+          "includes": [
+            "Canopy",
+            "Table",
+            "Power point"
+          ]
+        },
+        {
+          "id": "kopi",
+          "label": "Pesta Kopi lot",
+          "priceRm": 1300,
+          "sizeLabel": "3m x 4.5m",
+          "slots": 20,
+          "slotsAvailable": 6,
+          "includes": [
+            "Canopy",
+            "Table",
+            "Power point",
+            "Water access",
+            "Listed in coffee trail"
+          ]
+        }
+      ],
+      "totalSlots": 80,
+      "availableSlots": 29,
+      "expectedVisitors": 35000,
+      "vendorRequirements": [
+        "Malaysian-made or locally sourced products",
+        "Own canopy weights",
+        "SSM registration"
+      ],
+      "organizerName": "Pesta Kopi x Rainforest Challenge",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
+      "reviewed": "2026-08-31"
     }
-   ],
-   "totalSlots": 100,
-   "availableSlots": 21,
-   "expectedVisitors": null,
-   "vendorRequirements": [
-    "SSM registration",
-    "Mall vendor code of conduct",
-    "No open-flame cooking on site"
-   ],
-   "organizerName": "Impian Event x Lotus's",
-   "source": "seed",
-   "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
-   "reviewed": "2026-08-31"
-  }
- ]
+  ]
 }

@@ -14,6 +14,9 @@ const Compare = lazy(() => import("./routes/Compare.js"));
 /** Events never loads the Maps bundle, so it stays out of the main chunk too. */
 const Events = lazy(() => import("./routes/Events.js"));
 const EventDetail = lazy(() => import("./routes/EventDetail.js"));
+/** Reached deliberately and rarely, so they stay out of the main chunk. */
+const Login = lazy(() => import("./routes/Login.js"));
+const Register = lazy(() => import("./routes/Register.js"));
 
 /**
  * Redirect to the simulator KEEPING the query string.
@@ -23,6 +26,7 @@ const EventDetail = lazy(() => import("./routes/EventDetail.js"));
  * those links to the default scenario — a data-loss bug disguised as a routing
  * tidy-up.
  */
+
 function RedirectToSimulator() {
   const { search } = useLocation();
   return <Navigate to={{ pathname: "/simulator", search }} replace />;
@@ -40,6 +44,22 @@ export default function App() {
       <Routes>
         <Route path="/" element={<RedirectToSimulator />} />
         <Route path="/simulator" element={<Simulator />} />
+        <Route
+          path="/login"
+          element={
+            <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
+              <Login />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
+              <Register />
+            </Suspense>
+          }
+        />
         <Route
           path="/analysis"
           element={

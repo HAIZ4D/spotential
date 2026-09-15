@@ -1,4 +1,5 @@
-import type { EventListing } from "@spotential/sim-engine";
+import type { VendorAccount, VendorAccountStore } from "./account.js";
+import type { EventListing, EventSource } from "@spotential/sim-engine";
 
 /**
  * Booth applications, and the first thing Spotential has ever stored that
@@ -31,6 +32,18 @@ export interface BoothApplication {
   eventId: string;
   eventName: string;
   packageId: string | null;
+  /**
+   * WHOSE PRICE THE VENDOR AGREED TO.
+   *
+   * A curated listing's booth fee is Spotential's estimate, not the
+   * organizer's published terms. Whoever reads this application and forwards
+   * it has to know which, because the two lead to different conversations: one
+   * confirms a price, the other has to go and ask for it. Without this on the
+   * record there is no way to tell them apart after the fact.
+   */
+  listingSource: EventSource;
+  /** The fee shown beside the booth when they applied, or null if none was. */
+  boothPriceRm: number | null;
 
   businessName: string;
   contactName: string;
@@ -38,6 +51,9 @@ export interface BoothApplication {
   contactPhone: string;
   /** What the vendor sells — free text they wrote themselves. */
   productDescription: string;
+  /** The pitch. Both may be empty: a pitch helps, it is not required. */
+  boothActivation: string;
+  whyThisEvent: string;
 
   status: ApplicationStatus;
   submittedAt: number;
@@ -86,6 +102,7 @@ export interface ApplicationStore {
 }
 
 const APPLICATIONS = "boothApplications";
+const PROFILES = "vendorAccounts";
 
 /**
  * One application per vendor per event.
@@ -143,5 +160,50 @@ export class InMemoryApplicationStore implements ApplicationStore {
 
   async findForUserAndEvent(uid: string, eventId: string): Promise<BoothApplication | null> {
     return this.rows.get(applicationId(uid, eventId)) ?? null;
+  }
+}
+
+/**
+ * Vendor profiles, stored under the caller's own uid.
+ *
+ * FAILS CLOSED like applications and unlike every cache here. A profile that
+ * lived in memory would show a vendor a confirmation for something that dies
+ * with the instance, and they would then find their details gone the next time
+ * they applied. There is no in-memory default in production for the same
+ * reason there is none for applications.
+ */
+export class FirestoreVendorAccountStore implements VendorAccountStore {
+  constructor(private db: FirestoreLike) {}
+
+  async find(uid: string): Promise<VendorAccount | null> {
+    const snapshot = await this.db.collection(PROFILES).doc(uid).get();
+    if (!snapshot.exists) return null;
+    return (snapshot.data() as unknown as VendorAccount) ?? null;
+  }
+
+  async save(profile: VendorAccount): Promise<void> {
+    // Keyed on the uid itself, so a vendor can only ever have one profile and
+    // can only ever write their own.
+    await this.db
+      .collection(PROFILES)
+      .doc(profile.uid)
+      .set(profile as unknown as Record<string, unknown>);
+  }
+}
+
+/** For tests. Never wired in production, for the reason above. */
+export class InMemoryVendorAccountStore implements VendorAccountStore {
+  private rows = new Map<string, VendorAccount>();
+
+  async find(uid: string): Promise<VendorAccount | null> {
+    return this.rows.get(uid) ?? null;
+  }
+
+  async save(profile: VendorAccount): Promise<void> {
+    this.rows.set(profile.uid, profile);
+  }
+
+  get size(): number {
+    return this.rows.size;
   }
 }

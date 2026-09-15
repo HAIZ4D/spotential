@@ -5,8 +5,10 @@ import lotusPopFest from "../../../img/lotus-pop-fest.webp";
 import heritage from "../../../img/malaysia-food-heritage.webp";
 import pestaTempatan from "../../../img/pesta-tempatan-4x4.webp";
 import retroBazaar from "../../../img/retro-bazaar.webp";
+import santaiArabia from "../../../img/santai-connect-arabia.webp";
 import temuJanji from "../../../img/temu-janji-market.webp";
 import wanitaMendunia from "../../../img/karnival-wanita-mendunia.webp";
+import weekendRace from "../../../img/weekend-race-market.webp";
 
 /**
  * Event posters.
@@ -36,12 +38,48 @@ const POSTERS: Record<string, string> = {
   "evt-lapan-pagi": lapanPagi,
   "evt-pesta-tempatan": pestaTempatan,
   "evt-retro-bazaar": retroBazaar,
+  "evt-santai-arabia": santaiArabia,
   "evt-tjm-bayuemas": temuJanji,
   "evt-wanita-mendunia": wanitaMendunia,
+  "evt-weekend-race-market": weekendRace,
 };
+
+/**
+ * Intrinsic height at the shipped width of 420px.
+ *
+ * Versioned constants rather than a build step, which is this project's
+ * pattern for anything that changes as slowly as an image file does.
+ *
+ * THE PAGE NEEDS THE REAL RATIO, not an assumed one. These run from 0.67 to
+ * 1.22 — `pesta-tempatan-4x4` is the only landscape poster in the set — so a
+ * single hardcoded `aspect-ratio` would letterbox nine of them and crop the
+ * tenth. Declaring the true width and height on the `<img>` lets the browser
+ * reserve exactly the right box before the file arrives, which is what stops
+ * the stage jolting as it loads.
+ */
+const POSTER_HEIGHTS: Record<string, number> = {
+  "evt-hari-sukan-negara": 560,
+  "evt-heritage-matic": 594,
+  "evt-johor-lotus": 629,
+  "evt-lapan-pagi": 583,
+  "evt-pesta-tempatan": 344,
+  "evt-retro-bazaar": 558,
+  "evt-santai-arabia": 625,
+  "evt-tjm-bayuemas": 525,
+  "evt-wanita-mendunia": 630,
+  "evt-weekend-race-market": 525,
+};
+
+export const POSTER_WIDTH = 420;
 
 export function posterFor(event: EventListing): string | null {
   return POSTERS[event.id] ?? null;
+}
+
+/** Null when there is no poster, so a caller cannot reserve space for nothing. */
+export function posterSizeFor(event: EventListing): { width: number; height: number } | null {
+  const height = POSTER_HEIGHTS[event.id];
+  return height === undefined ? null : { width: POSTER_WIDTH, height };
 }
 
 /**

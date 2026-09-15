@@ -141,9 +141,10 @@ export function DemandSection({
             <span className="tiny muted">{surfaceOn ? "on" : "off"}</span>
           </button>
           <p className="tiny muted">
-            Opening this tab already widened the map to about 2.5km. At the search framing a single
-            693m cell fills the pane, so every figure below would describe one hexagon. This switch
-            only decides whether that area is coloured in.
+            Opening this tab widens the map to about 2.5km and shades it, because at the search
+            framing a single 693m cell fills the pane and every figure below would describe one
+            hexagon. Switch the shading off to see the streets underneath. Leaving the tab puts the
+            map back the way it was.
           </p>
         </div>
       </section>

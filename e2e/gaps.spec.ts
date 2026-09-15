@@ -63,29 +63,29 @@ const ABSENT = [
   },
 ];
 
-const BRIEFING = {
-  kind: "brief",
+const READINGS = {
+  kind: "readings",
   cached: false,
-  briefing: {
-    headline: "A street with one thin category and one crowded one.",
-    readings: ["Korean restaurants number 20 or more, averaging 379 reviews per outlet."],
-    watchOut: "The result cap filled early, so the count is a floor.",
-    nextStep: "Get a quoted rent for the unit.",
-    opportunity: {
-      verdict: "Bubble tea and dessert is the least crowded category relative to its demand here.",
-      why: "Three outlets carry 640 reviews each, against 20 or more Korean restaurants averaging 379.",
-      moves: [
-        "Visit the 3 dessert outlets at 9pm to see whether the queues match the review counts.",
-        "Compare a second site before committing.",
+  readings: [
+    {
+      id: "opportunity",
+      role: "Opportunity",
+      headline:
+        "Bubble tea and dessert is the least crowded category relative to its demand here.",
+      points: [
+        "Three outlets carry 640 reviews each, against 20 or more Korean restaurants averaging 379.",
       ],
+      move: "Visit the 3 dessert outlets at 9pm to see whether the queues match the review counts.",
     },
-  },
+  ],
+  withheld: [],
+  skipped: [],
 };
 
 async function stub(
   page: Page,
   over: Record<string, unknown> = {},
-  brief: { status: number; body: unknown } = { status: 200, body: BRIEFING },
+  brief: { status: number; body: unknown } = { status: 200, body: READINGS },
 ) {
   await page.route(MAPS, (route) => route.abort());
   await page.route("**/v1/opportunity-gaps", (route) =>
@@ -153,7 +153,7 @@ test("names the best opportunity, without a tab to open", async ({ page }) => {
 
   // It used to take a click on a Gaps tab. It is on the page now.
   await expect(page.getByRole("tab", { name: /^Gaps/ })).toHaveCount(0);
-  await expect(page.locator(".ai-gap-verdict")).toContainText(/Bubble tea/);
+  await expect(page.locator(".ai-spec-headline").first()).toContainText(/Bubble tea/);
 });
 
 test("shows a capped category as a minimum and marks it saturated", async ({ page }) => {
@@ -178,7 +178,7 @@ test("keeps zero-outlet categories out of the ranking and says why", async ({ pa
   await expect(page.getByText(/cannot tell the two apart/)).toBeVisible();
 
   // And it is definitely not what the AI called the opening.
-  await expect(page.locator(".ai-gap-verdict")).not.toContainText(/Fast-casual/);
+  await expect(page.locator(".ai-spec-headline").first()).not.toContainText(/Fast-casual/);
 });
 
 test("states the limitations on screen rather than hiding them", async ({ page }) => {

@@ -103,8 +103,112 @@ test("offers log in and a single primary sign-up", async ({ page }) => {
   await goto(page, "/events");
   await openIfCompact(page);
 
-  await expect(page.getByRole("button", { name: "Log in" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign up" })).toBeVisible();
+  /**
+   * LINKS, not buttons, and that is the change rather than a looser assertion.
+   * These used to open a Google popup in place, which meant the product had
+   * two sign-in surfaces with two sets of error handling and no page a vendor
+   * could be sent to. They address real routes now, so the destination is
+   * worth pinning alongside the label.
+   */
+  await expect(page.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
+  await expect(page.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/register");
+});
+
+test("does not underline the auth buttons", async ({ page }) => {
+  await goto(page, "/events");
+  await openIfCompact(page);
+
+  /**
+   * They read as buttons, so they must not be underlined like links.
+   *
+   * The underline arrived with the MARKUP rather than with a stylesheet
+   * change: these were `<button>` elements, which the browser never
+   * underlines, and became `<a>` when they started addressing real pages.
+   * None of their rules had ever needed `text-decoration`, so the default
+   * applied. `.nav-link` next to them already carried it.
+   *
+   * Hover is checked too: a rule covering only the resting state lets the
+   * underline back in under the pointer, and on a phone that is the state a
+   * tap leaves a control in.
+   */
+  for (const name of ["Log in", "Sign up"]) {
+    const el = page.getByRole("link", { name });
+    expect(await el.evaluate((n) => getComputedStyle(n).textDecorationLine), name).toBe("none");
+    await el.hover();
+    expect(
+      await el.evaluate((n) => getComputedStyle(n).textDecorationLine),
+      `${name} hovered`,
+    ).toBe("none");
+  }
+});
+
+test("centres the auth labels and balances them against the logo", async ({ page }) => {
+  await goto(page, "/events");
+  await openIfCompact(page);
+
+  /**
+   * SECOND BUG FROM THE SAME CAUSE as the underline above, which is why this
+   * is measured rather than eyeballed.
+   *
+   * A `<button>` centres its own label; a block `<a>` with a `min-height` and
+   * no inner alignment drops the line box at the TOP of the pill. When these
+   * became links, both labels ended up 7px above centre with 2px of space
+   * above and 16px below, and it read as the buttons sitting high in the bar.
+   *
+   * The text's own rect, via a `Range`, is the only honest way to measure it:
+   * the ELEMENT is perfectly centred in the capsule either way, which is what
+   * makes this the kind of misalignment that survives a casual look.
+   */
+  for (const name of ["Log in", "Sign up"]) {
+    const off = await page.getByRole("link", { name }).evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const text = range.getBoundingClientRect();
+      return text.y + text.height / 2 - (box.y + box.height / 2);
+    });
+    expect(Math.abs(off), `${name} label off centre by ${off.toFixed(1)}px`).toBeLessThan(1.5);
+  }
+});
+
+test("gives both ends of the capsule the same optical margin", async ({ page }) => {
+  // Desktop only: below 900px the actions move into the drawer and the
+  // capsule holds just the logo and the menu button.
+  test.skip((page.viewportSize()?.width ?? 0) < 900, "actions are in the drawer");
+  await goto(page, "/events");
+
+  /**
+   * Measured to the VISIBLE thing at each end, not to its box. The brand link
+   * carries 4px of its own padding, so matching the capsule's raw padding
+   * left and right would still look lopsided. It read 19px to the logo mark
+   * against 11px to the Sign up pill, which is what made the gold crowd the
+   * capsule's curve.
+   */
+  /**
+   * POLLED, because the bar animates itself in.
+   *
+   * The masthead tweens `.nav-logo` with a `scale` on mount, and `.nav-mark`
+   * sits inside it — so a single reading taken while that is still running
+   * measures a box mid-flight. It passed in isolation and failed once under
+   * full-suite load, which is the worst kind of flake and exactly the trap
+   * this file already records for colour transitions: never take one sample of
+   * a value that is still moving.
+   */
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(() => {
+          const nav = document.querySelector(".navbar")!.getBoundingClientRect();
+          // `.nav-mark` is the white CHIP, which is the visible left edge. The
+          // `<img>` inside it is inset by its own padding and reads 26px from
+          // the capsule, which is not the margin anybody sees.
+          const mark = document.querySelector(".nav-mark")!.getBoundingClientRect();
+          const signup = document.querySelector(".nav-signup")!.getBoundingClientRect();
+          return Math.round(Math.abs(mark.x - nav.x - (nav.right - signup.right)));
+        }),
+      { message: "optical margins never settled to within 3px of each other" },
+    )
+    .toBeLessThan(3);
 });
 
 test("still renders the actions each route passes in", async ({ page }) => {

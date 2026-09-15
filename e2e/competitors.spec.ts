@@ -230,7 +230,17 @@ test("the simulator route never requests competitors", async ({ page }) => {
   });
 
   await page.goto("/simulator");
-  await expect(page.getByTestId("headline-profit")).toBeVisible();
+  /**
+   * A generous wait on the RENDER, not on the thing under test.
+   *
+   * The subject here is that `/simulator` makes no Places call, and waiting
+   * for the profit figure is only how this knows the page came up. Under full
+   * parallel suite load that occasionally took longer than the 5s default and
+   * the test failed for a reason it is not about. A longer window is also
+   * strictly stricter on the real assertion, since it gives any stray call
+   * more time to appear.
+   */
+  await expect(page.getByTestId("headline-profit")).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(1_000);
 
   expect(competitorCalls).toEqual([]);

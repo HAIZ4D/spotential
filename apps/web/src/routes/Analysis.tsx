@@ -183,6 +183,37 @@ export default function Analysis() {
    * having to reach into the map's state.
    */
   const demandActive = demand || section === "demand";
+  /**
+   * Whether the SHADING is on because the Demand tab turned it on, rather than
+   * because the reader did.
+   *
+   * Opening the tab used to widen the camera and stop there, so the map went
+   * wide and blank and the reader had to scroll back up to the map's own
+   * Demand button before there was anything to see. The tab now shades the
+   * map as it opens.
+   *
+   * It only takes back what it gave. Leaving the tab switches the shading off
+   * if the tab switched it on, and leaves it alone if the reader turned it on
+   * first. Any hand toggle, from either button, hands ownership back to the
+   * reader. Without that, every other tab would inherit a map zoomed out to
+   * 2.5km around a 500m question.
+   */
+  const shadedByTab = useRef(false);
+  const selectSection = (next: SectionId) => {
+    if (next === section) return;
+    if (next === "demand" && !demand) {
+      shadedByTab.current = true;
+      setDemand(true);
+    } else if (section === "demand" && shadedByTab.current) {
+      shadedByTab.current = false;
+      setDemand(false);
+    }
+    setSection(next);
+  };
+  const shadeByHand = (next: boolean) => {
+    shadedByTab.current = false;
+    setDemand(next);
+  };
   // Bounds move on every pixel of a pan. Bucketed to ~110m for the query key
   // and debounced on top, so a drag collapses into one or two fetches.
   const settledView = useDebounced(view, 350);
@@ -606,7 +637,7 @@ export default function Analysis() {
               if (nextRadius) setRadiusMetres(nextRadius);
             }}
           />
-          <SectionTabs tabs={tabs} active={section} onSelect={setSection} />
+          <SectionTabs tabs={tabs} active={section} onSelect={selectSection} />
           <div className="section-body" id={`section-${section}`} role="tabpanel">
             {section === "overview" && (
               /* No card header: the tab above it already says Overview, and a
@@ -647,7 +678,7 @@ export default function Analysis() {
                 showRent={showRentPins}
                 onShowRent={setShowRentPins}
                 surfaceOn={demand}
-                onSurface={setDemand}
+                onSurface={shadeByHand}
                 onFlyTo={setFlyTo}
                 loading={grid.isLoading}
                 failed={grid.isError}
@@ -738,7 +769,7 @@ export default function Analysis() {
             hoveredCompetitor={hoveredCompetitor}
             demand={demand}
             demandActive={demandActive}
-            onDemandChange={setDemand}
+            onDemandChange={shadeByHand}
             demandCells={grid.data?.cells}
             demandState={
               grid.data ? "ready" : grid.isError ? "failed" : "loading"
@@ -885,8 +916,8 @@ function MapAwareBody({
          * Opening the Demand tab is asking an area question, and at the search
          * framing exactly one 693m cell is in view — so "residents", "median
          * cell" and "densest cell" all print the same number and the panel
-         * reads as broken. The tab gets the area view; the toggle beside it
-         * only decides whether the area is coloured in.
+         * reads as broken. The tab gets the area view and shades it; the
+         * toggle beside it decides whether the shading stays.
          */
         fitRadiusMetres={framingRadius(radiusMetres, demandActive)}
         demand={demand}

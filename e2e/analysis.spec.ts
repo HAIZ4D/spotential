@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /**
  * Location Analysis — slice 1a.
@@ -245,6 +245,85 @@ test.describe("the demand layer", () => {
 
     await expect(page.getByText(/Green does not mean space to open/)).toBeVisible();
     await expect(page.getByText(/opposite of what green means in the score bars/)).toBeVisible();
+  });
+
+  /**
+   * CI blocks Google Maps, so these read the shading state off the tab's own
+   * switch rather than off the camera. The camera was measured against a real
+   * map when this shipped: see the note at the top of this block.
+   */
+  /**
+   * A grid that LOADS. Aborting the route instead swaps the whole panel for
+   * its "could not load the population grid" notice a moment later, which
+   * takes the switch with it and reads exactly like the switch misbehaving.
+   */
+  const stubGrid = (page: Page) =>
+    page.route("**/v1/heatmap**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          cells: [
+            {
+              lat: 3.1464,
+              lng: 101.687,
+              population: 3_100,
+              boundary: [3.14875, 101.69105, 3.1511, 101.687, 3.14875, 101.68295, 3.14405, 101.68295, 3.1417, 101.687, 3.14405, 101.69105],
+            },
+          ],
+          hexagonEdgeMetres: 400,
+          resolution: 8,
+          attribution: "Kontur Population (CC BY 4.0), via HDX",
+          vintage: "20231101",
+        }),
+      }),
+    );
+  const shadeSwitch = (page: Page) =>
+    page.locator(".layer-toggle").filter({ hasText: "Shade the map by residents" });
+  const openTab = (page: Page, name: string) =>
+    page.locator(".tab").filter({ hasText: name }).first().click();
+
+  test("opening the Demand tab shades the map without a second click", async ({ page }) => {
+    /**
+     * The owner's report: the tab widened the map and stopped, so the reader
+     * had to scroll back up to the map's Demand button before anything was
+     * drawn. Asserted on a second visit too, because the tab has to shade the
+     * map every time it opens, not only the first.
+     */
+    await page.route(MAPS, (route) => route.abort());
+    await page.route("**/v1/amenities**", (route) => route.abort());
+    await stubGrid(page);
+    await page.goto("/analysis?lat=3.1478&lng=101.6953");
+    await page.locator(".mappane").waitFor();
+
+    await openTab(page, "Demand");
+    await expect(shadeSwitch(page)).toHaveAttribute("aria-pressed", "true");
+
+    await openTab(page, "Overview");
+    await openTab(page, "Demand");
+    await expect(shadeSwitch(page)).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("the shading switch still turns it off while the tab is open", async ({ page }) => {
+    /**
+     * Opening the tab turns the shading on; it must not HOLD it on. An
+     * implementation that forced `demand` true whenever the tab was open would
+     * pass the test above and leave this switch dead, which is the version
+     * this guards against.
+     */
+    await page.route(MAPS, (route) => route.abort());
+    await page.route("**/v1/amenities**", (route) => route.abort());
+    await stubGrid(page);
+    await page.goto("/analysis?lat=3.1478&lng=101.6953");
+    await page.locator(".mappane").waitFor();
+
+    await openTab(page, "Demand");
+    await expect(shadeSwitch(page)).toHaveAttribute("aria-pressed", "true");
+
+    await shadeSwitch(page).click();
+    await expect(shadeSwitch(page)).toHaveAttribute("aria-pressed", "false");
+    await page.waitForTimeout(400);
+    await expect(shadeSwitch(page)).toHaveAttribute("aria-pressed", "false");
   });
 
   test("costs nothing beyond the free population grid", async ({ page }) => {

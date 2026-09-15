@@ -1,5 +1,7 @@
+import { useEffect, useRef } from "react";
 import { en, formatCurrency, formatPercent, type SimulationResult } from "@spotential/sim-engine";
 import { CostComposition } from "./sim/CostComposition.js";
+import { PanelLede, costLede } from "./sim/PanelLede.js";
 
 /** Rent burden traffic light — SPEC §7.4. */
 function rentTone(pct: number): { cls: "green" | "amber" | "red"; label: string } {
@@ -12,6 +14,41 @@ export function CostBreakdown({ result }: { result: SimulationResult }) {
   const { steady, costBreakdown } = result;
   const rentLine = costBreakdown.find((l) => l.key === "rent");
   const rent = rentLine ? rentTone(rentLine.pctOfRevenue) : null;
+  const lede = costLede(result);
+
+  /**
+   * THE TABLE PRINTS EVEN WHEN IT IS FOLDED.
+   *
+   * The lines live in a `<details>` so the panel stops reading as a ledger,
+   * but a closed `<details>` hides its content from paper as well as from the
+   * screen — and the printed page is the copy most likely to be handed to a
+   * landlord or a bank, where the tally is the entire point. So the disclosure
+   * opens for the print and closes again after.
+   *
+   * Done with the print events rather than a CSS rule because forcing a closed
+   * disclosure's content visible is not reliably styleable across browsers.
+   */
+  const workingRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const details = workingRef.current;
+    if (!details) return;
+
+    let wasOpen = false;
+    const before = () => {
+      wasOpen = details.open;
+      details.open = true;
+    };
+    const after = () => {
+      details.open = wasOpen;
+    };
+
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, []);
 
   return (
     <section className="card">
@@ -26,9 +63,17 @@ export function CostBreakdown({ result }: { result: SimulationResult }) {
       </header>
 
       <div className="body">
+        <PanelLede text={lede.text} figure={lede.figure} />
+
         <CostComposition result={result} />
 
-        <div className="table-scroll">
+        {/* Folded, never trimmed. Showing only the largest lines would break
+            the tally: these add up to the profit figure on the last row, and a
+            partial list that still looked like a total would be worse than a
+            table nobody opens. */}
+        <details className="cost-working" ref={workingRef}>
+          <summary>Show every line</summary>
+          <div className="table-scroll">
           <table>
             <thead>
               <tr>
@@ -61,7 +106,8 @@ export function CostBreakdown({ result }: { result: SimulationResult }) {
               </tr>
             </tbody>
           </table>
-        </div>
+          </div>
+        </details>
 
         <details style={{ marginTop: 12 }}>
           <summary className="small muted" style={{ cursor: "pointer" }}>

@@ -14,10 +14,45 @@
 export interface QuotaConfig {
   perCallerPerDay: number;
   globalPerDay: number;
+  /** What ran out, for the refusal message. Defaults to "questions". */
+  noun?: string;
 }
 
+/** "about 4 hours", so a refusal says when it lifts rather than just that it happened. */
+function hoursUntil(resetsAt: number, now: number): string {
+  const hours = Math.max(1, Math.round((resetsAt - now) / (60 * 60 * 1000)));
+  return hours === 1 ? "about an hour" : `about ${hours} hours`;
+}
+
+/**
+ * Questions a person actually typed.
+ *
+ * Was 30, set when the assistant was one small panel in a sidebar. It is now
+ * the centrepiece of both `/simulator` and `/analysis`, and 30 turned out to
+ * be about an hour of ordinary use — the ceiling was being hit during normal
+ * work rather than by abuse, which is the definition of a mis-set limit. The
+ * global breaker below is what actually guards the bill.
+ */
 export const DEFAULT_QUOTA: QuotaConfig = {
-  perCallerPerDay: 30,
+  perCallerPerDay: 150,
+  globalPerDay: 3_000,
+};
+
+/**
+ * The automatic briefing, on its own budget.
+ *
+ * THE BUG THIS FIXES: `/v1/location/brief` generates on page view rather than
+ * on request, and it was charged to the same counter as typed questions. So
+ * opening a handful of locations silently spent someone's ability to ask
+ * anything, and the refusal told them they had used their "questions" when
+ * they had asked none. Two different things cannot share one budget.
+ *
+ * Higher per caller because browsing is how the page is used, and cheap
+ * because it is cached on a hash of the fact sheet: only a genuinely new
+ * location costs a call.
+ */
+export const BRIEF_QUOTA: QuotaConfig = {
+  perCallerPerDay: 120,
   globalPerDay: 2_000,
 };
 
@@ -47,7 +82,7 @@ export class QuotaTracker {
     if (this.global.count >= this.config.globalPerDay) {
       return {
         allowed: false,
-        reason: "The assistant has hit today's usage limit for everyone. Your figures still work.",
+        reason: `The assistant has hit today's limit for everyone. Every figure on the page still works, and this resets in ${hoursUntil(this.global.resetsAt, now)}.`,
       };
     }
 
@@ -57,7 +92,7 @@ export class QuotaTracker {
     if (caller.count >= this.config.perCallerPerDay) {
       return {
         allowed: false,
-        reason: `You have used today's ${this.config.perCallerPerDay} questions. The sliders and figures still work.`,
+        reason: `You have reached today's limit of ${this.config.perCallerPerDay} ${this.config.noun ?? "questions"}. Everything else on the page still works, and this resets in ${hoursUntil(caller.resetsAt, now)}.`,
       };
     }
 

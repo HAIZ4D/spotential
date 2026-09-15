@@ -91,22 +91,46 @@ export default function Events() {
     };
   }, [vendor, params]);
 
+  /**
+   * BUILT FROM THE CURRENT URL, NOT THE CAPTURED ONE.
+   *
+   * This read `new URLSearchParams(params)`, and `params` is the value from
+   * the render that created the handler. Two keystrokes landing before React
+   * re-rendered therefore both built from the same stale base, and the second
+   * overwrote the first: typing "terang" quickly produced "tg".
+   *
+   * It only showed on a loaded machine, because that is when the round-trip
+   * through the URL is slow enough to lose the race — so it presented as a
+   * flaky test rather than as the real dropped-keystrokes bug it is. The
+   * functional form is handed the live params every time.
+   */
   const setParam = (key: string, value: string | boolean) => {
-    const next = new URLSearchParams(params);
     const v = typeof value === "boolean" ? (value ? "1" : "") : value;
-    if (v) next.set(key, v);
-    else next.delete(key);
-    setParams(next, { replace: true });
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (v) next.set(key, v);
+        else next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   const onFilter = (key: keyof FilterState, value: string) => setParam(PARAM[key], value);
 
   // The category rides in the URL so a scored view is shareable.
   useEffect(() => {
-    const next = new URLSearchParams(params);
-    if (next.get("cat") === vendor.category) return;
-    next.set("cat", vendor.category);
-    setParams(next, { replace: true });
+    // Same stale-base hazard as `setParam` above, so the same fix.
+    setParams(
+      (current) => {
+        if (current.get("cat") === vendor.category) return current;
+        const next = new URLSearchParams(current);
+        next.set("cat", vendor.category);
+        return next;
+      },
+      { replace: true },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendor.category]);
 

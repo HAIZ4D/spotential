@@ -30,6 +30,7 @@ interface Health {
     gemini: string;
     geminiModel: string | null;
     competitorCache: string;
+    briefCache: string;
     places: string;
   };
 }
@@ -41,6 +42,21 @@ describe.skipIf(!baseUrl)("deployed backends", () => {
     // The exact regression. In-memory here means every cold start pays Places
     // again, while still looking healthy from the outside.
     expect(health.backends.competitorCache).toBe("firestore");
+  });
+
+  it("uses Firestore for the AI readings cache, not in-memory", async () => {
+    const health = (await (await fetch(`${baseUrl}/health`)).json()) as Health;
+
+    /**
+     * A LIVE LEAK, not a hypothetical. The comparison panel's readings were
+     * wired to nothing, so they ran on the in-memory default in production:
+     * Cloud Run scales to zero, so every cold start lost the cache and
+     * re-billed three Gemini calls per comparison. Nothing caught it because
+     * `/health` had no field for it. The same store now serves the location
+     * panel's four specialists, which makes the leak four times larger if it
+     * ever comes back.
+     */
+    expect(health.backends.briefCache).toBe("firestore");
   });
 
   it("has a Gemini backend configured and names the model", async () => {
@@ -416,4 +432,84 @@ describe.skipIf(baseUrl)("deployed smoke", () => {
   it("is skipped without SIMULATOR_URL", () => {
     expect(baseUrl).toBeUndefined();
   });
+});
+
+/**
+ * The four specialists, against the real deployed model.
+ *
+ * ASSERTS THE SHAPE, NEVER THE CONTENT. This file already records why: pinning
+ * which outcome a model picks went intermittently red on a question the data
+ * genuinely cannot answer, and a flaky gate just teaches people to re-run it.
+ * What is worth guarding here is that the route is reachable, that it answers
+ * in the shape the panel reads, and that a bad model id or key surfaces as a
+ * failure rather than as a quietly empty panel.
+ */
+describe.skipIf(!baseUrl || !smokeKey)("deployed location readings", () => {
+  const location = {
+    point: { lat: 3.1478, lng: 101.6953 },
+    label: "Kuala Lumpur",
+    category: "korean_restaurant",
+    radiusMetres: 500,
+    competitors: {
+      total: 20,
+      averageRating: 4.3,
+      ratedCount: 18,
+      totalReviews: 5600,
+      nearestMetres: 40,
+      operational: 19,
+    },
+    truncated: true,
+    completeToMetres: 421,
+    density: [{ upToMetres: 500, count: 20 }],
+    demographics: null,
+    rentOverride: null,
+  };
+
+  it("answers in the shape the panel reads", async () => {
+    const response = await fetch(`${baseUrl}/v1/location/brief`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-smoke-key": smokeKey,
+        origin: "https://spotential-app.web.app",
+      },
+      body: JSON.stringify({
+        category: "korean_restaurant",
+        radiusMetres: 500,
+        location,
+        gaps: null,
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      kind: string;
+      readings: { id: string; role: string; headline: string; points: string[] }[];
+      withheld: { id: string; role: string; reason: string }[];
+      skipped: { id: string; role: string; reason: string }[];
+    };
+
+    expect(payload.kind).toBe("readings");
+    // All three lists are always present. An absent one is what took the whole
+    // page down once, because the panel calls `.find` on each.
+    expect(Array.isArray(payload.readings)).toBe(true);
+    expect(Array.isArray(payload.withheld)).toBe(true);
+    expect(Array.isArray(payload.skipped)).toBe(true);
+
+    // No gaps were sent, so Opportunity has nothing to read and must be
+    // skipped rather than asked. That is the spend control, asserted rather
+    // than assumed.
+    expect(payload.skipped.map((s) => s.id)).toContain("opportunity");
+
+    // Every specialist that did answer is renderable.
+    for (const reading of payload.readings) {
+      expect(reading.role.length).toBeGreaterThan(0);
+      expect(reading.headline.length).toBeGreaterThan(0);
+      expect(reading.points.length).toBeGreaterThan(0);
+    }
+
+    // Reachability: a bad model id or an expired key surfaces as every
+    // specialist failing, which would otherwise render as a quiet empty panel.
+    expect(payload.readings.length + payload.withheld.length).toBeGreaterThan(0);
+  }, 90_000);
 });

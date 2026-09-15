@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
 import { EventCatalogue } from "../src/events/catalogue.js";
@@ -33,8 +34,21 @@ describe("GET /v1/events", () => {
     expect(res.statusCode).toBe(200);
 
     const body = res.json();
-    expect(body.events.length).toBeGreaterThan(5);
-    expect(body.total).toBe(catalogue.all().filter((e) => !isPast(e)).length);
+
+    /**
+     * ASSERTED AGAINST THE CATALOGUE, not a magic number.
+     *
+     * This read `toBeGreaterThan(5)` and went red on 2026-09-02 with no code
+     * change: the seeded events age, finished ones drop out of the listing,
+     * and the count crossed the threshold on its own. A test that fails by
+     * calendar teaches people to ignore it. The invariant worth holding is
+     * that the route lists exactly the events that have not finished, and that
+     * there is still something to list.
+     */
+    const listable = catalogue.all().filter((e) => !isPast(e)).length;
+    expect(listable).toBeGreaterThan(0);
+    expect(body.events.length).toBe(listable);
+    expect(body.total).toBe(listable);
   });
 
   /**
@@ -90,12 +104,39 @@ describe("GET /v1/events", () => {
   });
 
   it("applies a real price ceiling", async () => {
-    const body = (await app.inject({ method: "GET", url: "/v1/events?maxPrice=500" })).json();
+    /**
+     * THE CEILING COMES FROM THE CATALOGUE, not from a magic number.
+     *
+     * This asserted `maxPrice=500` returned something, and it went red on
+     * 2026-09-14 with no code change: seeded events age, the last listable
+     * event under RM500 finished, and the filter correctly matched nothing.
+     * Second time a calendar has broken a test in this file, and the lesson is
+     * the one already written down: assert the invariant, never a value that
+     * only holds until a date passes.
+     *
+     * So it reads the cheapest published price that is actually listable and
+     * filters at exactly that, which tests the FILTER rather than the
+     * catalogue's current contents.
+     */
+    const all = (await app.inject({ method: "GET", url: "/v1/events" })).json();
+    const prices: number[] = all.events
+      .flatMap((e: { packages: { priceRm: number }[] }) => e.packages.map((p) => p.priceRm))
+      .filter((n: number) => Number.isFinite(n));
+    expect(prices.length, "no listable event publishes a price").toBeGreaterThan(0);
+
+    const ceiling = Math.min(...prices);
+    const body = (
+      await app.inject({ method: "GET", url: `/v1/events?maxPrice=${ceiling}` })
+    ).json();
+
     expect(body.events.length).toBeGreaterThan(0);
     for (const e of body.events) {
       const cheapest = Math.min(...e.packages.map((p: { priceRm: number }) => p.priceRm));
-      expect(cheapest).toBeLessThanOrEqual(500);
+      expect(cheapest).toBeLessThanOrEqual(ceiling);
     }
+
+    // And it genuinely narrows: an unpriced listing sorts out, never in.
+    expect(body.events.length).toBeLessThanOrEqual(all.events.length);
   });
 
   it("reports itself unavailable rather than serving an empty list", async () => {
@@ -177,16 +218,29 @@ describe("POST /v1/events/rank", () => {
       payload: { vendor: { category: "cafe_coffee_shop" } },
     });
 
-    // Pinned to an event that HAS a published price. One listing in the
-    // catalogue deliberately has none, and its affordability axis is correctly
-    // unavailable — a different case from an unstated budget.
+    /**
+     * ANY event that has a published price, found from the catalogue.
+     *
+     * This used to pin `evt-lapan-pagi`, which finished on 2026-09-13 and
+     * dropped out of the listing the next morning, so `find` returned
+     * undefined and the test died on a property of it. The event was never the
+     * subject; the behaviour is.
+     */
+    const listing = (await app.inject({ method: "GET", url: "/v1/events" })).json();
+    const withPrice = listing.events.find(
+      (e: { packages: unknown[] }) => e.packages.length > 0,
+    ) as { id: string } | undefined;
+    expect(withPrice, "no listable event publishes a price").toBeDefined();
+
     const priced = res
       .json()
-      .ranked.find((r: { eventId: string }) => r.eventId === "evt-lapan-pagi");
+      .ranked.find((r: { eventId: string }) => r.eventId === withPrice!.id);
     const afford = priced.score.dimensions.find(
       (d: { key: string }) => d.key === "boothAffordability",
     );
     // Falls back to the inferred yardstick rather than scoring as unaffordable.
+    // A listing with NO published price is a different case: its axis is
+    // correctly unavailable, which is why this looks for one that has a price.
     expect(afford.kind).toBe("proxy");
   });
 });
@@ -268,6 +322,143 @@ describe("POST /v1/events/:id/apply", () => {
     });
 
     expect(res.statusCode).toBe(401);
+    await guarded.close();
+  });
+
+  /**
+   * THE ACCEPT PATH, which nothing could reach before.
+   *
+   * Every test above stops at a 401, because `AuthVerifier` checks a token
+   * against Google's live JWKS and no unit test can forge one. That is right
+   * for the refusals they assert and useless for the thing this route now
+   * does: store a real application under a real owner. The verifier is
+   * injectable for exactly this, and for nothing else.
+   */
+  const asVendor = (uid = "vendor-1") => ({
+    guard: () => async (request: { user?: unknown }) => {
+      // Exactly what the real guard does on a good token: attach the user the
+      // routes then read with `userOf`. It does NOT skip any other check.
+      request.user = { uid, email: "aina@example.com", name: "Aina", anonymous: false };
+    },
+  });
+
+  const application = {
+    packageId: "std",
+    businessName: "Rahim Bakes",
+    contactName: "Aina Rahim",
+    contactEmail: "aina@example.com",
+    contactPhone: "012-345 6789",
+    productDescription: "Sourdough loaves, kouign-amann and filter coffee.",
+    boothActivation: "Free tastings on the hour.",
+    whyThisEvent: "Our regulars are five minutes away.",
+    consentToShare: true,
+  };
+
+  it("ACCEPTS an application for a curated listing, and stores whose price it was", async () => {
+    /**
+     * This route used to refuse `source === "seed"` with a 409, so that nobody
+     * could believe they had applied to an event that did not exist. The owner
+     * reversed it: these events are real, and what is curated is the booth
+     * pricing and the slot counts.
+     *
+     * What replaced the refusal is the record itself. `listingSource` says
+     * whether the fee the vendor agreed to was published by the organizer or
+     * estimated by us, because whoever forwards this has to know which: one
+     * confirms a price, the other has to go and ask for it.
+     */
+    const store = new InMemoryApplicationStore();
+    const guarded = buildApp({
+      events: catalogue,
+      authVerifier: asVendor() as never,
+      applicationStore: store,
+    });
+
+    const seeded = catalogue.byId("evt-lapan-pagi")!;
+    expect(seeded.source, "fixture must be a curated listing").toBe("seed");
+
+    const res = await guarded.inject({
+      method: "POST",
+      url: "/v1/events/evt-lapan-pagi/apply",
+      payload: { eventId: "evt-lapan-pagi", ...application },
+      headers: { authorization: "Bearer stubbed" },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().applied).toBe(true);
+
+    const saved = await store.findForUserAndEvent("vendor-1", "evt-lapan-pagi");
+    expect(saved).not.toBeNull();
+    expect(saved!.listingSource).toBe("seed");
+    expect(saved!.boothPriceRm).toBeGreaterThan(0);
+    // From the TOKEN, never the body. The whole security of the route.
+    expect(saved!.uid).toBe("vendor-1");
+    expect(saved!.boothActivation).toContain("tastings");
+    await guarded.close();
+  });
+
+  it("takes the uid from the token even when the body supplies a different one", async () => {
+    const store = new InMemoryApplicationStore();
+    const guarded = buildApp({
+      events: catalogue,
+      authVerifier: asVendor("real-owner") as never,
+      applicationStore: store,
+    });
+
+    await guarded.inject({
+      method: "POST",
+      url: "/v1/events/evt-lapan-pagi/apply",
+      payload: { eventId: "evt-lapan-pagi", uid: "someone-else", ...application },
+      headers: { authorization: "Bearer stubbed" },
+    });
+
+    expect(await store.findForUserAndEvent("someone-else", "evt-lapan-pagi")).toBeNull();
+    expect(await store.findForUserAndEvent("real-owner", "evt-lapan-pagi")).not.toBeNull();
+    await guarded.close();
+  });
+
+  it("REPLACES a second application rather than filing two", async () => {
+    // The id is `uid__eventId`. An organizer receiving the same vendor twice
+    // for one event has to work out which is current, so there is only ever
+    // one, and the UI says so before anybody retypes anything.
+    const store = new InMemoryApplicationStore();
+    const guarded = buildApp({
+      events: catalogue,
+      authVerifier: asVendor() as never,
+      applicationStore: store,
+    });
+
+    for (const name of ["Rahim Bakes", "Rahim Bakes & Co"]) {
+      await guarded.inject({
+        method: "POST",
+        url: "/v1/events/evt-lapan-pagi/apply",
+        payload: { eventId: "evt-lapan-pagi", ...application, businessName: name },
+        headers: { authorization: "Bearer stubbed" },
+      });
+    }
+
+    const mine = await store.listForUser("vendor-1");
+    expect(mine).toHaveLength(1);
+    expect(mine[0]!.businessName).toBe("Rahim Bakes & Co");
+    await guarded.close();
+  });
+
+  it("still refuses without consent, which no reversal changes", async () => {
+    // This is the moment contact details leave Spotential for a third party.
+    // Accepting curated listings did not loosen it.
+    const guarded = buildApp({
+      events: catalogue,
+      authVerifier: asVendor() as never,
+      applicationStore: new InMemoryApplicationStore(),
+    });
+
+    const res = await guarded.inject({
+      method: "POST",
+      url: "/v1/events/evt-lapan-pagi/apply",
+      payload: { eventId: "evt-lapan-pagi", ...application, consentToShare: false },
+      headers: { authorization: "Bearer stubbed" },
+    });
+
+    expect(res.statusCode).toBe(400);
     await guarded.close();
   });
 
@@ -364,6 +555,54 @@ describe("parseApplyRequest", () => {
     expect(parsed.ok).toBe(true);
     if (parsed.ok) expect(parsed.value.businessName).toBe("Kedai Kopi Ali");
   });
+
+  /**
+   * The pitch: what the vendor will run at the booth, and why they fit.
+   *
+   * Optional on purpose. `productDescription` is what an organizer needs to
+   * judge the stall at all; a pitch is what helps them choose between two
+   * good ones. Making it required would only teach people to write filler,
+   * and filler is worse than a blank for the person reading fifty of these.
+   */
+  it("accepts an application with no pitch at all", () => {
+    const parsed = parseApplyRequest(valid);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.boothActivation).toBe("");
+    expect(parsed.value.whyThisEvent).toBe("");
+  });
+
+  it("carries the pitch through rather than dropping it", () => {
+    const parsed = parseApplyRequest({
+      ...valid,
+      boothActivation: "Free tastings on the hour and a latte-art demo at 4pm.",
+      whyThisEvent: "Our regulars are five minutes from this venue.",
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.boothActivation).toContain("latte-art");
+    expect(parsed.value.whyThisEvent).toContain("five minutes");
+  });
+
+  it("REFUSES an over-long pitch rather than silently truncating it", () => {
+    /**
+     * A half-sentence handed to the organizer, with nothing telling the vendor
+     * it was cut, is the same failure mode as a silently shortened phone
+     * number: the vendor believes they said something they did not. The cap
+     * exists to bound the write, so exceeding it is a rejection.
+     */
+    for (const field of ["boothActivation", "whyThisEvent"] as const) {
+      const parsed = parseApplyRequest({ ...valid, [field]: "x".repeat(601) });
+      expect(parsed.ok, field).toBe(false);
+    }
+  });
+
+  it("treats a non-string pitch as absent rather than stringifying it", () => {
+    const parsed = parseApplyRequest({ ...valid, boothActivation: { evil: true } });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.boothActivation).toBe("");
+  });
 });
 
 describe("the catalogue itself", () => {
@@ -411,9 +650,27 @@ describe("the catalogue itself", () => {
   });
 
   it("has a poster for every seeded listing", () => {
-    // The reason the catalogue shrank. A seeded listing with no artwork would
-    // fall back to a generated cover, which is the organizer-submission path
-    // rather than something this curated set should need.
-    expect(catalogue.size).toBe(8);
+    /**
+     * CHECKED AGAINST THE POSTER MAP, not against a count.
+     *
+     * This asserted `catalogue.size === 8`, which is not what its name claims
+     * and never was: the number happened to match while eight listings had
+     * eight posters, so it would have passed just as happily with a listing
+     * that had none and failed the moment anyone added one that did. Adding
+     * two events broke it for the wrong reason.
+     *
+     * A seeded listing with no artwork falls back to a generated cover, which
+     * is the organizer-submission path rather than something this curated set
+     * should ever need. That is the thing worth holding.
+     */
+    const posters = readFileSync(
+      new URL("../../../apps/web/src/components/events/posters.ts", import.meta.url),
+      "utf8",
+    );
+    const mapped = new Set([...posters.matchAll(/"(evt-[a-z0-9-]+)":/g)].map((m) => m[1]));
+
+    const missing = catalogue.all().filter((e) => !mapped.has(e.id));
+    expect(missing.map((e) => e.id)).toEqual([]);
+    expect(catalogue.size).toBeGreaterThan(0);
   });
 });

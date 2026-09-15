@@ -25,17 +25,21 @@ import {
 } from "@spotential/sim-engine";
 import type { BusinessCategory } from "@spotential/sim-engine";
 import { extractPatch, narrate, type GeminiConfig } from "./gemini.js";
-import { QuotaTracker } from "./quota.js";
+import { BRIEF_QUOTA, QuotaTracker } from "./quota.js";
 import { searchNearby, type PlacesConfig } from "./places.js";
 import { findCompetitors } from "./competitors/service.js";
 import { detectGaps } from "./competitors/gaps.js";
 import { InMemoryCompetitorStore, type CompetitorStore } from "./competitors/store.js";
-import { briefLocation } from "./chat/brief.js";
 import { buildFacts } from "./chat/facts.js";
+import { buildComparisonFacts } from "./chat/compareFacts.js";
+import { runAgents, COMPARE_ROSTER, type AgentReading } from "./chat/agents.js";
+import { locationRoster } from "./chat/locationAgents.js";
+import { askAboutComparison } from "./chat/askCompare.js";
 import {
-  briefingKey,
-  InMemoryBriefingStore,
-  type BriefingStore,
+  locationReadingsKey,
+  readingsKey,
+  InMemoryReadingsStore,
+  type ReadingsStore,
 } from "./chat/store.js";
 import type { DemographicsLookup } from "./demographics.js";
 import { AppCheckVerifier, callerIdOf, type AppCheckConfig } from "./appcheck.js";
@@ -65,8 +69,19 @@ import type { AmenitiesSeed } from "./amenities/seed.js";
 import { MAX_LISTINGS, type FetchOutcome } from "./properties/propertyguru.js";
 import { InMemoryListingsStore, loadListings, type ListingsStore } from "./properties/store.js";
 import { AuthVerifier, userOf, type AuthConfig } from "./auth.js";
+
+/**
+ * What a `preHandler` is, so the test seam can be typed to exactly that.
+ *
+ * Taken from `AuthVerifier.guard`'s own return type rather than hand-written:
+ * a hand-written signature has to match Fastify's generics exactly, and mine
+ * did not, which is the sort of drift that makes a stub diverge from the thing
+ * it stands in for.
+ */
+type FastifyGuard = ReturnType<AuthVerifier["guard"]>;
 import type { EventCatalogue } from "./events/catalogue.js";
 import { parseApplyRequest } from "./events/apply.js";
+import { parseAccountRequest, type VendorAccount, type VendorAccountStore } from "./events/account.js";
 import {
   applicationId,
   type ApplicationStore,
@@ -98,17 +113,31 @@ export interface AppOptions {
   /** Defaults to in-memory, which is correct for tests and local development. */
   competitorStore?: CompetitorStore | undefined;
   /**
-   * Caches the AI briefing. Defaults to in-memory.
+   * Caches the AI readings for BOTH panels. Defaults to in-memory.
    *
-   * Unlike the application store this one is ALLOWED to downgrade: a lost
-   * briefing costs one Flash call to regenerate, and the page still renders
-   * its derived summary meanwhile. It is reported on /health all the same,
-   * because "silently in memory" is how the competitor cache once re-billed
-   * Places on every cold start.
+   * One store, because the entries are the same type in the same collection
+   * and only the key prefix differs. Unlike the application store this one is
+   * ALLOWED to downgrade: lost readings cost a few Flash calls to regenerate,
+   * and both pages still render their derived summary meanwhile. It is
+   * reported on /health all the same, because "silently in memory" is how the
+   * competitor cache once re-billed Places on every cold start, and how this
+   * very store re-billed three Gemini calls per comparison on every cold start
+   * until a health field was put on it.
    */
-  briefingStore?: BriefingStore | undefined;
+  readingsStore?: ReadingsStore | undefined;
   /** Separate ceiling from the AI quota: this one guards Places spend. */
   placesQuota?: QuotaTracker | undefined;
+  /**
+   * Vendor profiles. Like `applicationStore` there is no in-memory default:
+   * personal details that die with the instance are worse than a refusal.
+   */
+  vendorAccountStore?: VendorAccountStore | undefined;
+  /**
+   * The automatic briefing's own ceiling. Separate from `quota` on purpose:
+   * a page view and a typed question are different things and must not
+   * compete for one budget.
+   */
+  briefQuota?: QuotaTracker | undefined;
   /**
    * Which backend each subsystem actually resolved to, reported on /health.
    *
@@ -167,6 +196,14 @@ export interface AppOptions {
    * would write records owned by nobody.
    */
   auth?: AuthConfig | undefined;
+  /**
+   * TEST SEAM ONLY. Replaces the live JWKS verifier. See `buildApp`.
+   *
+   * Typed to the ONE thing the routes use rather than to `AuthVerifier`, whose
+   * private members a structural stub cannot satisfy. Narrower is also safer:
+   * nothing passed here can do more than supply a preHandler.
+   */
+  authVerifier?: { guard: () => FastifyGuard } | undefined;
   /** Defaults to in-memory, which is correct for tests only. */
   applicationStore?: ApplicationStore | undefined;
 }
@@ -207,7 +244,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       gemini: options.gemini ? options.gemini.transport.name : "none",
       geminiModel: options.gemini?.transport.model ?? null,
       competitorCache: options.competitorStore ? "provided" : "in-memory",
-      briefCache: options.briefingStore ? "provided" : "in-memory",
+      briefCache: options.readingsStore ? "provided" : "in-memory",
       places: options.places?.apiKey ? "configured" : "none",
       demographics: options.demographics ? `districts:${options.demographics.districtCount}` : "none",
       appCheck: options.appCheck ? "enforced" : "off",
@@ -251,6 +288,16 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   const paidRoute = appCheck ? { preHandler: appCheck.guard() } : {};
 
   const quota = options.quota ?? new QuotaTracker();
+
+  /**
+   * The briefing has its OWN budget, because it is not a question.
+   *
+   * It generates on page view rather than on request, so charging it to the
+   * same counter as typed questions meant opening a few locations silently
+   * spent someone's ability to ask anything — and the refusal then told them
+   * they had used their "questions" when they had asked none.
+   */
+  const briefQuota = options.briefQuota ?? new QuotaTracker({ ...BRIEF_QUOTA, noun: "location briefings" });
 
   /**
    * SPEC §8 — the AI route.
@@ -349,7 +396,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   });
 
   const competitorStore = options.competitorStore ?? new InMemoryCompetitorStore();
-  const briefingStore = options.briefingStore ?? new InMemoryBriefingStore();
+  const readingsStore = options.readingsStore ?? new InMemoryReadingsStore();
   // Deliberately separate from the AI quota, and it counts only UNCACHED
   // searches — a cache hit costs nothing, so rate-limiting it would just make
   // the product worse for no saving.
@@ -1000,62 +1047,84 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
     const gaps = gapsOf(raw["gaps"]);
     const facts = buildFacts(grounded, gaps);
-    const key = briefingKey(facts);
+    const key = locationReadingsKey(facts);
+
+    /**
+     * WHICH SPECIALISTS HAVE ANYTHING TO READ, decided before anything is
+     * called and recomputed on a cache hit rather than stored.
+     *
+     * It is derived from the same inputs that built the fact sheet, so it
+     * costs nothing and cannot drift from what the sheet actually contains.
+     * Storing it would add a second thing to keep in step with the readings,
+     * for no saving at all.
+     */
+    const { roster, skipped } = locationRoster(grounded, gaps);
 
     /**
      * CACHE BEFORE QUOTA. A hit spends nothing, so charging a caller's AI
      * quota for it would throttle people for reading a page twice.
      */
     try {
-      const hit = await briefingStore.find(key);
-      if (hit) return { kind: "brief", briefing: hit.briefing, cached: true };
+      const hit = await readingsStore.find(key);
+      if (hit) {
+        return { kind: "readings", readings: hit.readings, withheld: [], skipped, cached: true };
+      }
     } catch (error) {
       // A cache read failing is not worth failing the request over.
-      request.log.warn({ err: error }, "briefing cache read failed");
+      request.log.warn({ err: error }, "location readings cache read failed");
     }
 
     const callerId = callerIdOf(request);
-    const allowed = quota.check(callerId);
+    const allowed = briefQuota.check(callerId);
     if (!allowed.allowed) {
       return reply.status(429).send({ error: "quota_exceeded", message: allowed.reason });
     }
-    quota.record(callerId);
+    briefQuota.record(callerId);
 
     try {
-      const outcome = await briefLocation(options.gemini, grounded, gaps);
+      const outcomes = await runAgents(options.gemini, facts, roster);
+      const readings: AgentReading[] = [];
+      const withheld: { id: string; role: string; reason: string }[] = [];
 
-      if (outcome.kind === "brief") {
-        try {
-          await briefingStore.save({ key, briefing: outcome.briefing, generatedAt: Date.now() });
-        } catch (error) {
-          // Serving an uncached briefing beats failing on a write.
-          request.log.warn({ err: error }, "briefing cache write failed");
-        }
-        return { ...outcome, cached: false };
+      for (const outcome of outcomes) {
+        if (outcome.kind === "reading") readings.push(outcome.reading);
+        else withheld.push({ id: outcome.id, role: outcome.role, reason: outcome.kind });
       }
 
       /**
-       * A refusal is never cached: it is a property of one model reply, not of
-       * this location, and the next attempt may well pass the guard.
+       * Only a COMPLETE set is cached, and a withheld specialist never is.
        *
-       * Logged with its cause, because the two refusal routes look identical
-       * to a caller and need completely different fixes. A populated
-       * `unsupported` means the guard fired and the model invented a figure;
-       * an empty one means the reply would not parse at all, which in practice
-       * has meant the response was truncated. "Refused" alone is not
-       * diagnosable, the same lesson the Overpass failures already taught.
+       * A refusal is a property of one model reply rather than of this
+       * location, so the next attempt may well pass the guard; caching one
+       * would freeze a bad roll for seven days. Caching a partial set would be
+       * worse still, because it would make a missing specialist permanent.
+       *
+       * A SKIPPED specialist is a different thing entirely and does not block
+       * the write: nothing was asked, because there was nothing to read, and
+       * that is a property of the data rather than of the reply.
        */
-      request.log.warn(
-        {
-          unsupported: outcome.unsupported,
-          cause: outcome.unsupported.length > 0 ? "guard" : "unparseable",
-        },
-        "briefing refused",
-      );
-      return outcome;
+      if (readings.length === outcomes.length) {
+        try {
+          await readingsStore.save({ key, readings, generatedAt: Date.now() });
+        } catch (error) {
+          // Serving uncached readings beats failing on a write.
+          request.log.warn({ err: error }, "location readings cache write failed");
+        }
+      }
+
+      /**
+       * Logged apart, because the two need completely different fixes and a
+       * category-only failure already cost a deploy cycle once with Overpass.
+       * `refused` means the guard fired and that specialist invented a figure;
+       * `failed` means the reply would not parse at all, which in practice has
+       * meant it was truncated.
+       */
+      if (withheld.length > 0) request.log.warn({ withheld }, "location agents withheld");
+
+      return { kind: "readings", readings, withheld, skipped, cached: false };
     } catch (error) {
       // The AI layer failing must never suggest the figures on screen are wrong.
-      request.log.error({ err: error }, "location briefing failed");
+      request.log.error({ err: error }, "location agents failed");
       return reply.status(502).send({
         error: "ai_failed",
         message: "Could not reach the analysis. Every figure on the page is unaffected.",
@@ -1162,6 +1231,185 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
    * handful of query parameters — but it is still free, still deterministic,
    * and still makes no external call.
    */
+  /**
+   * The comparison panel: three specialists on one fact sheet.
+   *
+   * Mirrors `/v1/location/brief` deliberately, including the order of
+   * operations, which is load-bearing: CACHE, THEN QUOTA, THEN MODEL. A cache
+   * hit spends nothing, so charging a caller's AI budget for it would throttle
+   * somebody for opening a page twice.
+   *
+   * The validation is the same `kind: "comparison"` parser `/v1/report`
+   * already uses, so the locations arrive checked and capped. Catchment is
+   * filled HERE from the server's own grid rather than read from the body: it
+   * is a measurement, and a client has no business asserting it.
+   */
+  app.post("/v1/compare/brief", paidRoute, async (request, reply) => {
+    const parsed = parseReportRequest({ ...(request.body as object), kind: "comparison" });
+    if (!parsed.ok || parsed.value.kind !== "comparison") {
+      return reply.status(400).send({
+        error: "invalid_comparison",
+        message: parsed.ok ? "Expected a comparison." : parsed.message,
+      });
+    }
+
+    if (parsed.value.locations.length < 2) {
+      return reply.status(400).send({
+        error: "too_few_locations",
+        message: "A comparison needs at least two locations.",
+      });
+    }
+
+    if (!options.gemini) {
+      return reply.status(503).send({
+        error: "ai_unavailable",
+        message: "The analysis is not configured on this deployment.",
+      });
+    }
+
+    const grounded = parsed.value.locations.map((location) => ({
+      ...location,
+      catchment:
+        options.population?.catchment(location.point, location.radiusMetres).population ?? null,
+    }));
+
+    const facts = buildComparisonFacts(grounded);
+    const key = readingsKey(facts);
+
+    try {
+      const hit = await readingsStore.find(key);
+      if (hit) return { kind: "readings", readings: hit.readings, withheld: [], cached: true };
+    } catch (error) {
+      // A cache read failing is not worth failing the request over.
+      request.log.warn({ err: error }, "readings cache read failed");
+    }
+
+    const callerId = callerIdOf(request);
+    const allowed = briefQuota.check(callerId);
+    if (!allowed.allowed) {
+      return reply.status(429).send({ error: "quota_exceeded", message: allowed.reason });
+    }
+    briefQuota.record(callerId);
+
+    try {
+      const outcomes = await runAgents(options.gemini, facts, COMPARE_ROSTER);
+      const readings: AgentReading[] = [];
+      const withheld: { id: string; role: string; reason: string }[] = [];
+
+      for (const outcome of outcomes) {
+        if (outcome.kind === "reading") readings.push(outcome.reading);
+        else withheld.push({ id: outcome.id, role: outcome.role, reason: outcome.kind });
+      }
+
+      /**
+       * Only a COMPLETE set is cached, and refusals never are.
+       *
+       * A refusal is a property of one model reply rather than of this
+       * comparison, so the next attempt may well pass the guard; caching one
+       * would freeze a bad roll for seven days. Caching a partial set would be
+       * worse still: it would make a missing specialist permanent.
+       */
+      if (readings.length === outcomes.length) {
+        try {
+          await readingsStore.save({ key, readings, generatedAt: Date.now() });
+        } catch (error) {
+          request.log.warn({ err: error }, "readings cache write failed");
+        }
+      }
+
+      // Logged apart, because "refused" and "failed" need opposite fixes and a
+      // category-only failure already cost a deploy cycle once with Overpass.
+      if (withheld.length > 0) request.log.warn({ withheld }, "compare agents withheld");
+
+      return { kind: "readings", readings, withheld, cached: false };
+    } catch (error) {
+      request.log.error({ err: error }, "compare agents failed");
+      return reply
+        .status(502)
+        .send({ error: "ai_failed", message: "The analysis could not be generated." });
+    }
+  });
+
+  /**
+   * Free-form questions about the comparison.
+   *
+   * NO `adjust_view` TOOL, unlike `/v1/location/ask`. Category and radius apply
+   * to every site here, so letting the model move them could spend one paid
+   * Places call per location on a single sentence. See `chat/askCompare.ts`.
+   */
+  app.post("/v1/compare/ask", paidRoute, async (request, reply) => {
+    const raw = (request.body as Record<string, unknown> | undefined) ?? {};
+    const question = typeof raw["question"] === "string" ? raw["question"].trim() : "";
+
+    if (question.length < 2 || question.length > 500) {
+      return reply.status(400).send({
+        error: "invalid_question",
+        message: "Ask a question between 2 and 500 characters.",
+      });
+    }
+
+    const parsed = parseReportRequest({ ...raw, kind: "comparison" });
+    if (!parsed.ok || parsed.value.kind !== "comparison") {
+      return reply.status(400).send({
+        error: "invalid_comparison",
+        message: parsed.ok ? "Expected a comparison." : parsed.message,
+      });
+    }
+
+    if (!options.gemini) {
+      return reply
+        .status(503)
+        .send({ error: "ai_unavailable", message: "The assistant is not configured here." });
+    }
+
+    const callerId = callerIdOf(request);
+    /**
+     * The ASK budget, not the briefing one.
+     *
+     * Kept apart because a page view and a typed question are not the same
+     * act. Sharing them shipped once: opening a handful of locations silently
+     * spent someone's ability to ask anything, and the refusal then told them
+     * they had used their "questions" when they had asked none.
+     */
+    const allowed = quota.check(callerId);
+    if (!allowed.allowed) {
+      return reply.status(429).send({ error: "quota_exceeded", message: allowed.reason });
+    }
+    quota.record(callerId);
+
+    const grounded = parsed.value.locations.map((location) => ({
+      ...location,
+      catchment:
+        options.population?.catchment(location.point, location.radiusMetres).population ?? null,
+    }));
+
+    const history = Array.isArray(raw["history"])
+      ? (raw["history"] as { role: unknown; text: unknown }[])
+          .filter(
+            (turn) =>
+              turn &&
+              (turn.role === "user" || turn.role === "model") &&
+              typeof turn.text === "string",
+          )
+          .map((turn) => ({ role: turn.role as "user" | "model", text: turn.text as string }))
+      : [];
+
+    try {
+      const outcome = await askAboutComparison(
+        options.gemini,
+        question,
+        buildComparisonFacts(grounded),
+        history,
+      );
+      return outcome;
+    } catch (error) {
+      request.log.error({ err: error }, "compare ask failed");
+      return reply
+        .status(502)
+        .send({ error: "ai_failed", message: "The assistant could not answer just now." });
+    }
+  });
+
   app.post("/v1/events/rank", async (request, reply) => {
     if (!events) {
       return reply.status(503).send({
@@ -1237,7 +1485,18 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
    * taken from the verified token and NEVER from the body — accepting a
    * client-supplied uid would let anyone write a record owned by someone else.
    */
-  const auth = options.auth ? new AuthVerifier(options.auth) : null;
+  /**
+   * A seam, and it does NOT weaken anything.
+   *
+   * `AuthVerifier` verifies against Google's live JWKS, so the accept path of
+   * every authenticated route was unreachable from a unit test: they all stop
+   * at the 401, which is right for the refusals they assert and useless for
+   * proving a record is stored under the right owner. Tests pass a stub;
+   * production passes a project id and gets the real verifier. There is no
+   * env var and no header that reaches this, so it cannot be turned on by
+   * accident or by a request.
+   */
+  const auth = options.authVerifier ?? (options.auth ? new AuthVerifier(options.auth) : null);
 
   /**
    * NO in-memory default, unlike every cache in this service.
@@ -1250,6 +1509,78 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
    * rather than accept something it cannot keep.
    */
   const applications = options.applicationStore ?? null;
+
+  /**
+   * Vendor profiles. Same posture as applications: no in-memory default, so an
+   * absent store refuses rather than accepting details it cannot keep.
+   */
+  const profiles = options.vendorAccountStore ?? null;
+
+
+  /**
+   * The vendor profile — who is applying.
+   *
+   * THE UID COMES FROM THE VERIFIED TOKEN AND NEVER FROM THE BODY. That single
+   * line is the whole security of this route: a uid read from a request would
+   * let anyone write a record owned by someone else, and `parseAccountRequest`
+   * deliberately does not even look for one.
+   *
+   * An anonymous token is not an account. Every visitor holds one for the
+   * quota hint, so a naive check would silently give everyone a vendor profile
+   * that vanishes when they clear storage.
+   */
+  app.get("/v1/vendor/account", auth ? { preHandler: auth.guard() } : {}, async (request, reply) => {
+    if (!auth || !profiles) {
+      return reply.status(503).send({
+        error: "profiles_unavailable",
+        message: "Vendor accounts are not available on this deployment.",
+      });
+    }
+
+    const user = userOf(request);
+    if (!user) {
+      return reply.status(401).send({ error: "sign_in_required", message: "Sign in first." });
+    }
+
+    const profile = await profiles.find(user.uid);
+    return profile ? { profile } : reply.status(404).send({ error: "no_profile" });
+  });
+
+  app.post("/v1/vendor/account", auth ? { preHandler: auth.guard() } : {}, async (request, reply) => {
+    if (!auth || !profiles) {
+      return reply.status(503).send({
+        error: "profiles_unavailable",
+        message: "Vendor accounts are not available on this deployment.",
+      });
+    }
+
+    const user = userOf(request);
+    if (!user) {
+      return reply.status(401).send({ error: "sign_in_required", message: "Sign in first." });
+    }
+
+    const parsed = parseAccountRequest(request.body);
+    if (!parsed.ok) {
+      return reply.status(400).send({
+        error: "invalid_profile",
+        message: "The vendor profile did not pass validation.",
+        details: parsed.errors,
+      });
+    }
+
+    const now = Date.now();
+    const existing = await profiles.find(user.uid);
+    const profile: VendorAccount = {
+      ...parsed.value,
+      // From the token. Never `request.body`.
+      uid: user.uid,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+
+    await profiles.save(profile);
+    return { profile };
+  });
 
   app.post(
     "/v1/events/:id/apply",
@@ -1292,19 +1623,25 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       }
 
       /**
-       * A sample listing is not a real booking, and must never behave like
-       * one. Letting a vendor believe they applied to an event that does not
-       * exist is the single most harmful thing this feature could do, so it is
-       * refused at the route rather than merely discouraged in the UI.
+       * CURATED LISTINGS ACCEPT APPLICATIONS, and that is a deliberate reversal
+       * of the rule that used to sit here.
+       *
+       * This route refused `source === "seed"` with a 409 so that nobody could
+       * believe they had applied to an event that did not exist. The owner
+       * changed the answer, and the reasoning holds up: these events ARE real
+       * — real posters, real dates, real venues, real organizers — and what is
+       * curated is the booth pricing and the slot counts, not the event.
+       *
+       * So the protection moved from a refusal to the truth. The record is
+       * genuinely stored, the confirmation says Spotential has it and will
+       * pass it to the organizer, and `listingSource` below carries whether
+       * the fee the vendor agreed to was published or estimated. What would
+       * still be wrong is claiming the organizer has already received it.
        */
-      if (event.source === "seed") {
-        return reply.status(409).send({
-          error: "sample_event",
-          message:
-            "This is a sample listing used to demonstrate scoring, not a live booking. " +
-            "Applications open when a real organizer publishes an event.",
-        });
-      }
+      const cheapest = event.packages.length
+        ? Math.min(...event.packages.map((p) => p.priceRm))
+        : null;
+      const chosen = event.packages.find((p) => p.id === parsed.value.packageId) ?? null;
 
       const application: BoothApplication = {
         id: applicationId(user.uid, event.id),
@@ -1312,11 +1649,15 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
         eventId: event.id,
         eventName: event.name,
         packageId: parsed.value.packageId,
+        listingSource: event.source,
+        boothPriceRm: chosen?.priceRm ?? cheapest,
         businessName: parsed.value.businessName,
         contactName: parsed.value.contactName,
         contactEmail: parsed.value.contactEmail,
         contactPhone: parsed.value.contactPhone,
         productDescription: parsed.value.productDescription,
+        boothActivation: parsed.value.boothActivation,
+        whyThisEvent: parsed.value.whyThisEvent,
         status: "submitted",
         submittedAt: Date.now(),
       };

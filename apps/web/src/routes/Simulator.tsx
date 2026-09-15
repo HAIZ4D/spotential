@@ -61,21 +61,21 @@ export default function Simulator() {
         </div>
       )}
 
+      {/**
+        * THE CONSOLE FIRST, then the figures it moves.
+        *
+        * This page used to open with a KPI strip, then a narrow left sidebar
+        * holding the ask box above seventeen form fields, with the charts it
+        * affects in a different column. So the one thing the page is for was
+        * the smallest thing on it, and a question and its consequence were
+        * never on screen together. They are adjacent now.
+        */}
+      <AskPanel scenario={scenario} />
+
       <KpiStrip result={result} baseline={baselineResult} showDeltas={isDirty} />
 
       {isDirty && (
-        <div
-          className="no-print"
-          style={{
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-            padding: "8px 16px",
-            borderBottom: "1px solid var(--line)",
-            background: "var(--surface)",
-            fontSize: 13,
-          }}
-        >
+        <div className="sim-baseline no-print">
           <span className="muted">Comparing against your pinned baseline.</span>
           <button type="button" className="tiny" onClick={revertToBaseline}>
             {en.ai.revert}
@@ -86,13 +86,8 @@ export default function Simulator() {
         </div>
       )}
 
-      <div className="layout">
-        <aside className="col-inputs no-print">
-          <AskPanel scenario={scenario} />
-          <InputPanel scenario={scenario} />
-        </aside>
-
-        <main className="col-detail">
+      <div className="simgrid">
+        <main className="sim-results">
           <WarningsPanel result={result} onApply={apply} />
           {result.recovery && <RecoveryPanel result={result} onApply={apply} />}
           <ProjectionChart result={result} />
@@ -117,6 +112,12 @@ export default function Simulator() {
             </div>
           </section>
         </main>
+
+        {/* The levers, demoted from the page's spine to a reference rail, and
+            sticky so they stay reachable exactly like the map on /analysis. */}
+        <aside className="sim-rail no-print">
+          <InputPanel scenario={scenario} />
+        </aside>
       </div>
     </>
   );

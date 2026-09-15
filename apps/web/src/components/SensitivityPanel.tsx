@@ -1,4 +1,5 @@
 import { en, HORIZON_MONTHS, type SimulationResult } from "@spotential/sim-engine";
+import { PanelLede, sensitivityLede } from "./sim/PanelLede.js";
 
 /**
  * Which lever actually moves the answer — SPEC §4.9.
@@ -21,6 +22,11 @@ export function SensitivityPanel({ result }: { result: SimulationResult }) {
         <span className="tiny muted">payback at ±20%</span>
       </header>
       <div className="body">
+        {(() => {
+          const lede = sensitivityLede(result);
+          return lede ? <PanelLede text={lede.text} figure={lede.figure} /> : null;
+        })()}
+
         {sensitivity.map((entry) => (
           <div className="sens-row" key={entry.field}>
             <span>{en.levers[entry.field] ?? entry.field}</span>

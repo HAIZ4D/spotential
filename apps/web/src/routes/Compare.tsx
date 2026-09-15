@@ -14,12 +14,15 @@ import { CompareToolbar } from "../components/compare/CompareToolbar.js";
 import { CompareHero } from "../components/compare/CompareHero.js";
 import { DimensionCompare } from "../components/compare/DimensionCompare.js";
 import { CompareTable } from "../components/CompareTable.js";
+import { CompareAI } from "../components/compare/CompareAI.js";
 import { ReportButton } from "../components/ReportButton.js";
 import { postCompetitors, postDemographics } from "../lib/api.js";
 import {
   MAX_COMPARED,
   comparisonSearchParams,
   parseComparisonFromSearch,
+  readPendingComparison,
+  writePendingComparison,
 } from "../lib/compareUrl.js";
 import type { PickedLocation } from "../lib/location.js";
 
@@ -35,7 +38,31 @@ import type { PickedLocation } from "../lib/location.js";
  * location and this page is about the score, not the category ranking.
  */
 export default function Compare() {
-  const initial = useMemo(() => parseComparisonFromSearch(window.location.search), []);
+  /**
+   * The comparison to open with, and the ORDER here is the whole safety of it.
+   *
+   * THE URL WINS. Somebody opening a link you sent must see your comparison,
+   * not whatever they were last looking at. A restore that quietly overrode
+   * the address bar would show them two sites they never chose, on a page
+   * whose header offers to share that link.
+   *
+   * Only when the URL carries nothing does the saved copy come back. That is
+   * the case the owner hit: the nav's Compare link is a bare `/compare`, so
+   * leaving for Events and returning landed on an empty page and the work was
+   * genuinely gone. `readPendingComparison` already existed for the
+   * "Add to comparison" flow and nothing had ever called it from here.
+   */
+  const initial = useMemo(() => {
+    const fromUrl = parseComparisonFromSearch(window.location.search);
+    if (fromUrl.state.locations.length > 0) return fromUrl;
+
+    const saved = readPendingComparison();
+    // An empty save is not a save: a first-ever visit must still get the
+    // "Add a second location" state rather than an empty shell.
+    if (!saved || saved.locations.length === 0) return fromUrl;
+
+    return { ...fromUrl, state: saved };
+  }, []);
 
   const [category, setCategory] = useState<BusinessCategory>(initial.state.category);
   const [radiusMetres, setRadiusMetres] = useState<number>(initial.state.radiusMetres);
@@ -53,11 +80,26 @@ export default function Compare() {
     [locations, rents],
   );
 
-  // Keep the link current, so copying the address bar shares the comparison.
+  /**
+   * Keep the link current, and keep a copy that survives navigation.
+   *
+   * The URL stays the durable, shareable record; the stored copy exists only
+   * so that returning to a bare `/compare` finds the work again. Writing both
+   * from one effect is what stops the two drifting apart.
+   *
+   * It runs on the RESTORED state as well as on edits, deliberately: that is
+   * what puts the locations back into the address bar after a restore, so the
+   * link is shareable again rather than being a dead `/compare`.
+   */
   useEffect(() => {
+    const state = { category, radiusMetres, locations, rents };
     const url = new URL(window.location.href);
-    url.search = comparisonSearchParams({ category, radiusMetres, locations, rents }).toString();
+    url.search = comparisonSearchParams(state).toString();
     window.history.replaceState(null, "", url.toString());
+
+    // Never store an empty comparison: it would turn a deliberate "remove the
+    // last site" into a restore of nothing, and mask a real first visit.
+    if (locations.length > 0) writePendingComparison(state);
   }, [category, radiusMetres, locations, rents]);
 
   // One competitor search and one demographics lookup per location. Both ride
@@ -138,6 +180,45 @@ export default function Compare() {
     (s) => s.score.dimensions.find((d) => d.key === "rent")?.kind !== "unavailable",
   ).length;
 
+  /**
+   * The payload the SERVER is given, built once.
+   *
+   * The PDF and the AI panel both send this, and they must send the same
+   * thing: a report and an analysis describing different inputs would be two
+   * authoritative documents that disagree. It used to be built inline inside
+   * the report button's prop, which is exactly how a second copy gets written.
+   *
+   * Note what is NOT here: catchment. The server measures that from its own
+   * population grid for every one of these routes, because it is a
+   * measurement and a client has no business asserting it.
+   */
+  const reportLocations = useMemo(
+    () =>
+      locations.flatMap((location, index) => {
+        const data = results[index * 2]?.data as
+          | Awaited<ReturnType<typeof postCompetitors>>
+          | undefined;
+        const demo = results[index * 2 + 1]?.data as
+          | Awaited<ReturnType<typeof postDemographics>>
+          | undefined;
+        if (!data) return [];
+
+        return [
+          {
+            point: { lat: location.lat, lng: location.lng },
+            label: location.label,
+            competitors: data.summary,
+            truncated: data.truncated,
+            completeToMetres: data.completeToMetres,
+            density: data.density,
+            demographics: demo?.demographics ?? null,
+            rentOverride: rents[index] ?? null,
+          },
+        ];
+      }),
+    [locations, results, rents],
+  );
+
   const comparison = useMemo(() => compareLocations(scored), [scored]);
 
   return (
@@ -155,28 +236,7 @@ export default function Compare() {
             kind: "comparison",
             category,
             radiusMetres,
-            locations: locations.flatMap((location, index) => {
-              const data = results[index * 2]?.data as
-                | Awaited<ReturnType<typeof postCompetitors>>
-                | undefined;
-              const demo = results[index * 2 + 1]?.data as
-                | Awaited<ReturnType<typeof postDemographics>>
-                | undefined;
-              if (!data) return [];
-
-              return [
-                {
-                  point: { lat: location.lat, lng: location.lng },
-                  label: location.label,
-                  competitors: data.summary,
-                  truncated: data.truncated,
-                  completeToMetres: data.completeToMetres,
-                  density: data.density,
-                  demographics: demo?.demographics ?? null,
-                  rentOverride: rents[index] ?? null,
-                },
-              ];
-            }),
+            locations: reportLocations,
           })}
         />
       </Masthead>
@@ -203,88 +263,86 @@ export default function Compare() {
       />
 
       {locations.length < 2 ? (
-        <div className="cockpit compare">
-          <div className="cockpit-info">
-            <section className="card">
-              <header>
-                <h2>Comparison</h2>
-              </header>
-              <div className="body">
-                <div className="notice info">
-                  <span>
-                    Add at least two locations to compare. A single score means little on its own.
-                    the point is the difference between two sites.
-                  </span>
-                </div>
-              </div>
-            </section>
+        <div className="cmpx">
+          <div className="cmpx-empty">
+            <h2>Add a second location</h2>
+            <p>
+              A single score means little on its own. The point of this page is the difference
+              between two sites, so it waits until it has two to difference.
+            </p>
+            <p className="tiny muted">
+              Score a location first, then use <strong>Add to comparison</strong> on it. The
+              business type and radius you pick here apply to every site.
+            </p>
           </div>
         </div>
       ) : loading ? (
-        <div className="cockpit compare">
-          <div className="cockpit-info">
-            <section className="card">
-              <div className="body">
-                <div className="small muted">Scoring each location…</div>
-              </div>
-            </section>
+        <div className="cmpx">
+          {/* Holds the shape the answer will take, so the page does not jolt
+              when the scores land. */}
+          <div className="cmpx-skeleton" aria-live="polite">
+            Scoring each location&hellip;
           </div>
         </div>
       ) : (
         <>
-          <CompareHero locations={scored} comparison={comparison} />
+          <div className="cmpx">
+            <CompareHero locations={scored} comparison={comparison} />
 
-          <div className="cockpit compare">
-            <div className="cockpit-info">
-              <section className="card">
-                <header>
-                  <h2>Location profiles</h2>
-                </header>
-                <div className="body">
-                  <DimensionCompare locations={scored} comparison={comparison} />
-                </div>
-              </section>
+            {/* The ledger IS the page: one row per dimension, both sites, and
+                the gap between them. Full width, because a difference needs
+                horizontal room to be visible and the old two-column shell left
+                the whole bottom-right of the page empty. */}
+            <section className="cmpx-panel">
+              <header className="cmpx-panel-head">
+                <span className="cmpx-kicker">Dimension by dimension</span>
+                <h2>Where the difference actually is</h2>
+              </header>
+              <DimensionCompare locations={scored} comparison={comparison} />
+            </section>
 
-              <section className="card">
-                <header>
-                  <h2>Every figure</h2>
-                </header>
-                <div className="body">
-                  {/* Substantively untouched: the table has to tally, and it
-                      already labels measured vs inferred correctly. */}
-                  <CompareTable locations={scored} comparison={comparison} />
-                </div>
-              </section>
+            <CompareAI
+              category={category}
+              radiusMetres={radiusMetres}
+              locations={reportLocations}
+              scored={scored}
+              comparison={comparison}
+            />
+
+            <section className="cmpx-panel">
+              <header className="cmpx-panel-head">
+                <span className="cmpx-kicker">Profile shapes</span>
+                <h2>The same scores, as a shape</h2>
+              </header>
+              <CompareRadar locations={scored} />
+            </section>
+
+            {/* Folded, never trimmed. It holds exactly the figures above, so
+                it is duplication on screen — but it tallies, it labels every
+                cell measured or inferred, and it is the part that prints. Same
+                treatment the event page gives its score working. */}
+            <details className="cmpx-working">
+              <summary>Show every figure</summary>
+              <CompareTable locations={scored} comparison={comparison} />
+            </details>
+
+            <div className="notice info cmpx-caveat">
+              <span>
+                These are <strong>comparison scores, not forecasts</strong>. Nothing here has been
+                validated against real outcomes. Read the dimension differences rather than the
+                totals alone.
+                {withRent === 0
+                  ? " Rent sensitivity is missing for every location: no benchmark covers these spots."
+                  : withRent < scored.length
+                    ? " Rent sensitivity is inferred for some locations and missing for others, so weigh that dimension carefully."
+                    : " Rent figures are researched benchmarks unless you entered a quote, so treat that dimension as indicative."}
+              </span>
             </div>
 
-            <div className="cockpit-map cmp-aside">
-              <section className="card">
-                <header>
-                  <h2>Profile shapes</h2>
-                </header>
-                <div className="body">
-                  <CompareRadar locations={scored} />
-                </div>
-              </section>
-
-              <div className="notice info">
-                <span>
-                  These are <strong>comparison scores, not forecasts</strong>. Nothing here has
-                  been validated against real outcomes. Read the shapes and the dimension
-                  differences rather than the totals alone.
-                  {withRent === 0
-                    ? " Rent sensitivity is missing for every location: no benchmark covers these spots."
-                    : withRent < scored.length
-                      ? " Rent sensitivity is inferred for some locations and missing for others, so weigh that dimension carefully."
-                      : " Rent figures are researched benchmarks unless you entered a quote, so treat that dimension as indicative."}
-                </span>
-              </div>
-
-              <div className="tiny muted">
-                Business type and radius apply to every location. Comparing different categories
-                or radii would not be a comparison.
-              </div>
-            </div>
+            <p className="cmpx-sourceline">
+              Business type and radius apply to every location. Comparing different categories or
+              radii would not be a comparison.
+            </p>
           </div>
         </>
       )}

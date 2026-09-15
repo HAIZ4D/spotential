@@ -20,6 +20,22 @@ export interface ApplyRequest {
   contactEmail: string;
   contactPhone: string;
   productDescription: string;
+  /**
+   * The pitch, and the reason it is two fields rather than a longer
+   * description.
+   *
+   * An organizer reading fifty applications is deciding two different things:
+   * whether this stall suits the event at all, and what it will actually do on
+   * the day. Folded into one box those arrive as a paragraph that has to be
+   * read to be sorted. Kept apart they can be skimmed, and a vendor who has
+   * nothing planned beyond selling can leave the second one empty rather than
+   * padding it.
+   *
+   * BOTH OPTIONAL. `productDescription` is what the organizer needs; a pitch is
+   * what helps. Requiring it would only teach people to write filler.
+   */
+  boothActivation: string;
+  whyThisEvent: string;
   /** The vendor has read what gets shared with the organizer. */
   consentToShare: boolean;
 }
@@ -35,6 +51,8 @@ const LIMITS = {
   contactEmail: 254,
   contactPhone: 30,
   productDescription: 600,
+  boothActivation: 600,
+  whyThisEvent: 600,
 } as const;
 
 const str = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
@@ -97,6 +115,22 @@ export function parseApplyRequest(body: unknown): ApplyParse {
     errors.push("Tick the box to confirm your details may be shared with the organizer.");
   }
 
+  /**
+   * Capped, never truncated. Silently shortening a pitch would hand the
+   * organizer half a sentence and tell the vendor nothing went wrong — the
+   * same reasoning that refuses a mistyped phone number rather than trimming
+   * it.
+   */
+  const boothActivation = str(raw["boothActivation"]);
+  if (boothActivation.length > LIMITS.boothActivation) {
+    errors.push(`Keep what you will run at the booth under ${LIMITS.boothActivation} characters.`);
+  }
+
+  const whyThisEvent = str(raw["whyThisEvent"]);
+  if (whyThisEvent.length > LIMITS.whyThisEvent) {
+    errors.push(`Keep why you fit this event under ${LIMITS.whyThisEvent} characters.`);
+  }
+
   const packageValue = str(raw["packageId"]);
 
   if (errors.length > 0) return { ok: false, errors };
@@ -111,6 +145,8 @@ export function parseApplyRequest(body: unknown): ApplyParse {
       contactEmail,
       contactPhone,
       productDescription,
+      boothActivation,
+      whyThisEvent,
       consentToShare,
     },
   };

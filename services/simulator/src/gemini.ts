@@ -193,7 +193,7 @@ export async function callGemini(
   config: GeminiConfig,
   body: unknown,
   modelOverride?: string,
-): Promise<{ functionCall?: FunctionCall; text?: string }> {
+): Promise<{ functionCall?: FunctionCall; text?: string; finishReason?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.timeoutMs ?? 20_000);
 
@@ -216,9 +216,24 @@ export async function callGemini(
     }
 
     const json = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string; functionCall?: FunctionCall }[] } }[];
+      candidates?: {
+        finishReason?: string;
+        content?: { parts?: { text?: string; functionCall?: FunctionCall }[] };
+      }[];
     };
     const parts = json.candidates?.[0]?.content?.parts ?? [];
+    /**
+     * WHY the reply ended, which nothing here used to carry.
+     *
+     * `MAX_TOKENS` is the only signal that a reply was cut off, and thinking
+     * tokens are charged against the same ceiling as the answer. For JSON that
+     * overrun presents as a parse failure, which at least fails loudly. For
+     * PROSE it presents as a sentence that simply stops, the guard passes it
+     * because every figure in it is real, and a reader gets a confident
+     * fragment. Found live on the comparison assistant, where the fact sheet
+     * is three times the size of a single location's.
+     */
+    const finishReason = json.candidates?.[0]?.finishReason;
 
     const call = parts.find((p) => p.functionCall)?.functionCall;
     const text = parts
@@ -227,7 +242,11 @@ export async function callGemini(
       .join("")
       .trim();
 
-    return { ...(call ? { functionCall: call } : {}), ...(text ? { text } : {}) };
+    return {
+      ...(call ? { functionCall: call } : {}),
+      ...(text ? { text } : {}),
+      ...(finishReason ? { finishReason } : {}),
+    };
   } finally {
     clearTimeout(timer);
   }

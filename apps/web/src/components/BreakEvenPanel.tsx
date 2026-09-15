@@ -1,5 +1,6 @@
 import { formatCurrency, formatNumber, type SimulationResult } from "@spotential/sim-engine";
 import { RunwayTimeline } from "./sim/RunwayTimeline.js";
+import { PanelLede, breakEvenLede } from "./sim/PanelLede.js";
 
 /**
  * The three break-even numbers — SPEC §4.8.
@@ -23,6 +24,11 @@ export function BreakEvenPanel({ result }: { result: SimulationResult }) {
         <h2>Break-even</h2>
       </header>
       <div className="body stack">
+        {(() => {
+          const lede = breakEvenLede(result);
+          return <PanelLede text={lede.text} figure={lede.figure} />;
+        })()}
+
         <RunwayTimeline result={result} />
 
         <Row

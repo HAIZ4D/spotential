@@ -27,10 +27,25 @@ export function bandFor(score: number): Band {
 
 const SIZE = 132;
 const STROKE = 11;
-const RADIUS = (SIZE - STROKE) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export function ScoreRing({ score }: { score: number }) {
+/**
+ * An optional smaller ring, and the reason it is a PROP rather than a CSS
+ * transform on the caller's side.
+ *
+ * The compare page wanted a ring beside two lines of text and scaled it with
+ * `transform: scale(0.62)`. A transform does not change layout: the 132px box
+ * kept its 132px column while the paint shrank, so the ring visually spilled
+ * ~15px into the text next to it and the reading ran underneath it. Sizing the
+ * SVG itself is the only version where the layout box and the drawing agree.
+ *
+ * Everything inside scales with it, including the type, or a 82px ring gets
+ * 38px digits and the number overflows its own circle.
+ */
+export function ScoreRing({ score, size = SIZE }: { score: number; size?: number }) {
+  const stroke = Math.max(6, Math.round((STROKE * size) / SIZE));
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const scale = size / SIZE;
   // 700ms: this happens once on arrival and nothing is waiting on it, unlike
   // the simulator's sliders where 200ms is right because they fire on drag.
   const counted = useCountUp(score, 700);
@@ -51,37 +66,40 @@ export function ScoreRing({ score }: { score: number }) {
   const clamped = Math.max(0, Math.min(100, shown));
 
   return (
-    <div className="ring-wrap">
-      <svg width={SIZE} height={SIZE} role="img" aria-label={`Success score ${Math.round(score)} out of 100`}>
+    <div className="ring-wrap" style={{ width: size, height: size }}>
+      <svg width={size} height={size} role="img" aria-label={`Success score ${Math.round(score)} out of 100`}>
         <circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={RADIUS}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
           fill="none"
           stroke="var(--line)"
-          strokeWidth={STROKE}
+          strokeWidth={stroke}
         />
         <circle
           className="ring-arc"
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={RADIUS}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
           fill="none"
           stroke={band.colour}
-          strokeWidth={STROKE}
+          strokeWidth={stroke}
           strokeLinecap="round"
-          strokeDasharray={CIRCUMFERENCE}
-          strokeDashoffset={CIRCUMFERENCE * (1 - clamped / 100)}
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - clamped / 100)}
         />
       </svg>
 
-      <div className="ring-centre">
+      <div className="ring-centre" style={{ fontSize: `${scale}em` }}>
         {/* Counts up as the arc sweeps, so the two read as one movement
             rather than a number that snaps while a ring travels. Banding
             still uses the FINAL score: a ring that changed colour on its way
             past 40 and 70 would flash a verdict it does not hold. */}
         <span className="ring-score">{Math.round(counted)}</span>
-        <span className="ring-out-of">out of 100</span>
+        {/* Dropped on a small ring. Three stacked lines inside 86px crowd the
+            arc, and "out of 100" is the one a reader can infer: the number and
+            the band cannot be. */}
+        {size >= 110 && <span className="ring-out-of">out of 100</span>}
         <span className="ring-band" style={{ color: band.colour }}>
           {band.label.toUpperCase()}
         </span>

@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import mark from "../../img/spotential-mark.png";
-import { currentAccount, onAccountChange, signInWithGoogle, signOutAccount } from "../lib/firebase.js";
+import { currentAccount, onAccountChange, signOutAccount } from "../lib/firebase.js";
 
 gsap.registerPlugin(useGSAP);
 
@@ -56,7 +56,6 @@ export function Masthead({ subtitle, children }: { subtitle: string; children?: 
 
   const [open, setOpen] = useState(false);
   const [account, setAccount] = useState(currentAccount());
-  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => onAccountChange(setAccount), []);
 
@@ -260,21 +259,6 @@ export function Masthead({ subtitle, children }: { subtitle: string; children?: 
     gsap.to(e.currentTarget, { y: on ? -1 : 0, duration: 0.15, ease: "power1.out" });
   };
 
-  const signIn = async () => {
-    setAuthError(null);
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      const code = (error as { code?: string }).code ?? "";
-      setAuthError(
-        code.includes("popup-closed") || code.includes("cancelled")
-          ? "Sign-in was cancelled."
-          : code.includes("operation-not-allowed")
-            ? "Sign-in is not switched on for this project yet."
-            : "Could not sign in. Try again in a moment.",
-      );
-    }
-  };
 
   return (
     <header className="navbar-shell no-print" ref={shellRef}>
@@ -327,22 +311,25 @@ export function Masthead({ subtitle, children }: { subtitle: string; children?: 
             </>
           ) : (
             <>
-              <button
+              {/* Real pages, not a popup. Both used to fire the same Google
+                  popup, so "Sign up" could not collect the business details an
+                  organizer needs and "Log in" had no email option at all. */}
+              <Link
+                to="/login"
                 className="nav-login"
-                onClick={() => void signIn()}
                 onMouseEnter={hover(true)}
                 onMouseLeave={hover(false)}
               >
                 Log in
-              </button>
-              <button
+              </Link>
+              <Link
+                to="/register"
                 className="nav-signup"
-                onClick={() => void signIn()}
                 onMouseEnter={hover(true)}
                 onMouseLeave={hover(false)}
               >
                 Sign up
-              </button>
+              </Link>
             </>
           )}
           </div>
@@ -362,12 +349,6 @@ export function Masthead({ subtitle, children }: { subtitle: string; children?: 
           </span>
         </button>
       </nav>
-
-      {authError && (
-        <p className="nav-auth-error" role="status">
-          {authError}
-        </p>
-      )}
 
       {/* Page-level actions the routes pass in — the parity badge, share bar,
           print and report buttons. They keep their own row so the capsule stays

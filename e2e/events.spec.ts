@@ -284,15 +284,28 @@ test("attributes the turnout figure to the organizer every time it appears", asy
   await page.goto("/events/terang-malam-market");
 
   /**
-   * The figure appears in three places — the facts list, the ROI caption and
-   * the score note — and EVERY ONE of them names its source. That is the
-   * property worth pinning, so the count is asserted rather than just the
-   * first occurrence.
+   * EVERY mention names its source. That is the property worth pinning, and it
+   * used to be written as "exactly three", which was the count on the day
+   * rather than the guarantee: a page that says more about an event will
+   * legitimately mention the figure more often, and a rewrite that dropped one
+   * mention entirely would still have passed. Asserting at least one, and then
+   * walking ALL of them, is strictly stronger than the count it replaces.
    */
   const mentions = page.getByText(/18,000/);
-  await expect(mentions).toHaveCount(3);
+  /**
+   * Wait for the page, not for a particular mention to be VISIBLE. One of them
+   * now lives inside the closed "How this was scored" disclosure, and a
+   * hidden mention still has to name its source: the guarantee is about what
+   * the text says, not about whether it is currently on screen.
+   *
+   * `count()` does not auto-wait, unlike `toHaveCount`, so something has to
+   * settle the page first.
+   */
+  await expect(page.locator(".evx-meter")).toHaveCount(6);
+  const count = await mentions.count();
+  expect(count).toBeGreaterThan(0);
 
-  for (let i = 0; i < 3; i += 1) {
+  for (let i = 0; i < count; i += 1) {
     await expect(mentions.nth(i)).toContainText(/organizer/i);
   }
 
@@ -344,6 +357,17 @@ test("scores the venue on the same national scale the rest of the app uses", asy
   await stub(page);
   await page.goto("/events/terang-malam-market");
 
+  /**
+   * The score working is opened FIRST, and that ordering is the point.
+   *
+   * The dimension notes moved behind a disclosure, and the catchment note is
+   * the earliest `3,100` in the DOM — so `.first()` started resolving to a
+   * hidden element and a visibility assertion failed against a page that was
+   * perfectly correct. Folding content into a `<details>` hides it from every
+   * query, which cost eleven tests at once the last time it happened here.
+   */
+  await page.locator(".evx-working summary").click();
+
   await expect(page.getByText(/3,100/).first()).toBeVisible();
   await expect(page.getByText(/residents within 500m/).first()).toBeVisible();
   // The caveat that stops it being read as footfall.
@@ -360,18 +384,25 @@ test("shows an unscored dimension in words, never as a zero bar", async ({ page 
 });
 
 /**
- * Applying, and the refusal that matters most.
+ * Applying, and what replaced the refusal.
+ *
+ * This route used to refuse every listing in the catalogue, because all of
+ * them are curated rather than published by their organizer. The owner
+ * reversed that, and the honesty moved from the refusal into the copy: the
+ * events are real, the record is really stored, and the page says what
+ * actually happens next rather than implying the organizer already has it.
  */
-test("refuses to take an application for a sample listing", async ({ page }) => {
+test("gates the form behind an account rather than refusing the event", async ({ page }) => {
   await stub(page);
   await page.goto("/events/terang-malam-market");
 
-  // Stated BEFORE the form rather than discovered after submitting. Letting
-  // someone believe they applied to an event that does not exist would be the
-  // most harmful thing this feature could do — so the form is absent, not
-  // merely disabled, and the route refuses these server-side regardless.
-  await expect(page.getByText(/Applications are not open for this event yet/)).toBeVisible();
+  // Signed out, there is no form at all rather than a disabled one: nothing is
+  // useful to type before there is somebody for the organizer to reply to.
   await expect(page.getByRole("button", { name: /Send application/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Join as a vendor" })).toBeVisible();
+
+  // And the page no longer tells a vendor the event cannot be applied to.
+  await expect(page.getByText(/Applications are not open for this event yet/)).toHaveCount(0);
 });
 
 test("keeps browsing and costing free of any sign-in", async ({ page }) => {
@@ -632,7 +663,37 @@ test("typing in the search box actually types", async ({ page }) => {
 
   const box = page.getByPlaceholder("Event, venue or organizer");
   await box.click();
-  await box.pressSequentially("terang", { delay: 30 });
+
+  /**
+   * ONE CHARACTER, CONFIRMED, THEN THE REST.
+   *
+   * Waiting for the first card was not enough: the cards can be on screen
+   * while the controlled input is still catching up, and keystrokes that land
+   * in that window go nowhere. The field then settles a character or two short
+   * and the assertion fails on a value that looks almost right — which reads
+   * exactly like the frozen-field bug this test exists to catch.
+   *
+   * Proving the first keystroke registers is the hydration signal, and it
+   * still tests real typing rather than `fill`, which would bypass the very
+   * thing under test.
+   */
+  await box.press("t");
+  await expect(box).toHaveValue("t");
+
+  /**
+   * NO DELAY, deliberately.
+   *
+   * The original 30ms delay hid a real bug rather than avoiding a test
+   * artifact: `setParam` built each update from the `params` captured in its
+   * render, so two keystrokes landing before React re-rendered both started
+   * from the same stale base and the second overwrote the first. Typing
+   * "terang" produced "tg". It only surfaced on a loaded machine, which made
+   * it look like flakiness instead of dropped keystrokes.
+   *
+   * Typing as fast as the browser allows is the reproduction, so that is what
+   * this asserts now.
+   */
+  await box.pressSequentially("erang");
 
   await expect(box).toHaveValue("terang");
   await expect(page).toHaveURL(/[?&]q=terang/);

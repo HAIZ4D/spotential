@@ -193,7 +193,7 @@ const [geminiTransport, stores, demographics, population, amenitiesSeed, events]
     createEvents(),
   ]);
 
-const { competitorStore, listingsStore, amenitiesStore, applicationStore, briefingStore } = stores;
+const { competitorStore, listingsStore, amenitiesStore, applicationStore, readingsStore, vendorAccountStore } = stores;
 
 /**
  * The Firebase project, used to verify ID tokens on the apply route.
@@ -216,7 +216,7 @@ const app = buildApp({
   staticMaps,
   population,
   listingsStore,
-  briefingStore,
+  readingsStore,
   // The real network call. Kept out of buildApp so tests never touch a third
   // party, and so an unconfigured deployment reports "none" instead of
   // quietly reaching out to PropertyGuru from a test run.
@@ -234,6 +234,7 @@ const app = buildApp({
    */
   auth: firebaseProjectId ? { projectId: firebaseProjectId } : undefined,
   applicationStore,
+  vendorAccountStore,
   // Gates the routes that cost money. Absent only in local development and
   // tests; production always sets APP_CHECK_PROJECT_NUMBER.
   appCheck: appCheckProjectNumber
@@ -254,7 +255,8 @@ const app = buildApp({
     staticMaps: staticMaps ? "configured" : "none",
     population: population ? `hexagons:${population.hexagonCount}` : "none",
     listingsCache: listingsStore ? "firestore" : "in-memory",
-    briefCache: briefingStore ? "firestore" : "in-memory",
+    briefCache: readingsStore ? "firestore" : "in-memory",
+    vendorAccounts: vendorAccountStore ? "firestore" : "off",
     listings: "propertyguru",
     amenitiesCache: amenitiesStore ? "firestore" : "in-memory",
     amenities: "overpass",
@@ -293,21 +295,34 @@ async function createStores() {
     const { FirestoreListingsStore } = await import("./properties/store.js");
     const { FirestoreAmenitiesStore } = await import("./amenities/store.js");
     const { FirestoreApplicationStore } = await import("./events/store.js");
-    const { FirestoreBriefingStore } = await import("./chat/store.js");
+    const { FirestoreReadingsStore } = await import("./chat/store.js");
+    const { FirestoreVendorAccountStore } = await import("./events/store.js");
     const firestore = new Firestore(explicitProject ? { projectId: explicitProject } : {});
     // Do NOT read firestore.projectId here: it throws "Client is not yet ready
     // to issue requests" until credentials resolve, and the catch below would
     // swallow that into a silent in-memory fallback. The logging meant to
     // expose failures caused one.
-    console.log("[cache] competitor, listings, amenities and briefing caches backed by Firestore.");
+    console.log("[cache] competitor, listings, amenities and AI readings caches backed by Firestore.");
     return {
       competitorStore: new FirestoreCompetitorStore(firestore as never),
       listingsStore: new FirestoreListingsStore(firestore as never),
       amenitiesStore: new FirestoreAmenitiesStore(firestore as never),
-      briefingStore: new FirestoreBriefingStore(firestore as never),
+      /**
+       * BOTH AI PANELS, and this line is a bug fix rather than a new feature.
+       *
+       * The comparison panel's readings were wired to nothing, so they ran on
+       * the in-memory default in production: Cloud Run scales to zero, so
+       * every cold start lost the cache and re-billed three Gemini calls per
+       * comparison. Nothing caught it because `/health` had no field for it.
+       * It does now, and a deployed check asserts it.
+       */
+      readingsStore: new FirestoreReadingsStore(firestore as never),
       // Not a cache. See the note in app.ts on why there is no in-memory
       // fallback for this one.
       applicationStore: new FirestoreApplicationStore(firestore as never),
+      // Personal data, so it fails closed exactly like applications: there is
+      // no in-memory fallback for this one.
+      vendorAccountStore: new FirestoreVendorAccountStore(firestore as never),
     };
   } catch (error) {
     console.error("[cache] Firestore unavailable, falling back to in-memory:", error);

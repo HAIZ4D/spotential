@@ -6,11 +6,13 @@ import type { CompetitorsResponse } from "../../lib/api.js";
 import {
   postLocationAsk,
   postLocationBrief,
-  type Briefing,
+  type AgentReading,
   type ChatTurn,
   type GapsResponse,
+  type LocationReadings,
   type ReportLocation,
 } from "../../lib/api.js";
+import mark from "../../../img/spotential-mark.png";
 
 /**
  * Spotential AI — one surface for the whole location report.
@@ -29,9 +31,16 @@ import {
  * is the whole safety argument: the deterministic core keeps working when the
  * AI layer does not.
  *
+ * FOUR SPECIALISTS, NOT ONE ASSISTANT. Opportunity, Rivals, Customers and
+ * Money each read a different section of the same fact sheet and each answer
+ * in their own call. It replaced a single briefing that was asked to do all of
+ * it at once and read like a general assistant because that is what it was.
+ *
  * THE MODEL NEVER DOES ARITHMETIC. It is handed a fact sheet the engine built,
  * and a server-side guard refuses any field citing a number that is not in it.
- * A refusal shows the derived line alone rather than a plausible invention.
+ * A refusal now costs ONE CARD rather than the panel, and the missing card is
+ * named: a shorter panel that looks complete is the failure the split exists
+ * to avoid.
  */
 
 /**
@@ -174,9 +183,74 @@ const MAX_TURNS = 8;
 type BriefState =
   | { phase: "waiting" }
   | { phase: "thinking" }
-  | { phase: "ready"; briefing: Briefing }
-  /** The guard fired, or the model is unreachable. The derived line stands. */
+  | { phase: "ready"; result: LocationReadings }
+  /** The model is unreachable or unconfigured. The derived line stands. */
   | { phase: "unavailable"; reason: string };
+
+/**
+ * Render order, fixed here rather than taken from the response.
+ *
+ * The server returns whichever specialists ran, and skipped ones come back on
+ * a separate list, so left to itself the panel would reshuffle as sections
+ * appear and disappear between locations. It reads in the order somebody
+ * actually decides: is there an opening, who is already here, who lives here,
+ * what does it cost.
+ */
+const AGENT_ORDER = ["opportunity", "rivals", "customers", "money"] as const;
+
+/**
+ * WITHHELD AND SKIPPED ARE DIFFERENT THINGS, and the card says which.
+ *
+ * Withheld means the specialist answered and its answer was thrown away,
+ * almost always because it cited a figure this page never measured. Skipped
+ * means it was never asked, because the section it reads is empty. Printing
+ * one as the other would tell a reader the model had nothing to say about rent
+ * when the truth is that no benchmark reaches this point.
+ */
+const WITHHELD_COPY: Record<string, string> = {
+  refused:
+    "Withheld. This reading referred to a figure this page did not measure, so it was not shown.",
+  failed: "This reading did not come back. Every figure on the page is unaffected.",
+};
+
+function Specialist({
+  role,
+  reading,
+  quiet,
+}: {
+  role: string;
+  reading?: AgentReading;
+  /** The reason there is no reading. Computed or mapped, never generated. */
+  quiet?: string;
+}) {
+  return (
+    <article className={`ai-spec ai-reveal${reading ? "" : " is-quiet"}`}>
+      <span className="ai-spec-role">{role}</span>
+
+      {reading ? (
+        <>
+          <p className="ai-spec-headline">{reading.headline}</p>
+          <ul className="ai-spec-points">
+            {reading.points.map((point) => (
+              <li key={point}>{point}</li>
+            ))}
+          </ul>
+          {/* The action, marked apart from the observations above it. The
+              owner's verdict on the old gap table was that it told them
+              nothing they could act on, and this is the answer to that. */}
+          {reading.move && (
+            <p className="ai-spec-move">
+              <span className="ai-spec-move-label">Do this</span>
+              {reading.move}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="ai-spec-quiet">{quiet}</p>
+      )}
+    </article>
+  );
+}
 
 export function SpotentialAI({
   category,
@@ -240,10 +314,24 @@ export function SpotentialAI({
     })
       .then((response) => {
         if (!live) return;
+        /**
+         * A reply naming no specialist at all is not a panel.
+         *
+         * `postLocationBrief` normalises the shape so nothing can throw, which
+         * leaves one case it cannot fix: a response that parsed but described
+         * nothing, which is what an older revision answering during a deploy
+         * looks like. Four empty cards would be worse than saying so.
+         */
+        const named =
+          response.readings.length + response.withheld.length + response.skipped.length;
         setBrief(
-          response.kind === "brief"
-            ? { phase: "ready", briefing: response.briefing }
-            : { phase: "unavailable", reason: response.reason },
+          named > 0
+            ? { phase: "ready", result: response }
+            : {
+                phase: "unavailable",
+                reason:
+                  "The analysis did not come back in a form this page could read. Every figure here is unaffected.",
+              },
         );
       })
       .catch((caught: unknown) => {
@@ -360,7 +448,13 @@ export function SpotentialAI({
         </span>
         <span className="ai-name">Spotential AI</span>
         {brief.phase === "ready" && (
-          <span className="ai-state">reading {gaps ? "the full report" : "this location"}</span>
+          <span className="ai-state">
+            {/* Counts what actually ran, so a location with two sections of
+                data does not claim four specialists looked at it. */}
+            {brief.result.readings.length === 1
+              ? "1 specialist on this location"
+              : `${brief.result.readings.length} specialists on this location`}
+          </span>
         )}
         {thinking && <span className="ai-state">working through the numbers</span>}
       </header>
@@ -387,62 +481,36 @@ export function SpotentialAI({
         </p>
 
         {brief.phase === "ready" && (
-          <>
-            <p className="ai-headline ai-reveal">{brief.briefing.headline}</p>
+          <div className="ai-specialists">
+            {AGENT_ORDER.map((id) => {
+              const reading = brief.result.readings.find((r) => r.id === id);
+              if (reading) {
+                return <Specialist key={id} role={reading.role} reading={reading} />;
+              }
 
-            <ul className="ai-readings">
-              {brief.briefing.readings.map((reading) => (
-                <li key={reading} className="ai-reveal">
-                  {reading}
-                </li>
-              ))}
-            </ul>
+              /**
+               * A specialist with no reading still gets a card.
+               *
+               * Dropping it would leave a panel that looks complete while a
+               * whole subject is missing, which is the one failure splitting
+               * this into four calls exists to prevent.
+               */
+              const withheld = brief.result.withheld.find((w) => w.id === id);
+              if (withheld) {
+                return (
+                  <Specialist
+                    key={id}
+                    role={withheld.role}
+                    quiet={WITHHELD_COPY[withheld.reason] ?? WITHHELD_COPY["failed"]!}
+                  />
+                );
+              }
 
-            {/**
-              * The gap, given its own block.
-              *
-              * This replaced a six-row table of outlets, reviews per outlet
-              * and ratings that the owner could not act on. The moves are
-              * numbered because they are steps, and because numbering
-              * separates advice from the observations above at a glance.
-              */}
-            {/* Guarded on the verdict rather than assumed present. The type
-                says it is required, but a cache written by an older revision
-                can still be served, and an empty heading is worse than no
-                section — it reads as "there is no gap", a claim nobody made. */}
-            {brief.briefing.opportunity?.verdict ? (
-            <section className="ai-gap ai-reveal" aria-label="The opening, and how to take it">
-              <h3 className="ai-gap-title">The opening, and how to take it</h3>
-              <p className="ai-gap-verdict">{brief.briefing.opportunity.verdict}</p>
-              {brief.briefing.opportunity.why && (
-                <p className="ai-gap-why">{brief.briefing.opportunity.why}</p>
-              )}
-
-              {brief.briefing.opportunity.moves.length > 0 && (
-                <ol className="ai-moves">
-                  {brief.briefing.opportunity.moves.map((move) => (
-                    <li key={move}>{move}</li>
-                  ))}
-                </ol>
-              )}
-            </section>
-            ) : null}
-
-            <div className="ai-cards">
-              {brief.briefing.watchOut && (
-                <div className="ai-card watch ai-reveal">
-                  <span className="ai-card-label">Watch out for</span>
-                  <p>{brief.briefing.watchOut}</p>
-                </div>
-              )}
-              {brief.briefing.nextStep && (
-                <div className="ai-card next ai-reveal">
-                  <span className="ai-card-label">Do this next</span>
-                  <p>{brief.briefing.nextStep}</p>
-                </div>
-              )}
-            </div>
-          </>
+              const skipped = brief.result.skipped.find((k) => k.id === id);
+              if (!skipped) return null;
+              return <Specialist key={id} role={skipped.role} quiet={skipped.reason} />;
+            })}
+          </div>
         )}
 
         {thinking && (
@@ -506,7 +574,31 @@ export function SpotentialAI({
                 <p>{turn.text}</p>
               </div>
             ))}
-            {pending && <p className="ai-turn-pending">Working it out…</p>}
+            {/**
+              * An HONEST waiting state, not a spinner.
+              *
+              * Asking takes ten seconds or more and the only signal used to be
+              * the word "Thinking" on the button. There are no progress
+              * callbacks from the model, so a bar or a percentage would be
+              * measuring nothing; what this says instead is what actually
+              * happens, which is that the answer comes from this page's own
+              * figures and every number in it is checked against them before
+              * it is shown.
+              */}
+            {pending && (
+              <div className="aiwait" role="status" aria-live="polite">
+                <span className="aiwait-mark" aria-hidden="true">
+                  <img src={mark} alt="" width={26} height={28} />
+                </span>
+                <span className="aiwait-body">
+                  <span className="aiwait-line">Reading this location</span>
+                  <span className="aiwait-note">
+                    Answering from the figures on this page, then checking every number in the
+                    reply against them.
+                  </span>
+                </span>
+              </div>
+            )}
           </div>
         )}
 

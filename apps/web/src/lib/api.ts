@@ -291,30 +291,50 @@ export type ChatResponse =
   | { kind: "refused"; reason: string };
 
 /**
- * The Spotential AI briefing.
+ * The location panel: four specialist readings on one grounded fact sheet.
  *
- * One AI surface for the whole location report. `gaps` is passed up because
- * the page has already fetched it and the server cannot re-derive it without
- * paying Places again — it is sanitised server-side and used only as narration
- * material, never scored.
+ * `gaps` is passed up because the page has already fetched it and the server
+ * cannot re-derive it without paying Places again. It is sanitised server-side
+ * and used only as narration material, never scored.
+ *
+ * `withheld` and `skipped` are two different things and the panel says which.
+ * WITHHELD means a specialist answered and its answer was refused, usually
+ * because it cited a figure the page never measured. SKIPPED means it was
+ * never asked, because the section it reads is empty. Collapsing them would
+ * tell a reader "the model had nothing to say about rent" when the truth is
+ * that no rent benchmark reaches this point.
  */
-export interface Briefing {
+/**
+ * One specialist's reading, on either page.
+ *
+ * `withheld` is not an error field. Each specialist is its own call with its
+ * own numeric guard, so one can be refused while the others stand, and a panel
+ * has to be able to say WHICH view is missing rather than quietly rendering a
+ * shorter panel that looks complete.
+ */
+export interface AgentReading {
+  id: string;
+  role: string;
   headline: string;
-  readings: string[];
-  watchOut: string;
-  nextStep: string;
-  /** The gap, and the actions that would take it. */
-  opportunity: {
-    verdict: string;
-    why: string;
-    moves: string[];
-  };
+  points: string[];
+  /**
+   * One action, on the location panel only.
+   *
+   * The comparison's Advisor is entirely actions, so asking its other two
+   * specialists for one as well would leave that panel with three competing
+   * next steps.
+   */
+  move?: string;
 }
 
-export type BriefResponse =
-  | { kind: "brief"; briefing: Briefing; cached: boolean }
-  /** The model cited a figure the page never measured, so nothing is shown. */
-  | { kind: "refused"; reason: string; unsupported: number[] };
+export interface LocationReadings {
+  kind: "readings";
+  readings: AgentReading[];
+  withheld: { id: string; role: string; reason: string }[];
+  /** Never asked, with a reason computed from the data rather than written. */
+  skipped: { id: string; role: string; reason: string }[];
+  cached: boolean;
+}
 
 export async function postLocationBrief(
   body: {
@@ -328,7 +348,7 @@ export async function postLocationBrief(
     } | null;
   },
   signal?: AbortSignal,
-): Promise<BriefResponse> {
+): Promise<LocationReadings> {
   const response = await fetch(`${SIMULATOR_URL}/v1/location/brief`, {
     method: "POST",
     headers: { "content-type": "application/json", ...(await authHeaders()) },
@@ -344,7 +364,101 @@ export async function postLocationBrief(
     );
   }
 
-  return (await response.json()) as BriefResponse;
+  /**
+   * NORMALISED, not cast, and that is a crash this caught rather than a
+   * precaution.
+   *
+   * A Cloud Run deploy serves the old and new revisions side by side, so a
+   * browser holding this bundle can be answered by the previous one. It was:
+   * an older service returned the single briefing's `{kind:"brief"}` shape,
+   * the panel called `.find` on an absent `withheld`, and the uncaught
+   * TypeError took the WHOLE PAGE down. Score, map, tabs and all, for an AI
+   * response, which is the one thing this product's structure is meant to make
+   * impossible.
+   */
+  const payload = (await response.json()) as Partial<LocationReadings>;
+  return {
+    kind: "readings",
+    readings: Array.isArray(payload.readings) ? payload.readings : [],
+    withheld: Array.isArray(payload.withheld) ? payload.withheld : [],
+    skipped: Array.isArray(payload.skipped) ? payload.skipped : [],
+    cached: payload.cached === true,
+  };
+}
+
+export interface CompareReadings {
+  kind: "readings";
+  readings: AgentReading[];
+  withheld: { id: string; role: string; reason: string }[];
+  cached: boolean;
+}
+
+export async function postCompareBrief(
+  body: {
+    category: BusinessCategory;
+    radiusMetres: number;
+    locations: ReportLocation[];
+  },
+  signal?: AbortSignal,
+): Promise<CompareReadings> {
+  const response = await fetch(`${SIMULATOR_URL}/v1/compare/brief`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(await authHeaders()) },
+    body: JSON.stringify(body),
+    ...(signal ? { signal } : {}),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new ApiError(
+      payload.message ?? "Could not reach the analysis. Every figure on the page is unaffected.",
+      response.status,
+    );
+  }
+
+  return (await response.json()) as CompareReadings;
+}
+
+/**
+ * NO `adjust` VARIANT, unlike `ChatResponse`.
+ *
+ * The location assistant can move that page's category and radius controls.
+ * Here those apply to every site, so one sentence could spend a paid Places
+ * call per location. The route offers the model no such tool, and this type is
+ * where that decision is visible to anyone reading the client: the outcome
+ * simply cannot exist.
+ */
+export type CompareAskResponse =
+  | { kind: "answer"; text: string }
+  | { kind: "declined"; reason: string; suggestion: string }
+  | { kind: "refused"; reason: string };
+
+export async function postCompareAsk(
+  body: {
+    question: string;
+    category: BusinessCategory;
+    radiusMetres: number;
+    locations: ReportLocation[];
+    history: ChatTurn[];
+  },
+  signal?: AbortSignal,
+): Promise<CompareAskResponse> {
+  const response = await fetch(`${SIMULATOR_URL}/v1/compare/ask`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(await authHeaders()) },
+    body: JSON.stringify(body),
+    ...(signal ? { signal } : {}),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new ApiError(
+      payload.message ?? "Could not reach the assistant. Your figures are unaffected.",
+      response.status,
+    );
+  }
+
+  return (await response.json()) as CompareAskResponse;
 }
 
 export async function postLocationAsk(
@@ -671,12 +785,14 @@ export interface ApplyPayload {
   contactEmail: string;
   contactPhone: string;
   productDescription: string;
+  /** The pitch. Optional, and sent empty rather than omitted. */
+  boothActivation: string;
+  whyThisEvent: string;
   consentToShare: boolean;
 }
 
 export type ApplyResult =
   | { kind: "applied"; applicationId: string }
-  | { kind: "sample"; message: string }
   | { kind: "signin"; message: string }
   | { kind: "invalid"; errors: string[] };
 
@@ -688,9 +804,121 @@ export type ApplyResult =
  * interchangeable.
  *
  * Outcomes are modelled rather than thrown, because three of the four are
- * things the form should explain rather than errors — a sample listing, a
- * missing sign-in and a validation failure all have a sensible next step.
+ * things the form should explain rather than errors: a missing sign-in and a
+ * validation failure both have a sensible next step.
  */
+/**
+ * The vendor account — who is applying, stored once instead of retyped.
+ *
+ * Note what is NOT sent: a uid. The server takes it from the verified ID token
+ * in the Authorization header, because a uid in a body is a request to write a
+ * record owned by somebody else.
+ */
+export interface VendorAccount {
+  uid: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  companyName: string;
+  companyEmail: string;
+  companyPhone: string;
+  ssmNumber: string;
+  category: BusinessCategory;
+  itemsSold: string;
+  tin: string;
+  consentToShare: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type VendorAccountInput = Omit<VendorAccount, "uid" | "createdAt" | "updatedAt">;
+
+export type AccountResult =
+  | { kind: "saved"; account: VendorAccount }
+  | { kind: "signin"; message: string }
+  | { kind: "unavailable"; message: string }
+  | { kind: "invalid"; message: string; details: string[] };
+
+async function accountRequest(
+  method: "GET" | "POST",
+  body?: VendorAccountInput,
+): Promise<Response> {
+  const { accountHeaders } = await import("./firebase.js");
+  return fetch(`${SIMULATOR_URL}/v1/vendor/account`, {
+    method,
+    headers: {
+      "content-type": "application/json",
+      ...(await authHeaders()),
+      ...(await accountHeaders()),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+}
+
+export async function saveVendorAccount(input: VendorAccountInput): Promise<AccountResult> {
+  const response = await accountRequest("POST", input);
+  const payload = (await response.json().catch(() => ({}))) as {
+    account?: VendorAccount;
+    message?: string;
+    details?: string[];
+    error?: string;
+  };
+
+  if (response.ok && payload.account) return { kind: "saved", account: payload.account };
+  if (response.status === 401 || response.status === 403) {
+    return { kind: "signin", message: payload.message ?? "Sign in first." };
+  }
+  if (response.status === 503) {
+    return {
+      kind: "unavailable",
+      message: payload.message ?? "Vendor accounts are not available on this deployment.",
+    };
+  }
+  return {
+    kind: "invalid",
+    message: payload.message ?? "Those details did not pass validation.",
+    details: payload.details ?? [],
+  };
+}
+
+/** Null when there is no account yet, which is not an error. */
+export async function getVendorAccount(): Promise<VendorAccount | null> {
+  const response = await accountRequest("GET");
+  if (!response.ok) return null;
+  const payload = (await response.json().catch(() => ({}))) as { account?: VendorAccount };
+  return payload.account ?? null;
+}
+
+export interface SentApplication {
+  id: string;
+  eventId: string;
+  eventName: string;
+  businessName: string;
+  contactEmail: string;
+  submittedAt: number;
+}
+
+/**
+ * One vendor's own applications, and only ever their own.
+ *
+ * The server filters on the uid inside the verified token, so there is no
+ * query a client could widen. The panel uses this to recognise a vendor who
+ * has already applied: `applicationId` is `uid__eventId`, so a second send
+ * REPLACES the first rather than adding to it, and a blank form would hide
+ * that from the person about to retype everything.
+ */
+export async function myApplications(): Promise<SentApplication[]> {
+  const { accountHeaders } = await import("./firebase.js");
+  const response = await fetch(`${SIMULATOR_URL}/v1/events/applications`, {
+    headers: { ...(await authHeaders()), ...(await accountHeaders()) },
+  });
+  if (!response.ok) return [];
+  const body = (await response.json().catch(() => ({}))) as {
+    applications?: SentApplication[];
+  };
+  return body.applications ?? [];
+}
+
 export async function applyForBooth(
   eventId: string,
   payload: ApplyPayload,
@@ -723,9 +951,6 @@ export async function applyForBooth(
     return { kind: "applied", applicationId: body.application.id };
   }
 
-  if (body.error === "sample_event") {
-    return { kind: "sample", message: body.message ?? "This is a sample listing." };
-  }
   if (response.status === 401 || response.status === 403) {
     return { kind: "signin", message: body.message ?? "Sign in to apply." };
   }

@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { formatCurrency, type SimulationResult } from "@spotential/sim-engine";
+import { PanelLede, projectionLede } from "./sim/PanelLede.js";
 
 /**
  * Profit and cash on one chart — SPEC §4.7 and the §7.1 layout.
@@ -43,6 +44,11 @@ export function ProjectionChart({ result }: { result: SimulationResult }) {
       </header>
 
       <div className="body">
+        {(() => {
+          const lede = projectionLede(result);
+          return <PanelLede text={lede.text} figure={lede.figure} />;
+        })()}
+        
         <div style={{ width: "100%", height: 340 }}>
           <ResponsiveContainer>
             <LineChart data={data} margin={{ top: 6, right: 12, bottom: 4, left: 4 }}>

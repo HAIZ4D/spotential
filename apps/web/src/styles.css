@@ -214,8 +214,23 @@ body {
   font-size: 11px;
   color: var(--ink-3);
 }
+/**
+ * Every control a `.field` can hold, not the three that happened to exist when
+ * this was written.
+ *
+ * `[type="text"]` does NOT match `<input value={x} />`, which carries no type
+ * attribute at all, and nothing here matched a `<textarea>`. So the apply
+ * form's business name rendered in Arial and its pitch boxes in MONOSPACE,
+ * while the number fields beside them used the app's own stack. Found by
+ * looking at the rendered panel rather than by reading the stylesheet, which
+ * is the third time that has been the only way to catch something here.
+ */
 .field input[type="number"],
 .field input[type="text"],
+.field input[type="email"],
+.field input[type="tel"],
+.field input:not([type]),
+.field textarea,
 .field select {
   width: 100%;
   padding: 7px 9px;
@@ -226,7 +241,14 @@ body {
   color: var(--ink);
   background: var(--bg);
 }
+.field textarea {
+  min-height: 76px;
+  resize: vertical;
+  line-height: 1.55;
+  font-variant-numeric: normal;
+}
 .field input:focus,
+.field textarea:focus,
 .field select:focus {
   outline: 2px solid var(--navy);
   outline-offset: -1px;
@@ -1357,6 +1379,1077 @@ button:disabled {
 }
 
 
+/**
+ * THE SIGNATURE CURVE.
+ *
+ * `cubic-bezier(0.4, 0, 0.2, 1)` — the Premium archetype: elegant, minimal,
+ * no overshoot. One curve carries the console's motion so it reads as designed
+ * rather than assembled. The GSAP timeline registers the identical curve as
+ * `spotential-premium`, verified to agree with this one to three decimals at
+ * quarter points.
+ */
+:root {
+  --ease-premium: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------- Vendor account pages ---------- */
+/**
+ * Register and log in.
+ *
+ * The fields come from the owner's supplied design; the palette does not. That
+ * mockup was another product in another colour, and a registration form is
+ * exactly where a reader decides whether they are dealing with one company or
+ * three. Navy, gold, and the same tokens as every other surface here.
+ */
+.authpage {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 18px 56px;
+}
+
+.auth-head {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.auth-head h1 {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.auth-head p {
+  margin: 10px auto 0;
+  max-width: 56ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.authcard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0, 48, 135, 0.05), 0 18px 40px -32px rgba(0, 48, 135, 0.6);
+  display: grid;
+  gap: 20px;
+}
+.authcard.narrow {
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.auth-sec > h2 {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--navy);
+}
+
+.auth-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.auth-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.auth-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+/* The required marker is decorative AND OUT OF THE DOM, so it cannot join the
+   field's accessible name. Every required field also carries the attribute, so
+   a screen reader is told by the control rather than by a star. */
+.auth-label.req::after {
+  content: "*";
+  color: var(--red);
+  margin-left: 3px;
+}
+
+.auth-field input,
+.auth-field select,
+.auth-field textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-lg);
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+/* The full-width field that follows the two-column grid needs its own air:
+   without it the "What you sell" label sits flush against the hint belonging
+   to the control above, and the two read as one paragraph. */
+.auth-sec > .auth-field {
+  margin-top: 14px;
+}
+.auth-field textarea {
+  min-height: 78px;
+  resize: vertical;
+  line-height: 1.55;
+}
+.auth-field input:focus-visible,
+.auth-field select:focus-visible,
+.auth-field textarea:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+  border-color: var(--navy);
+}
+
+.auth-hint,
+.auth-error {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+/* `--ink-3` measures 2.58:1 on white and fails AA, so hints use `--ink-2`. */
+.auth-hint { color: var(--ink-2); }
+.auth-error { color: var(--red); font-weight: 600; }
+
+.auth-consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.auth-consent input {
+  margin-top: 2px;
+  width: 17px;
+  height: 17px;
+  flex: none;
+  accent-color: var(--navy);
+}
+
+.auth-submit {
+  min-height: var(--control-lg);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 180ms var(--ease-premium);
+}
+@media (hover: hover) {
+  .authcard .auth-submit:hover:not(:disabled) { filter: brightness(1.14); }
+}
+.authcard .auth-submit:disabled {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink-2);
+  opacity: 1;
+  cursor: default;
+}
+.auth-submit:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+
+.auth-alt {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.authcard .auth-alt button {
+  min-height: var(--control-lg);
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .authcard .auth-alt button:hover { background: var(--surface); }
+}
+.auth-alt p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.auth-alt a {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .authcard { padding: 18px 15px; }
+  .auth-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- What-if console ---------- */
+/**
+ * The AI is the page now, not a box in a sidebar.
+ *
+ * Same navy-and-gold family as the Spotential AI panel on /analysis, so the
+ * two read as one product, but larger and lit: this is the only surface in the
+ * app where the interface is allowed to feel alive rather than merely correct.
+ */
+.simconsole {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 0;
+  background: linear-gradient(160deg, #00327f 0%, #002356 55%, #001834 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/**
+ * The aurora.
+ *
+ * Three blurred blobs drifting on a long loop. CONFINED TO THIS CONSOLE and
+ * never the page: the skill rates aurora performance "good" rather than
+ * "excellent", and a moving gradient behind a projection chart would fight the
+ * one thing this page exists to show.
+ *
+ * Only transform and opacity animate, so it stays on the compositor.
+ */
+.aurora {
+  position: absolute;
+  inset: -30% -10%;
+  /* NOT -1. A negative index puts this behind the panel's own gradient
+     background, which painted over it: the blobs were rendering and then
+     being covered. 0 keeps it above the background and below the content. */
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(46px);
+  opacity: 0.72;
+  transition: opacity 700ms var(--ease-premium);
+}
+.aurora i {
+  position: absolute;
+  display: block;
+  width: 46%;
+  height: 150%;
+  border-radius: 50%;
+  will-change: transform;
+}
+.aurora i:nth-child(1) {
+  left: 2%;
+  background: radial-gradient(circle, rgba(56, 122, 235, 0.85), transparent 68%);
+  animation: aurora-a 19s ease-in-out infinite alternate;
+}
+.aurora i:nth-child(2) {
+  left: 34%;
+  background: radial-gradient(circle, rgba(242, 169, 0, 0.5), transparent 66%);
+  animation: aurora-b 23s ease-in-out infinite alternate;
+}
+.aurora i:nth-child(3) {
+  right: 4%;
+  background: radial-gradient(circle, rgba(94, 214, 178, 0.45), transparent 68%);
+  animation: aurora-c 27s ease-in-out infinite alternate;
+}
+/**
+ * PARALLAX, which is what the first version was missing.
+ *
+ * All three blobs drifted roughly the same distance, so the field read as one
+ * flat wash rather than as depth. The speed ratios below follow the skill's
+ * parallax table — foreground 1.0x, midground ~0.55x, deep background ~0.25x —
+ * expressed as travel distance, since these drift rather than scroll.
+ *
+ * And the deep layer moves AGAINST the other two. Counter-motion is the single
+ * cheapest way to make a background feel like it has volume: the eye reads
+ * opposing drift as separation in space rather than as two things sliding.
+ */
+@keyframes aurora-a {
+  /* Foreground, 1.0x: the largest travel, and the layer the eye follows. */
+  from { transform: translate3d(-9%, -7%, 0) scale(1); }
+  to   { transform: translate3d(15%, 9%, 0) scale(1.22); }
+}
+@keyframes aurora-b {
+  /* Midground, ~0.55x. */
+  from { transform: translate3d(5%, 6%, 0) scale(1.12); }
+  to   { transform: translate3d(-8%, -4%, 0) scale(0.95); }
+}
+@keyframes aurora-c {
+  /* Deep background, ~0.25x, and travelling the other way. */
+  from { transform: translate3d(4%, -2%, 0) scale(1.04); }
+  to   { transform: translate3d(-2%, 4%, 0) scale(1.16); }
+}
+
+/* It brightens while you type and while it thinks, so the console reads as
+   listening rather than decorated. */
+.simconsole.is-listening .aurora { opacity: 0.92; }
+.simconsole.is-thinking .aurora { opacity: 1; }
+
+.simconsole-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 44px 20px 40px;
+}
+
+.sim-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.sim-title {
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: #fff;
+}
+.sim-sub {
+  margin: 10px 0 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 62ch;
+}
+/* .ai-name / .ai-state / .ai-mark are shared with the analysis panel. */
+.simconsole .ai-state {
+  font-size: 12px;
+}
+
+.sim-form {
+  display: flex;
+  gap: 9px;
+}
+.sim-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 50px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(4, 18, 46, 0.55);
+  color: #fff;
+  font-size: 15.5px;
+}
+.sim-form input::placeholder { color: rgba(255, 255, 255, 0.56); }
+.sim-form input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.sim-ask {
+  min-height: 50px;
+  padding: 0 26px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--gold);
+  /* Dark on gold, never white on gold. */
+  color: #3d2b00;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 180ms var(--ease-premium);
+}
+@media (hover: hover) {
+  .simconsole .sim-ask:hover { filter: brightness(1.08); }
+}
+.simconsole .sim-ask:disabled {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 1;
+  cursor: default;
+}
+.sim-ask:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.sim-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 13px;
+}
+/* Specificity-matched against the app-wide button:hover, which sets a light
+   --surface. On this navy that has already erased a label twice. */
+.simconsole .sim-examples button {
+  min-height: var(--control-sm);
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .simconsole .sim-examples button:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+  }
+}
+
+.sim-note {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.88);
+  max-width: 70ch;
+}
+.sim-note.warn { color: #ffd48a; }
+
+.sim-answer {
+  margin-top: 16px;
+  padding: 15px 17px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(3, 16, 42, 0.55);
+}
+.sim-answer-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+.sim-label {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #fff;
+}
+.sim-deltas {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+
+/**
+ * The patch, named.
+ *
+ * The model returns operations on parameters and never a figure. Printing them
+ * makes "Gemini never does arithmetic" checkable at a glance instead of a
+ * promise, and answers the question a reader actually has: what did it just
+ * change?
+ */
+.sim-ops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sim-ops li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(242, 169, 0, 0.4);
+  background: rgba(242, 169, 0, 0.12);
+  font-size: 12px;
+}
+.sim-op-field { color: rgba(255, 255, 255, 0.86); }
+.sim-op-change {
+  font-weight: 700;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-narration {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.92);
+  max-width: 70ch;
+}
+
+.sim-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.simconsole .sim-keep,
+.simconsole .sim-revert {
+  min-height: var(--control-md);
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.simconsole .sim-keep {
+  border: 1px solid transparent;
+  background: var(--gold);
+  color: #3d2b00;
+}
+.simconsole .sim-revert {
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+@media (hover: hover) {
+  .simconsole .sim-keep:hover { filter: brightness(1.08); }
+  .simconsole .sim-revert:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+  }
+}
+
+/**
+ * The thinking state: the levers it is allowed to move.
+ *
+ * The wait is genuinely 13 to 46 seconds against the live model, so this has
+ * to hold attention without lying about progress. A light sweeps across the
+ * eighteen patchable parameters while the model chooses among them. The
+ * caption says "choosing which of these to move", because that is exactly what
+ * is happening and nothing here measures how far along it is.
+ */
+.sim-thinking {
+  margin-top: 18px;
+}
+.sim-thinking-mark {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.sim-thinking-cap {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--gold);
+}
+.sim-thinking-note {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.sim-scan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 74ch;
+}
+.sim-scan-chip {
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11.5px;
+  white-space: nowrap;
+  animation: sim-scan-pass 2.1s ease-in-out infinite;
+}
+
+/**
+ * The sweep itself.
+ *
+ * Border and colour rather than transform, so chips never move and the row
+ * cannot reflow mid-animation. The delay is assigned per chip in the
+ * component, modulo nine, so the light travels in bands rather than every
+ * chip flashing at once.
+ */
+@keyframes sim-scan-pass {
+  0%, 70%, 100% {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.55);
+  }
+  30% {
+    border-color: rgba(242, 169, 0, 0.55);
+    background: rgba(242, 169, 0, 0.16);
+    color: #ffd98a;
+  }
+}
+
+/**
+ * The payoff. The chips the model actually chose keep the gold; the rest go
+ * quiet. These are the same objects the reader was just watching being
+ * considered, which is what makes the patch feel like an answer rather than a
+ * result appearing from nowhere.
+ */
+.sim-ops li.sim-op-picked {
+  border-color: rgba(242, 169, 0, 0.6);
+  background: rgba(242, 169, 0, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Specificity-matched: the animation is declared on `.sim-scan-chip`
+     (0,1,0), so a bare element selector here would lose. */
+  .sim-scan-chip {
+    animation: none;
+    border-color: rgba(242, 169, 0, 0.3);
+    color: rgba(255, 255, 255, 0.75);
+  }
+}
+
+/* ---------- The Spotential mark, thinking ---------- */
+/**
+ * A 4.5s loop for a wait that runs 13 to 46 seconds. Still, bloom, orbit,
+ * sweep, settle. The disc is what makes the mark legible: its own darkest navy
+ * is the same family as the console behind it, so without a light ground the
+ * S loses its edge, exactly as the navbar found.
+ */
+.st {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  flex: none;
+}
+
+.st-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #fff;
+  /**
+   * SECONDARY MOTION, driven by `--lift` from the timeline.
+   *
+   * The disc had no motion of its own, and the skill names a missing secondary
+   * layer as the cause of animation that "feels cheap/flat". Its shadow now
+   * deepens and spreads with the mark's breath at about 40% of the amplitude
+   * and 80ms behind it, which is the "card enters, shadow grows" pattern.
+   */
+  --lift: 0;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.18),
+    0 calc(10px + var(--lift) * 6px) calc(28px + var(--lift) * 10px) -12px
+      rgba(0, 0, 0, calc(0.5 + var(--lift) * 0.14));
+  overflow: hidden;
+  z-index: 2;
+}
+.st-mark {
+  display: block;
+  /* 54px against a 101px source keeps it sharp on a 2x screen. */
+  width: 54px;
+  height: auto;
+}
+
+/**
+ * The light sweep, masked by the artwork's own alpha.
+ *
+ * This is why a raster logo was not a blocker: the PNG carries transparency,
+ * so the gradient is clipped to the mark's silhouette and the light appears to
+ * travel up through the logo rather than across a rectangle over it.
+ */
+.st-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mask-image: var(--mark);
+  mask-size: 54px auto;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--mark);
+  -webkit-mask-size: 54px auto;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  /**
+   * Peak white 0.34, per the shimmer pattern's 0 to 30% band.
+   *
+   * It was 0.9, which bleached the lower half of the mark, then 0.55, which
+   * was still brighter than a gleam should be. The rest between sweeps matters
+   * as much as the brightness: the timeline fires this on alternate halves
+   * only, so roughly 6.5s of quiet separates one catch of light from the next.
+   */
+  background: linear-gradient(
+    118deg,
+    transparent 44%,
+    rgba(255, 255, 255, 0.34) 50%,
+    transparent 56%
+  );
+  background-size: 260% 260%;
+  background-position: 130% 130%;
+  mix-blend-mode: screen;
+}
+
+/* Two glows rather than one: navy for depth, gold a beat later for warmth. */
+.st-glow-navy,
+.st-glow-gold {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+.st-glow-navy {
+  width: 118px;
+  height: 118px;
+  background: radial-gradient(circle, rgba(86, 148, 255, 0.85), transparent 68%);
+  filter: blur(13px);
+  opacity: 0.18;
+}
+.st-glow-gold {
+  width: 136px;
+  height: 136px;
+  background: radial-gradient(circle, rgba(242, 169, 0, 0.6), transparent 66%);
+  filter: blur(17px);
+  opacity: 0.1;
+}
+
+/**
+ * The orbit ring rotates; the dot inside it is pushed out along x.
+ *
+ * Two elements on purpose. CSS owns the rotation here and GSAP owns the dot's
+ * `x`, so neither ever writes the other's transform — the collision that has
+ * cost this codebase three separate bugs, twice presenting as an animation
+ * that ran backwards or never moved at all.
+ */
+.st-ring {
+  position: absolute;
+  width: 0;
+  height: 0;
+  display: grid;
+  place-items: center;
+  transform: rotate(var(--from));
+  animation: st-spin var(--spin) linear infinite;
+  z-index: 1;
+}
+@keyframes st-spin {
+  from { transform: rotate(var(--from)); }
+  to { transform: rotate(calc(var(--from) + 360deg)); }
+}
+
+.st-dot {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  opacity: 0;
+}
+.st-dot.navy {
+  background: #7fb0ff;
+  box-shadow: 0 0 8px rgba(127, 176, 255, 0.9);
+}
+.st-dot.gold {
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(242, 169, 0, 0.85);
+}
+
+@media (max-width: 560px) {
+  .st { width: 120px; height: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Specificity-matched: the rotation is declared on `.st-ring` (0,1,0). The
+     mark stays, and stays still. */
+  .st-ring {
+    animation: none;
+  }
+  .st-dot {
+    opacity: 0;
+  }
+  .st-sweep {
+    opacity: 0;
+  }
+}
+
+/* ---------- Simulator body ---------- */
+.sim-baseline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 13px;
+}
+
+/**
+ * Results left, levers right. The mirror of /analysis, where information sits
+ * left and the sticky thing sits right, so the two pages read as one product.
+ */
+.simgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 14px;
+  align-items: start;
+  padding: 14px 16px 28px;
+}
+.sim-results {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+/* The rail, not the card inside it. `.sim-levers` was already taken by
+   InputPanel's Key levers card, and reusing it applied sticky positioning and
+   a scroll box to both. */
+.sim-rail {
+  position: sticky;
+  top: 78px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+@media (max-width: 1040px) {
+  .simgrid {
+    grid-template-columns: 1fr;
+  }
+  .sim-rail {
+    position: static;
+    max-height: none;
+  }
+}
+@media (max-width: 560px) {
+  .simconsole-inner { padding: 22px 14px 20px; }
+  .sim-form { flex-wrap: wrap; }
+  .sim-form input { flex: 1 1 100%; }
+  .sim-ask { flex: 1 1 100%; }
+  .simgrid { padding: 12px 12px 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /**
+   * SPECIFICITY-MATCHED. Each blob's animation is declared on
+   * `.aurora i:nth-child(n)` (0,2,1), so a bare `.aurora i` (0,1,1) here loses
+   * and the aurora kept drifting for readers who asked it not to. A media
+   * query contributes no specificity; being last only breaks ties. Seventh
+   * time this repo has paid for that lesson.
+   */
+  .aurora i:nth-child(1),
+  .aurora i:nth-child(2),
+  .aurora i:nth-child(3) {
+    animation: none;
+  }
+  .aurora { transition: none; }
+}
+
+/* ---------- Simulator panels ---------- */
+/**
+ * A quieter shell, scoped to this page.
+ *
+ * The grey header bar with an uppercase heading and a status pill is the most
+ * "admin dashboard" thing in the app, and with five identical ones stacked up
+ * nothing was ranked: a chart of the next twelve months looked exactly as
+ * important as a sensitivity table. Scoped under `.sim-results` and `.sim-rail`
+ * so /analysis, /compare and /events cannot move.
+ */
+.sim-results > .card,
+.sim-rail > .card {
+  border-radius: var(--radius-lg);
+  border-color: var(--line);
+  box-shadow: 0 1px 2px rgba(0, 48, 135, 0.04);
+}
+.sim-results > .card > header,
+.sim-rail > .card > header {
+  background: none;
+  border-bottom: none;
+  padding: 16px 18px 0;
+  align-items: baseline;
+}
+.sim-results > .card > header h2,
+.sim-rail > .card > header h2 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--ink);
+}
+.sim-results > .card > .body,
+.sim-rail > .card > .body {
+  padding: 12px 18px 18px;
+}
+
+/**
+ * The sentence a panel opens with.
+ *
+ * Derived from the result object, never generated, so it cannot contradict the
+ * chart underneath it. The figure leads because it is what the eye wants
+ * first, and the sentence explains what that figure means for the reader.
+ */
+.panel-lede {
+  margin: 8px 0 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 78ch;
+}
+.panel-lede-figure {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--navy);
+  margin-right: 6px;
+}
+
+/* The tallying table, folded so the panel stops reading as a ledger. It opens
+   automatically for print, because the tally is the point on paper. */
+.cost-working {
+  margin-top: 14px;
+}
+.cost-working > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  list-style: none;
+  min-height: var(--control-sm);
+  display: inline-flex;
+  align-items: center;
+}
+.cost-working > summary::-webkit-details-marker { display: none; }
+.cost-working > summary::before {
+  content: "▸ ";
+  color: var(--navy);
+  margin-right: 4px;
+}
+.cost-working[open] > summary::before { content: "▾ "; }
+@media (hover: hover) {
+  .cost-working > summary:hover { color: var(--ink); }
+}
+.cost-working > summary:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.cost-working .table-scroll { margin-top: 10px; }
+
+/* ---------- The levers ---------- */
+/**
+ * The value is the loud thing now.
+ *
+ * It was a small box beside a long label, which made seventeen fields read as
+ * a form to fill in rather than numbers to move. Scoped to the rail so the
+ * same control on other pages is untouched.
+ */
+.sim-rail .field {
+  padding: 11px 0;
+}
+.sim-rail .field + .field {
+  border-top: 1px solid var(--line);
+}
+.sim-rail .field .row {
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.sim-rail .field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.sim-rail .field input[type="number"],
+.sim-rail .field input[type="text"] {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  min-height: var(--control-md);
+}
+
+/* A thinner track with a gold handle, matching the console. */
+.sim-rail .field input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 20px;
+  background: none;
+  cursor: pointer;
+}
+.sim-rail .field input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--navy-soft);
+}
+.sim-rail .field input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--navy-soft);
+}
+.sim-rail .field input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -5.5px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid var(--bg);
+  box-shadow: 0 1px 3px rgba(0, 48, 135, 0.32);
+}
+.sim-rail .field input[type="range"]::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid var(--bg);
+  box-shadow: 0 1px 3px rgba(0, 48, 135, 0.32);
+}
+.sim-rail .field input[type="range"]:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+
+/* The source note and the rank badge become one quiet status line rather than
+   two competing decorations. */
+.sim-rail .field .source {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+
+/**
+ * The Key levers header lost its navy ground, so everything on it needs a new
+ * colour. The pill was white-on-16%-white and simply vanished the moment the
+ * header went light — the same "two grounds" failure that once rendered a
+ * white button on a white drawer at 1.00:1. Written at a specificity that
+ * beats the dark-ground rules above rather than deleting them.
+ */
+.sim-rail > .card.sim-levers {
+  border-color: rgba(0, 48, 135, 0.28);
+}
+.sim-rail > .card.sim-levers > header .pill.navy {
+  background: var(--navy-soft);
+  color: var(--navy);
+}
+
+/**
+ * The collapsed groups match the new shell.
+ *
+ * They kept an uppercase grey bar while the card above them went quiet, so the
+ * rail read as two different designs stacked. Sentence case, same weight, same
+ * ink as the panel titles.
+ */
+.sim-rail .sim-group-head {
+  padding: 13px 16px;
+}
+.sim-rail .sim-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--ink);
+}
+
 /* ---------- Spotential AI ---------- */
 /**
  * The one AI surface, sitting in the report rather than behind a tab.
@@ -1479,67 +2572,119 @@ button:disabled {
   color: rgba(255, 255, 255, 0.6);
 }
 
-.ai-headline {
-  margin: 13px 0 0;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.5;
-  letter-spacing: -0.01em;
-  color: #fff;
-  max-width: 62ch;
-}
-.ai-readings {
-  margin: 11px 0 0;
-  padding: 0;
-  list-style: none;
+/* ---- the four specialists ----
+   Opportunity, Rivals, Customers, Money. Light tiles on the panel navy, which
+   is the same call the event hero made about its score ring: text and verdict
+   colours fail against this ground, and a lighter tile fixes it without
+   recolouring anything inside. */
+.ai-specialists {
   display: grid;
-  gap: 7px;
-  max-width: 74ch;
+  /* TWO COLUMNS, STATED, not `auto-fit`.
+     Auto-fit packed three across the 1,020px panel and left the fourth card
+     alone on its own row, which is the one arrangement four things must never
+     take. A fixed pair also means the two cards in a row share a height, so
+     every "Do this" lands on the same line as its neighbour's. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 15px;
 }
-.ai-readings li {
-  position: relative;
-  padding-left: 16px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.86);
+@media (min-width: 760px) {
+  .ai-specialists {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
-.ai-readings li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 8px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--gold);
-}
-
-.ai-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 9px;
-  margin-top: 14px;
-}
-.ai-card {
-  padding: 11px 13px;
-  border-radius: 12px;
+.ai-spec {
+  display: flex;
+  flex-direction: column;
+  padding: 15px 17px 16px;
+  border-radius: 13px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.07);
+  min-width: 0;
 }
-.ai-card p {
-  margin: 4px 0 0;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.9);
-}
-.ai-card-label {
+.ai-spec-role {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   color: var(--gold);
 }
-.ai-card.next .ai-card-label { color: #7fd6a2; }
+.ai-spec-headline {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  color: #fff;
+}
+.ai-spec-points {
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.ai-spec-points li {
+  position: relative;
+  padding-left: 15px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+}
+/* White rather than gold. Gold carries the role label and the action below,
+   and four cards of gold bullets would leave nothing for either to mean. */
+.ai-spec-points li::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: 8px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+}
+/* The action, pushed to the foot of the card so every card's move lines up
+   however long the reading above it runs. */
+.ai-spec-move {
+  margin: 11px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #fff;
+  margin-top: auto;
+}
+.ai-spec-move-label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  /* 0.72 measures 6.9:1 on this navy. Small uppercase text is not large text,
+     so it does not get the 3:1 allowance. */
+  color: rgba(242, 169, 0, 0.92);
+}
+/* A specialist with nothing to show still gets a card, quieter. Dropping it
+   would leave a panel that looks complete while a whole subject is missing. */
+.ai-spec.is-quiet {
+  background: rgba(255, 255, 255, 0.035);
+  border-style: dashed;
+  /* Stretches with its row, and its label stays at the TOP with every other
+     card's. Centring the content read tidier on its own and put this card's
+     role label halfway down while its neighbour's sat at the top, which is the
+     misalignment the owner has already called unprofessional once. Four labels
+     on one line is worth more than a balanced-looking empty box. */
+}
+.ai-spec.is-quiet .ai-spec-role {
+  color: rgba(255, 255, 255, 0.55);
+}
+.ai-spec-quiet {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.72);
+}
 
 /* Holds the space the briefing is about to occupy. A placeholder is a promise,
    so it is only shown while something is genuinely on its way. */
@@ -1625,11 +2770,6 @@ button:disabled {
   color: rgba(255, 255, 255, 0.92);
 }
 .ai-turn.user p { color: var(--gold); }
-.ai-turn-pending {
-  margin: 0;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
-}
 
 .ai-form {
   display: flex;
@@ -1717,74 +2857,6 @@ button:disabled {
  * visible before it is read. Gold is used once here, on the rule and the step
  * numbers, which is what makes it read as the section that matters.
  */
-.ai-gap {
-  margin-top: 16px;
-  padding: 14px 16px 13px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-left: 3px solid var(--gold);
-  background: rgba(255, 255, 255, 0.06);
-}
-.ai-gap-title {
-  margin: 0;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--gold);
-}
-.ai-gap-verdict {
-  margin: 8px 0 0;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.5;
-  color: #fff;
-  max-width: 64ch;
-}
-.ai-gap-why {
-  margin: 7px 0 0;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.82);
-  max-width: 72ch;
-}
-
-/* Steps, so they read as things to do rather than more things to know. */
-.ai-moves {
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: move;
-  display: grid;
-  gap: 8px;
-  max-width: 74ch;
-}
-.ai-moves li {
-  counter-increment: move;
-  position: relative;
-  padding-left: 27px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.92);
-}
-.ai-moves li::before {
-  content: counter(move);
-  position: absolute;
-  left: 0;
-  top: 1px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--gold);
-  /* Dark on gold, never white on gold. 6.3:1. */
-  color: #3d2b00;
-  font-size: 10.5px;
-  font-weight: 700;
-}
-
-/* The evidence, folded away rather than deleted. */
 .ai-working {
   margin-top: 13px;
   padding-left: 0;
@@ -2444,62 +3516,6 @@ button:disabled {
 
 /* Scoped under .compare, exactly as .heat is, so the other three routes are
    untouched by anything in this block. */
-.cockpit.compare {
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-}
-.cmp-aside {
-  gap: 14px;
-}
-
-/* The verdict. Full width above the split, because it is the answer the page
-   exists to give and it used to arrive as a pill in a card header. */
-.cmp-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 24px;
-  margin: 18px 20px 0;
-  padding: 20px 22px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, var(--navy-tint) 0%, var(--bg) 70%);
-}
-.cmp-verdict-title {
-  margin: 0;
-  font-size: 21px;
-  line-height: 1.2;
-  color: var(--ink);
-}
-.cmp-verdict-note {
-  margin: 8px 0 0;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--ink-2);
-  max-width: 62ch;
-}
-
-.cmp-rings {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-.cmp-ring {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-}
-.cmp-ring-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--ink-2);
-  max-width: 130px;
-  text-align: center;
-}
-
-/* Toolbar chips — one per location, colour-keyed to the radar series. */
 .cmp-chips {
   display: flex;
   align-items: center;
@@ -2566,110 +3582,874 @@ button:disabled {
 }
 
 /* Per-dimension bars — the comparison the table made you compute yourself. */
-.cmp-dims {
+/* ---------- Compare ----------
+   One column, because a comparison needs horizontal room for a difference to
+   be visible. The two-column shell left the whole bottom-right of the page
+   empty at 1440px and squeezed the bars into the narrower half. */
+
+.cmpx {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 20px 56px;
   display: grid;
+  /* `minmax(0, 1fr)`, never the implicit `auto`: a grid item's `min-width` is
+     min-content, and an `auto` track grows to fit it. That is what pushed the
+     event page 44px past a phone viewport. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+
+/* ---- The verdict band ---- */
+
+.cmpx-hero {
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--navy-tint) 0%, var(--bg) 62%);
+}
+.cmpx-kicker {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  /* 5.48:1 on white, measured. The gold token itself is 1.9:1 and is a fill
+     colour, never a text colour on a light ground. */
+  color: #8a6200;
+}
+.cmpx-verdict {
+  display: grid;
+  gap: 6px;
+}
+.cmpx-verdict-title {
+  margin: 0;
+  font-size: clamp(22px, 2.8vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-weight: 750;
+  color: var(--navy);
+  text-wrap: balance;
+}
+.cmpx-verdict-note {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.cmpx-verdict-note strong {
+  color: var(--ink);
+}
+
+/* The sites, IN the band rather than pinned to its far edge. `auto-fit` is
+   what makes two and three both work without a second rule. */
+.cmpx-sites {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 14px;
 }
-.cmp-dim-head {
+.cmpx-site {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  min-width: 0;
+}
+.cmpx-site.leads {
+  border-color: var(--navy);
+  box-shadow: inset 0 0 0 1px var(--navy);
+}
+/* No transform here. `ScoreRing` takes a size, because a CSS scale leaves the
+   132px layout box behind and the ring paints over the text beside it. */
+.cmpx-site-ring {
+  display: grid;
+  place-items: center;
+}
+.cmpx-site-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.cmpx-site-name {
+  margin: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  margin-bottom: 6px;
+  flex-wrap: wrap;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
 }
-.cmp-dim-label {
+.cmpx-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+.cmpx-lead-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: #fff;
+}
+.cmpx-site-read {
+  margin: 0;
   font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* ---- Panels ---- */
+
+.cmpx-panel {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--bg);
+}
+.cmpx-panel-head {
+  display: grid;
+  gap: 5px;
+}
+.cmpx-panel-head h2 {
+  margin: 0;
+  font-size: clamp(19px, 2.1vw, 24px);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 750;
+  color: var(--navy);
+}
+
+/* ---- The ledger ---- */
+
+.cmpx-ledger {
+  display: grid;
+  gap: 10px;
+}
+/* label | bars | delta. The delta column is fixed so every gap on the page
+   lines up in one vertical band, which is what makes them comparable at a
+   glance rather than one at a time. */
+.cmpx-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 2.4fr) 96px;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--bg);
+}
+.cmpx-row.is-close {
+  background: var(--surface);
+}
+/* An absent dimension is quiet, not shouted, and not shown as a tie. */
+.cmpx-row.is-absent {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--surface),
+    var(--surface) 7px,
+    var(--bg) 7px,
+    var(--bg) 14px
+  );
+  border-style: dashed;
+}
+.cmpx-row-label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.cmpx-dim {
+  font-size: 14px;
   font-weight: 650;
   color: var(--ink);
 }
-.cmp-bars {
-  display: grid;
-  gap: 4px;
+/* NAMED APART FROM `.cmpx-verdict`, which is the hero's verdict block. One
+   class was doing both jobs, so this pill's uppercase, 800-weight, 10px rules
+   landed on the headline and its entire paragraph and shouted them. Third time
+   a reused class name has cost something in this project. */
+.cmpx-outcome {
+  justify-self: start;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
 }
-.cmp-bar-row {
-  display: grid;
-  grid-template-columns: 108px minmax(0, 1fr) 46px;
-  align-items: center;
-  gap: 8px;
+/* Three outcomes, three visibly different treatments. They are different
+   claims and must never be mistakable for one another. */
+.cmpx-outcome.wins {
+  background: var(--green-soft);
+  color: #0f7a37;
 }
-.cmp-bar-name {
-  font-size: 11px;
-  color: var(--ink-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.cmpx-outcome.close {
+  background: var(--gold-soft);
+  color: #7a5600;
 }
-.cmp-bar-track {
-  height: 12px;
-  border-radius: 3px;
+.cmpx-outcome.absent {
   background: var(--surface);
-  overflow: hidden;
-}
-.cmp-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  transition: width 260ms ease-out;
-}
-.cmp-bar-value {
-  font-size: 12px;
   color: var(--ink-2);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.cmp-bar-value.leads {
-  font-weight: 700;
-  color: var(--ink);
+  border: 1px dashed var(--line);
 }
 
-/* An empty track and words, never two zero-length bars — a tie at zero and
-   an absence of data must not look the same. */
-.cmp-empty {
+.cmpx-bars {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+.cmpx-bar {
+  display: grid;
+  grid-template-columns: minmax(64px, 88px) minmax(0, 1fr) 34px;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.cmpx-bar-name {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmpx-bar.leads .cmpx-bar-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+.cmpx-track {
+  display: block;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+/* The empty track: no fill at all, so an absent dimension cannot read as a
+   tie at zero. Wider than a bar row because it stands in for the whole set. */
+.cmpx-track.empty {
+  width: 100%;
+}
+.cmpx-track .dim-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+.cmpx-bar-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  text-align: right;
+}
+.cmpx-bar.leads .cmpx-bar-value {
+  color: var(--navy);
+}
+.cmpx-nil {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+/* The gap, which is the reason anybody opened this page and which it never
+   used to show at all. */
+.cmpx-delta {
+  display: grid;
+  gap: 1px;
+  justify-items: end;
+  text-align: right;
+}
+.cmpx-delta-figure {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--navy);
+  line-height: 1.1;
+}
+/* Muted where the gap is inside what the figures support, so a 3-point lead
+   cannot read as a win. */
+.cmpx-delta-figure.muted {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+.cmpx-delta-unit {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* Said ONCE, at the foot, instead of in full inside every unscored row. */
+.cmpx-foot {
+  margin: 0;
+  max-width: 78ch;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* ---- Shapes, working, caveat ---- */
+
+.cmpx-shapenote {
+  margin: 0 0 10px;
+  max-width: 78ch;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.cmpx-noshape {
+  margin: 0;
+  max-width: 74ch;
+  padding: 16px 18px;
+  border: 1px dashed var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.cmpx-working {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--bg);
+  padding: 18px 24px;
+}
+.cmpx-working > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--control-md);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.cmpx-working > summary::-webkit-details-marker {
+  display: none;
+}
+.cmpx-working > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 180ms var(--ease-premium);
+}
+.cmpx-working[open] > summary::before {
+  transform: rotate(45deg);
+}
+.cmpx-working > summary:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.cmpx-caveat {
+  margin: 0;
+}
+.cmpx-sourceline {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* ---- Empty and loading ---- */
+
+.cmpx-empty {
+  display: grid;
+  gap: 8px;
+  padding: 36px 28px;
+  border: 1px dashed var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  text-align: center;
+  justify-items: center;
+}
+.cmpx-empty h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--navy);
+}
+.cmpx-empty p {
+  margin: 0;
+  max-width: 56ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.cmpx-skeleton {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 900px) {
+  /* The delta drops under the label rather than being squeezed to nothing:
+     below about 760px the three-column row cannot hold a readable bar. */
+  .cmpx-row {
+    grid-template-columns: minmax(0, 1fr) 84px;
+    gap: 10px 14px;
+  }
+  .cmpx-bars {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .cmpx {
+    padding: 12px 12px 40px;
+    gap: 14px;
+  }
+  .cmpx-hero,
+  .cmpx-panel {
+    padding: 18px 16px;
+  }
+  .cmpx-working {
+    padding: 14px 16px;
+  }
+  .cmpx-site {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+  .cmpx-bar {
+    grid-template-columns: minmax(56px, 74px) minmax(0, 1fr) 30px;
+    gap: 8px;
+  }
+}
+
+/* ---------- Spotential AI on the comparison ----------
+   The derived line sits in the panel header, above anything a model wrote,
+   because that ordering is the safety argument rather than a layout choice.
+
+   A NAVY GROUND among white analysis panels. Navy IS this product's blue, so
+   the contrast comes from using it as a surface rather than from adding a hue
+   the palette does not have. It also does a job: one navy panel on a page of
+   white ones says "this part is the AI" without needing a badge, which is the
+   same move the simulator console and the event stage already make.
+
+   Measured on painted pixels, never `getComputedStyle` — the ground is a
+   gradient, and walking a gradient's ancestors reports `rgba(0,0,0,0)` and
+   sails straight past the navy. White on it is 13.6:1, the 0.84 body 9.0:1,
+   the 0.72 secondary 6.8:1. */
+
+.cmpai {
+  position: relative;
+  overflow: hidden;
+  border-color: transparent;
+  background:
+    radial-gradient(120% 90% at 88% -10%, rgba(96, 160, 255, 0.28), transparent 62%),
+    linear-gradient(150deg, var(--navy-deep) 0%, var(--navy) 58%, #0a3f9e 100%);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 48, 135, 0.16), 0 34px 70px -48px rgba(0, 32, 92, 0.9);
+}
+/* Inverted rather than restyled. Recolouring a surface means every colour on
+   it needs a new one, which this project has been caught by three times. */
+.cmpai > .cmpx-panel-head .cmpx-kicker {
+  color: var(--gold);
+}
+.cmpai > .cmpx-panel-head h2 {
+  color: #fff;
+}
+
+.cmpai-derived {
+  margin: 6px 0 0;
+  max-width: 78ch;
+  font-size: 14.5px;
+  line-height: 1.6;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.cmpai-wait {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 14px;
+  /* Lifted OFF the panel rather than tinted onto it: navy on navy is not a
+     band, it is a smudge. */
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+.cmpai-wait-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.cmpai-wait-note {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 12.5px;
+  line-height: 1.55;
+  /* 9.0:1 on the navy, measured. */
+  color: rgba(255, 255, 255, 0.84);
+}
+
+/* Three views, side by side, so they read as three opinions rather than one
+   long argument. `auto-fit` keeps it honest if an agent is withheld. */
+.cmpai-readings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+  /* Stretch, not `start`. Three views of the same comparison read as three
+     opinions when they are the same size and as a ranked list when they are
+     not, and the Skeptic wrapping to one more line is not a statement about
+     its importance. */
+  align-items: stretch;
+}
+.cmpai-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 16px 17px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  min-width: 0;
+}
+/* A tone each, so the Skeptic is visibly not the Analyst. Never colour alone:
+   every card is also named and carries its own one-line job description. */
+.cmpai-card.analyst {
+  background: linear-gradient(180deg, var(--navy-tint), transparent 58%), var(--bg);
+  border-color: var(--navy-soft);
+}
+.cmpai-card.skeptic {
+  background: linear-gradient(180deg, rgba(242, 169, 0, 0.09), transparent 58%), var(--bg);
+  border-color: rgba(242, 169, 0, 0.34);
+}
+.cmpai-card.advisor {
+  background: linear-gradient(180deg, rgba(22, 163, 74, 0.08), transparent 58%), var(--bg);
+  border-color: rgba(22, 163, 74, 0.3);
+}
+.cmpai-card > header {
+  display: grid;
+  gap: 1px;
+}
+.cmpai-card h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--navy);
+}
+.cmpai-card.skeptic h3 {
+  color: #7a5600;
+}
+.cmpai-card.advisor h3 {
+  color: #0f7a37;
+}
+.cmpai-card > header span {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.cmpai-headline {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 650;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.cmpai-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.cmpai-card li {
+  position: relative;
+  padding-left: 15px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.cmpai-card li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+/* Named, not hidden: a shorter panel that looks complete is worse than one
+   that says which view is missing. */
+.cmpai-withheld {
+  margin: 0;
+  padding: 11px 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.34);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 12px;
+  line-height: 1.55;
+  /* 7.1:1 on the navy. */
+  color: rgba(255, 255, 255, 0.84);
+}
+
+/* The line between what this page computed and what a model wrote. */
+.cmpai-label {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  /* 6.8:1, which clears AA at this size. */
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* ---- Ask ---- */
+
+.cmpai-ask {
+  display: grid;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+.cmpai-ask-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.cmpai-ask-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cmpai-ask-form input {
+  flex: 1 1 260px;
+  min-width: 0;
+  /* Stated in the base rule so it clears the 44px floor at every pointer type,
+     which sidesteps the coarse-pointer specificity trap entirely. */
+  min-height: var(--control-lg);
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.cmpai-ask-form input:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+  border-color: var(--navy);
+}
+/* GOLD, not navy. A navy button on a navy panel is not a button. Gold is the
+   CTA colour and nothing else here uses it, so nothing competes — and gold is
+   light, so the label is dark. 6.9:1, measured. */
+.cmpai-ask-form button {
+  flex: none;
+  min-height: var(--control-lg);
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #3a2a00;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 180ms var(--ease-premium);
+}
+@media (hover: hover) {
+  .cmpai-ask-form button:hover:not(:disabled) {
+    filter: brightness(1.14);
+  }
+}
+.cmpai .cmpai-ask-form button:disabled {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.72);
+  opacity: 1;
+  cursor: default;
+}
+
+.cmpai-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.cmpai .cmpai-examples button {
+  min-height: var(--control-md);
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+/* This one is SAFE from the app-wide `button:hover`, and by specificity
+   rather than by luck: the base rule is `.cmpai .cmpai-examples button`
+   (0,2,1), which outranks `button:hover` (0,1,1), so `--surface` never lands
+   here. Verified by deleting the background below and measuring: the hovered
+   chip stayed at `rgba(255,255,255,0.08)` rather than turning near-white.
+   Worth writing down because five other controls in this app were NOT written
+   that way and each one lost its label to that selector. */
+@media (hover: hover) {
+  .cmpai .cmpai-examples button:hover:not(:disabled) {
+    border-color: var(--gold);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+  }
+}
+
+/* A LIGHT tile on the navy, like the specialist cards. It is the longest
+   prose on the panel and the thing a reader actually stops to read, so it gets
+   the most legible ground available. */
+.cmpai-reply {
+  margin: 0;
+  padding: 15px 17px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.cmpai-ask-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* ---- The ask waiting state ----
+   Honest and indeterminate. No bar, no stages and no percentage: there are no
+   progress callbacks from the model, so anything resembling measured progress
+   would be measuring nothing. It says what is actually happening instead. */
+.aiwait {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 13px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+}
+/* The mark on a white disc. Its own darkest navy is the same family as this
+   panel, so without a light ground the S loses its edge — the finding the
+   navbar and the simulator's thinking state have both already paid for. */
+.aiwait-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  animation: aiwait-breathe 3s var(--ease-premium) infinite;
+}
+.aiwait-mark img {
+  display: block;
+  width: 26px;
+  height: auto;
+}
+/* 0.985 to 1.015 at ~3000ms, the waiting band. Past that a wait starts
+   demanding attention rather than keeping company. */
+@keyframes aiwait-breathe {
+  0%,
+  100% {
+    transform: scale(0.985);
+  }
+  50% {
+    transform: scale(1.015);
+  }
+}
+.aiwait-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.aiwait-line {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  /* A light sweeping across the words: the one moving thing here, and it
+     claims nothing about progress. */
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.72) 30%,
+    #fff 48%,
+    rgba(255, 255, 255, 0.72) 66%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: aiwait-sweep 2.2s var(--ease-premium) infinite;
+}
+@keyframes aiwait-sweep {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+.aiwait-note {
   font-size: 11.5px;
   line-height: 1.5;
-  color: var(--ink-3);
-  padding: 9px 10px;
-  border: 1px dashed var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
+  color: rgba(255, 255, 255, 0.76);
+}
+
+@media (max-width: 560px) {
+  /* Was written as `.cmpai-wait`, a class no component has ever carried, so
+     this rule matched nothing and the waiting block kept its two columns on a
+     phone. Grep the markup for a class, not the stylesheet. */
+  .aiwait {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cmp-bar-fill {
+  .cmpai-ask-form button {
     transition: none;
   }
-}
-
-@media (max-width: 1180px) {
-  .cockpit.compare {
-    grid-template-columns: 1fr;
+  /* Specificity-matched to the rules they override: a media query contributes
+     none, so being last in the file only breaks ties. The text keeps a solid
+     fill, or clipping the background to it leaves it invisible at rest. */
+  .aiwait-mark {
+    animation: none;
   }
-  /**
-   * Cancel the map column's `order: -1`.
-   *
-   * On /analysis the map genuinely is the main content on a phone, so it is
-   * hoisted above the panels. Here the right column is a supporting radar and
-   * a caveat, and the dimension bars are what the reader came for — so the
-   * order has to be undone rather than inherited. Needs the compound selector
-   * to outrank `.cockpit-map`, which is defined later in the file.
-   */
-  .cockpit.compare .cmp-aside {
-    order: 1;
-  }
-}
-
-@media (max-width: 720px) {
-  .cmp-hero {
-    grid-template-columns: 1fr;
-    margin: 14px 12px 0;
-    padding: 16px;
-  }
-  .cmp-rings {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-  .cmp-bar-row {
-    grid-template-columns: 76px minmax(0, 1fr) 40px;
+  .aiwait-line {
+    animation: none;
+    -webkit-text-fill-color: #fff;
   }
 }
 
@@ -3072,7 +4852,12 @@ button:disabled {
 
   max-width: 1180px;
   margin: 0 auto;
-  padding: 8px 10px 8px 14px;
+  /* 14 + the brand link's own 4px of padding puts the logo mark 18px from the
+     capsule edge. The Sign up pill has no inner padding of its own, so the
+     right side needs the full 18 to land on the same optical margin: measured
+     at 19 against 11 before this, which is what made the gold pill look
+     crowded against the capsule's curve. */
+  padding: 8px 18px 8px 14px;
 
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -3194,6 +4979,14 @@ button:disabled {
 }
 
 .navbar .nav-login {
+  /* CENTRES THE LABEL, which a `<button>` did for free and a block `<a>` does
+     not: with `min-height` and no inner alignment the line box sits at the top
+     of the pill. Measured at 7px above centre, 2px of space above and 16px
+     below. `.nav-link` next to these is flex for exactly this reason. Same
+     root cause as the underline: the rules predate these being links. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: var(--control-md);
   padding: 0 14px;
   border-radius: 999px;
@@ -3202,6 +4995,11 @@ button:disabled {
   color: rgba(255, 255, 255, 0.82);
   font-size: 13.5px;
   font-weight: 600;
+  /* These two are `<a>` now, not `<button>`, so the browser underlines them.
+     Nothing here set `text-decoration` because a button never needed it: the
+     rules predate the change and the underline arrived with the markup.
+     `.nav-link` beside them already carries this for the same reason. */
+  text-decoration: none;
 }
 .navbar .nav-login:hover {
   background: rgba(255, 255, 255, 0.12);
@@ -3211,6 +5009,9 @@ button:disabled {
 
 /* The single primary CTA on the bar. Gold is light, so the text is dark. */
 .navbar .nav-signup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: var(--control-md);
   padding: 0 18px;
   border-radius: 999px;
@@ -3220,6 +5021,7 @@ button:disabled {
   font-size: 13.5px;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(242, 169, 0, 0.32);
+  text-decoration: none;
 }
 .navbar .nav-signup:hover {
   background: #ffb800;
@@ -3248,13 +5050,6 @@ button:disabled {
   background: rgba(255, 255, 255, 0.88);
 }
 
-.nav-auth-error {
-  max-width: 1180px;
-  margin: 8px auto 0;
-  padding: 0 14px;
-  font-size: 12px;
-  color: var(--red);
-}
 
 /* ---- Burger ---- */
 .nav-burger {
@@ -4475,26 +6270,7 @@ button:disabled {
 }
 
 /* ---------- Event detail ----------
-   The listing page above was rewritten; the detail page was NOT part of that
-   change, so these are the styles it and the apply/ROI panels still rely on.
-   Kept in their own block so the two pages can move independently. */
-
-.cockpit.events.detail {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 16px;
-  align-items: start;
-  padding: 16px 20px 40px;
-  max-width: 1240px;
-  margin: 0 auto;
-}
-.cockpit.events.detail .cockpit-side {
-  min-width: 0;
-}
-.cockpit.events.detail .card.sticky {
-  position: sticky;
-  top: 92px;
-}
+   The breadcrumb and the facts list, shared by the page below. */
 
 .crumb {
   margin-bottom: 4px;
@@ -4507,62 +6283,6 @@ button:disabled {
 .crumb a:hover {
   color: var(--navy);
   text-decoration: underline;
-}
-
-/* The poster sits above the facts, capped so a tall portrait cannot push the
-   rest of the page below the fold. `contain` shows it whole; the blurred copy
-   behind fills the letterbox so the panel never reads as a gap. */
-.detail-hero {
-  position: relative;
-  height: 280px;
-  overflow: hidden;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-.detail-poster {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.detail-poster img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  position: relative;
-  z-index: 1;
-  border-radius: 6px;
-  /* Lifts the poster off the navy so it reads as an object on a surface. */
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32);
-}
-/* A plain navy field behind the poster, NOT a blurred copy of it.
-   The blurred-backdrop trick reads as the poster repeated three times at this
-   width — the artwork is too graphic and too high-contrast to dissolve — so it
-   competed with the real thing instead of receding behind it. A flat brand
-   ground makes the poster the only thing in the frame, which is the point. */
-.detail-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(150deg, var(--navy-deep), var(--navy));
-}
-.detail-hero .ev-cover {
-  width: 100%;
-  height: 100%;
-}
-
-.event-title {
-  margin: 0;
-  font-size: 26px;
-  line-height: 1.18;
-  letter-spacing: -0.02em;
-  color: var(--navy);
-}
-
-.event-card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .event-facts {
@@ -4588,38 +6308,1402 @@ button:disabled {
   min-width: 0;
 }
 
-.booth-list {
+/* ---------- The event page ----------
+   Three acts: the poster big at the top, the score horizontal beneath it, then
+   the information at length. It replaced seven identical grey cards in a
+   two-column cockpit, which the owner's verdict on was messy and boring and
+   which was right: the poster, the only part of the page an organizer actually
+   designed, was the smallest element in it.
+
+   CONTRAST ON THE NAVY STAGE IS COMPUTED, NOT EYEBALLED. White 13.6:1, the
+   0.84 summary 9.3:1, the 0.62 labels 5.4:1, the 0.74 secondary 7.1:1, dark
+   text on the gold pill 6.9:1, white on the ghost pill 7.7:1. The stage is a
+   gradient, so a reading taken with `getComputedStyle` would report
+   `rgba(0,0,0,0)`, sail past the navy and score white on white as a pass. */
+
+.evx {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 14px 20px 56px;
   display: grid;
-  gap: 8px;
+  /**
+   * `minmax(0, 1fr)`, NOT the implicit `auto`.
+   *
+   * A grid item's `min-width` is `auto`, which means min-content, and a track
+   * sized `auto` grows to fit it. On a listing with no artwork the built cover
+   * pushed the stage to 456px inside a 412px phone viewport and the whole page
+   * scrolled sideways. `overflow: hidden` on the stage does not help: it clips
+   * what the stage paints, not how wide the stage itself is allowed to become.
+   *
+   * Only reproduced on a listing WITHOUT a poster, which is why the first
+   * overflow probe came back clean.
+   */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
 }
-.booth {
+
+/* ---- Act 1: the stage ---- */
+
+.evx-stage {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  padding: 30px;
+  background: linear-gradient(148deg, var(--navy-deep) 0%, var(--navy) 52%, #0a3f9e 100%);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 48, 135, 0.14), 0 40px 80px -54px rgba(0, 32, 92, 0.95);
+}
+/* Reserves the stage's height so the page does not jolt when the poster
+   lands, and deliberately does NOT share `.evx-stage`: see the note in
+   EventDetail.tsx for the stale-handle flake that caused. */
+.evx-skeleton {
+  min-height: 460px;
+  border-radius: 22px;
+  background: linear-gradient(148deg, var(--navy-deep), var(--navy) 60%);
+  opacity: 0.5;
+}
+
+.evx-stage-inner {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 34px;
   align-items: center;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  cursor: pointer;
-  min-height: var(--control-lg);
 }
-.booth:hover {
-  background: var(--surface);
+
+/**
+ * The aurora, confined to this band.
+ *
+ * Three blurred blobs on long, differing loops. Never the whole page: a moving
+ * gradient behind the cost tables would fight the figures the page exists to
+ * show, and the skill rates aurora performance "good" rather than "excellent".
+ * Only `transform` and `opacity` animate.
+ */
+.evx-aurora {
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(58px);
+  /* Measured rather than guessed: at 0.55 this was invisible against the navy,
+     which is a cost with no effect. White text still measures 9.1:1 over the
+     brightest crest at 0.78, sampled across the loop rather than once. */
+  opacity: 0.78;
 }
-.booth.is-selected {
-  border-color: var(--navy);
-  background: var(--navy-tint);
+.evx-aurora i {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
 }
-.booth-main {
+/* Parallax by amplitude: the near layer travels furthest, the deep layer
+   drifts AGAINST the other two. Three layers moving the same distance is a
+   flat wash rather than a field. */
+.evx-aurora i:nth-child(1) {
+  width: 46%;
+  height: 60%;
+  left: 4%;
+  top: 6%;
+  background: radial-gradient(circle, rgba(242, 169, 0, 0.5), transparent 68%);
+  animation: evx-drift-a 23s var(--ease-premium) infinite alternate;
+}
+.evx-aurora i:nth-child(2) {
+  width: 52%;
+  height: 66%;
+  right: 2%;
+  top: 0;
+  background: radial-gradient(circle, rgba(96, 160, 255, 0.55), transparent 70%);
+  animation: evx-drift-b 19s var(--ease-premium) infinite alternate;
+}
+.evx-aurora i:nth-child(3) {
+  width: 60%;
+  height: 60%;
+  left: 26%;
+  bottom: -12%;
+  background: radial-gradient(circle, rgba(130, 96, 255, 0.4), transparent 72%);
+  animation: evx-drift-c 27s var(--ease-premium) infinite alternate;
+}
+@keyframes evx-drift-a {
+  to {
+    transform: translate3d(7%, -5%, 0) scale(1.12);
+  }
+}
+@keyframes evx-drift-b {
+  to {
+    transform: translate3d(-5%, 6%, 0) scale(1.08);
+  }
+}
+@keyframes evx-drift-c {
+  to {
+    transform: translate3d(3%, -3%, 0) scale(0.94);
+  }
+}
+
+/* The poster. Shown WHOLE: cropping one to fit a strip beheads the title,
+   which is the part a vendor scans for. A flat dark ground behind it rather
+   than a blurred copy of itself, which at this size reads as the poster
+   printed three times. */
+.evx-poster {
+  margin: 0;
+  min-width: 0;
+  /* Only the BUILT cover needs a reserved shape; a real poster carries its own
+     via the width and height on the `<img>`. The shipped set runs from 0.67 to
+     1.22, so one assumed ratio would letterbox nine of ten and crop the last. */
+  aspect-ratio: 3 / 4;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.34),
+    0 30px 60px -22px rgba(0, 0, 0, 0.62);
+}
+.evx-poster.has-art {
+  aspect-ratio: auto;
+  background: transparent;
+}
+.evx-poster img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* The built cover, for the listings with no artwork. Deliberately a graphic
+   and never a stock photograph: a borrowed crowd shot would imply we know what
+   this event looks like. At this size it has to carry enough to read as a
+   designed cover rather than as an image that failed to load. */
+.evx-cover {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  padding: 30px 26px;
+  text-align: left;
+  color: #fff;
+}
+.evx-cover em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+.evx-cover b {
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+}
+.evx-cover i,
+.evx-cover u {
+  font-style: normal;
+  text-decoration: none;
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0.86;
+}
+.evx-cover i {
+  font-weight: 600;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.evx-ident {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  align-content: center;
+}
+
+.evx-pills {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.evx-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+/* Gold is light, so dark text on it. Never white. */
+.evx-pill.gold {
+  background: var(--gold);
+  color: #3a2a00;
+}
+.evx-pill.ghost {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.evx-pill.full {
+  background: #ffd7d7;
+  color: #8f1616;
+}
+
+/* Type as hero. The editorial move the design system called for, and the one
+   thing that most separates a page FOR an event from a dashboard about it. */
+.evx-title {
+  margin: 0;
+  font-size: clamp(30px, 4.4vw, 52px);
+  line-height: 1.04;
+  letter-spacing: -0.032em;
+  font-weight: 800;
+  color: #fff;
+  text-wrap: balance;
+}
+.evx-by {
+  margin: 0;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.74);
+}
+.evx-by strong {
+  color: #fff;
+  font-weight: 700;
+}
+.evx-summary {
+  margin: 0;
+  max-width: 56ch;
+  font-size: 14.5px;
+  line-height: 1.62;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.evx-when {
+  margin: 6px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+.evx-when > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 2px solid rgba(242, 169, 0, 0.65);
+}
+.evx-when dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+.evx-when dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+.evx-when dd span {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.evx-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+/* The stage's secondary action needs its own ground: `.btn-quiet` is white on
+   white here and would disappear entirely. Third time this project has been
+   caught by a control having two possible grounds. */
+.btn-onnavy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-lg);
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  color: #fff;
+  transition: background 180ms var(--ease-premium);
+}
+@media (hover: hover) {
+  .btn-onnavy:hover {
+    background: rgba(255, 255, 255, 0.24);
+  }
+}
+.btn-onnavy:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.evx-cta .btn-primary {
+  background: var(--gold);
+  color: #3a2a00;
+}
+
+/* ---- Act 2: the score, horizontal ---- */
+
+.evx-score {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--bg);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 22px 48px -40px rgba(16, 24, 40, 0.5);
+}
+.evx-score-ring {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.evx-fit-for {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.evx-fit-for strong {
+  color: var(--navy);
+}
+
+.evx-score-body {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.evx-score-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+.evx-insight {
+  margin: 0;
+  flex: 1 1 300px;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.evx-scored-for {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.evx-scored-for > span {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.evx-scored-for select {
+  min-height: var(--control-md);
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+/* SIX ACROSS, which is the shape the owner asked for and is also the better
+   read: laid out horizontally the dimensions compare against each other at a
+   glance instead of being a list you scan top to bottom. */
+/**
+ * SIX ACROSS, AND EVERY ROW ON THE SAME LINE.
+ *
+ * `grid-template-rows` plus `subgrid` is what makes that true rather than
+ * approximately true: each meter inherits the parent's three rows, so the
+ * labels share one band, the numbers share the next, and the bars all sit on
+ * one baseline no matter how many lines a label takes. Without it, "Booth
+ * affordability" wrapping to two lines pushed its own bar down while its
+ * neighbours stayed put, and the band read as unfinished. That is exactly what
+ * the owner saw and called unprofessional.
+ *
+ * The `min-height` on the label is the fallback: where `subgrid` is missing it
+ * holds one-line and two-line labels to the same height, which reaches the
+ * same alignment a different way.
+ */
+.evx-meters {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: auto auto auto;
+  gap: 10px 14px;
+}
+.evx-meter {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 6px;
+  align-content: start;
   min-width: 0;
 }
-.booth-price {
-  font-weight: 700;
+.evx-meter .dim-bar-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  min-width: 0;
+  /* The base rule truncates with an ellipsis, which is right in the narrow
+     rail it was written for and wrong here: this band has the width, and
+     "Booth affordab..." is not a label. Resetting the wrap alone is not
+     enough; `overflow` and `text-overflow` come with it. */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.3;
+}
+.evx-meter .dim-bar-value {
+  /* The base rule right-aligns, which is right in the rail it was written for
+     where the label and value share a line. Here they are stacked, so a
+     right-aligned number under a left-aligned label is the same mixed
+     alignment the owner called unprofessional, one scale down. */
+  text-align: left;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  color: var(--navy);
+  line-height: 1.1;
   white-space: nowrap;
+  align-self: end;
+}
+/* Words, never a zero. An unscored dimension and one scoring nothing look
+   identical as a number and mean opposite things. */
+.evx-meter .dim-bar-value.muted {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: 0;
+}
+.evx-meter .dim-bar-track {
+  display: block;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.evx-meter .dim-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+/* The explanations, folded away. Same treatment the Location page gives its
+   own score working, and for the same reason: the figures are the control and
+   the reasoning is the appendix. */
+.evx-working {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.evx-working > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: var(--control-md);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--navy);
+}
+.evx-working > summary::-webkit-details-marker {
+  display: none;
+}
+.evx-working > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 180ms var(--ease-premium);
+}
+.evx-working[open] > summary::before {
+  transform: rotate(45deg);
+}
+.evx-working > summary:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.evx-working-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px 22px;
+}
+.evx-working-list li {
+  display: grid;
+  gap: 3px;
+  align-content: start;
+}
+.evx-working-list strong {
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.evx-working-list span {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.evx-est {
+  justify-self: start;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: #7a5600;
+}
+
+.evx-score-foot {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* The source note, no longer a boxed section. */
+.evx-sourceline {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* ---- Act 3: the information ---- */
+
+.evx-sec {
+  display: grid;
+  gap: 16px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--bg);
+}
+.evx-sec-head {
+  display: grid;
+  gap: 6px;
+}
+.evx-kicker {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  /* 5.48:1 on white, measured. The gold token itself is 1.9:1 and is a fill
+     colour, never a text colour on a light ground. */
+  color: #8a6200;
+}
+.evx-sec-head h2 {
+  margin: 0;
+  font-size: clamp(20px, 2.2vw, 26px);
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+  font-weight: 750;
+  color: var(--navy);
+}
+.evx-lede {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.evx-prose {
+  display: grid;
+  gap: 10px;
+  max-width: 72ch;
+}
+.evx-prose p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.68;
+  color: var(--ink);
+}
+.evx-none {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* At a glance */
+.evx-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.evx-stat {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 14px 15px;
+  border-radius: 13px;
+  background: linear-gradient(180deg, var(--surface), var(--bg));
+  border: 1px solid var(--line);
+}
+.evx-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--ink-2);
+}
+.evx-stat-value {
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--navy);
+  line-height: 1.15;
+}
+.evx-stat-value small {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+/* An absent figure is WORDS, at a size that cannot be mistaken for a number.
+   Loading, genuinely absent and actually zero are three different statements. */
+.evx-stat-value.is-absent {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: 0;
+}
+
+/* Who the organizer wants */
+.evx-wanted {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.evx-wanted li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.evx-wanted li.is-you {
+  border-color: var(--navy);
+  background: var(--navy-tint);
+  color: var(--navy);
+}
+.evx-you {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #3a2a00;
+}
+
+.evx-facts {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* Booths */
+.evx-booths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+.evx-booth {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  align-content: start;
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  cursor: pointer;
+  min-height: var(--control-lg);
+  transition:
+    border-color 180ms var(--ease-premium),
+    background 180ms var(--ease-premium);
+}
+/* The radio drives the state and stays in the accessibility tree; it is simply
+   not the thing you look at. Clipped rather than `display: none`, which would
+   take it out of the tab order entirely. */
+.evx-booth input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .evx-booth:hover {
+    border-color: var(--navy-soft);
+    background: var(--surface);
+  }
+}
+.evx-booth.is-selected {
+  border-color: var(--navy);
+  background: var(--navy-tint);
+  box-shadow: inset 0 0 0 1px var(--navy);
+}
+.evx-booth:focus-within {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+.evx-booth-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.evx-booth-head strong {
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.evx-booth-price {
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--navy);
+  white-space: nowrap;
+}
+.evx-booth-meta {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.evx-booth-inc {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  padding-top: 5px;
+  border-top: 1px dashed var(--line);
+}
+
+/* The rules, in two voices */
+.evx-rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.evx-rulecard {
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+.evx-rulecard.organizer {
+  background: var(--navy-tint);
+  border-color: var(--navy-soft);
+}
+.evx-rulecard.ask {
+  background: linear-gradient(180deg, rgba(242, 169, 0, 0.08), transparent 62%), var(--bg);
+}
+.evx-rulecard h3 {
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 750;
+  color: var(--navy);
+}
+/* The attribution, and it is the reason this section is two cards rather than
+   one list. Advice in the organizer's voice would read as a term somebody has
+   agreed to, on the page a vendor uses to decide whether to pay them. */
+.evx-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: #fff;
+}
+.evx-tag.ours {
+  background: var(--gold);
+  color: #3a2a00;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 10.5px;
+}
+
+.evx-ticks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+}
+.evx-ticks li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.evx-ticks li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--navy);
+}
+
+.evx-asklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 13px;
+}
+.evx-asklist li {
+  display: grid;
+  gap: 3px;
+}
+.evx-asklist strong {
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.evx-asklist span {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* Do and do not */
+.evx-trait {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.evx-dd {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.evx-dd-col {
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+.evx-dd-col h3 {
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 750;
+}
+/* Colour is never the only carrier: each column is also named and carries its
+   own glyph, so a reader who cannot separate the two hues still knows which
+   list they are in. */
+.evx-dd-col.do {
+  border-color: rgba(22, 163, 74, 0.32);
+  background: linear-gradient(180deg, rgba(22, 163, 74, 0.07), transparent 55%), var(--bg);
+}
+.evx-dd-col.do h3 {
+  color: #0f7a37;
+}
+.evx-dd-col.dont {
+  border-color: rgba(220, 38, 38, 0.28);
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.06), transparent 55%), var(--bg);
+}
+.evx-dd-col.dont h3 {
+  color: #a81c1c;
+}
+.evx-dd-col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 13px;
+}
+.evx-dd-col li {
+  display: grid;
+  gap: 3px;
+}
+.evx-dd-col strong {
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.evx-dd-col span {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* The ROI and apply panels keep their own markup, which is heavily tested, but
+   not their old chrome. A grey uppercase header bar next to these sections is
+   exactly the leftover that made the previous page read as assembled. */
+.evx-embed > .card {
+  border-radius: 18px;
+  border-color: var(--line);
+}
+.evx-embed > .card > header {
+  padding: 26px 26px 0;
+  border-bottom: 0;
+  background: transparent;
+  align-items: baseline;
+}
+.evx-embed > .card > header h2 {
+  font-size: clamp(20px, 2.2vw, 26px);
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+  font-weight: 750;
+  text-transform: none;
+  color: var(--navy);
+}
+.evx-embed > .card > .body {
+  padding: 16px 26px 26px;
+}
+@media (max-width: 720px) {
+  .evx-embed > .card > header {
+    padding: 18px 16px 0;
+  }
+  .evx-embed > .card > .body {
+    padding: 12px 16px 18px;
+  }
+}
+.evx-source .evx-prose p {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 1000px) {
+  .evx-stage-inner {
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 26px;
+  }
+  .evx-meters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* The row count has to follow the column count, or a `subgrid` child spans
+       three rows of a track list that no longer has six meters' worth. */
+    grid-template-rows: repeat(6, auto);
+  }
+}
+
+@media (max-width: 720px) {
+  .evx {
+    padding: 12px 12px 40px;
+    gap: 16px;
+  }
+  .evx-stage {
+    padding: 20px;
+  }
+  .evx-stage-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .evx-poster {
+    max-width: 280px;
+    margin: 0 auto;
+  }
+  .evx-score {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    padding: 18px;
+  }
+  .evx-meters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(9, auto);
+  }
+  .evx-sec {
+    padding: 18px 16px;
+  }
+  .evx-score-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/**
+ * Reduced motion, at the SAME SPECIFICITY as the rules it overrides.
+ *
+ * The aurora declares its animation on `.evx-aurora i:nth-child(n)`, which is
+ * (0,2,1). A rule written as `.evx-aurora i` is (0,1,1) and would lose, and a
+ * media query contributes no specificity to break the tie. That exact mistake
+ * already shipped once on the simulator console, where the page kept drifting
+ * for readers who had asked it not to.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .evx-aurora i:nth-child(1),
+  .evx-aurora i:nth-child(2),
+  .evx-aurora i:nth-child(3) {
+    animation: none;
+  }
+  .evx-booth {
+    transition: none;
+  }
+  .btn-onnavy {
+    transition: none;
+  }
+}
+
+/* ---------- Applying ----------
+   Signed out this is a gate; signed in it is a pitch, because the contact half
+   arrives already filled in from the vendor account. */
+
+.apply-gate {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.apply-gate .lede {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.apply-gate p {
+  margin: 0;
+}
+.apply-gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+/* `min-height` is stated in the BASE rule rather than appended to the
+   coarse-pointer list, which sidesteps the specificity trap that list has now
+   been bitten by six times: these clear the 44px floor at every pointer type
+   without having to match a selector written hundreds of lines away. */
+.btn-primary,
+.btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-lg);
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: filter 180ms var(--ease-premium), background 180ms var(--ease-premium);
+}
+.btn-primary {
+  background: var(--navy);
+  color: #fff;
+}
+.btn-quiet {
+  background: var(--bg);
+  border-color: var(--line);
+  color: var(--ink);
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    filter: brightness(1.14);
+  }
+  .btn-quiet:hover {
+    background: var(--surface);
+  }
+}
+.btn-primary:focus-visible,
+.btn-quiet:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+
+/* ---------- The application form ----------
+   It really sends now, so it is built as a form rather than a stack of fields:
+   two named groups, one primary action, and a confirmation that says what
+   actually happened. */
+
+.applyform {
+  display: grid;
+  gap: 16px;
+}
+.applyform-intro {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.applyform-sec {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px 18px;
+  display: grid;
+  gap: 12px;
+}
+/* A faint gold wash on the half that is the vendor's to win with. */
+.applyform-sec.pitch {
+  background: linear-gradient(180deg, rgba(242, 169, 0, 0.07), transparent 58%), var(--bg);
+}
+.applyform-sec > legend {
+  padding: 0 8px;
+  margin-left: -8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--navy);
+}
+.applyform-note {
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.applyform-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+/* One field. Named `.af` rather than reusing `.field`, which carries an
+   adjacent-sibling margin written for a stacked sidebar and an input rule that
+   matches only three of the five control types this form uses. */
+.af {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.af-label {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.af-label em {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.af input,
+.af select,
+.af textarea {
+  width: 100%;
+  min-width: 0;
+  /* Stated in the base rule so it clears the 44px floor at every pointer type,
+     which sidesteps the coarse-pointer specificity trap entirely. */
+  min-height: var(--control-lg);
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.af textarea {
+  min-height: 78px;
+  resize: vertical;
+  line-height: 1.55;
+}
+.af input:focus-visible,
+.af select:focus-visible,
+.af textarea:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+  border-color: var(--navy);
+}
+/* `--ink-3` measures 2.58:1 on white and fails AA, so hints use `--ink-2`. */
+.af-hint {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.applyform-consent {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.applyform-consent input {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--navy);
+}
+.applyform-consent strong {
+  color: var(--ink);
+}
+
+.applyform-send {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+}
+.btn-send {
+  width: 100%;
+  max-width: 340px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: filter 180ms var(--ease-premium);
+}
+@media (hover: hover) {
+  .applyform .btn-send:hover:not(:disabled) {
+    filter: brightness(1.15);
+  }
+}
+.applyform .btn-send:disabled {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  opacity: 1;
+  cursor: default;
+}
+.btn-send:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 3px;
+}
+.applyform-out {
+  justify-self: center;
+}
+
+/* Sent, and already applied. Both are receipts rather than notices: something
+   happened and this is the record of it. */
+.apply-done {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.apply-done.sent {
+  border-color: rgba(22, 163, 74, 0.34);
+  background: linear-gradient(180deg, rgba(22, 163, 74, 0.08), transparent 55%), var(--bg);
+}
+.apply-done-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  flex: none;
+}
+.apply-done.sent .apply-done-mark {
+  background: #16a34a;
+}
+.apply-done h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  color: var(--navy);
+}
+.apply-done p {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.apply-done .tiny {
+  color: var(--ink-2);
+}
+.apply-done .btn-quiet {
+  margin-top: 4px;
+}
+.apply-receipt {
+  margin: 0 0 10px;
+  display: grid;
+  gap: 6px;
+}
+.apply-receipt > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+.apply-receipt dt {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.apply-receipt dd {
+  margin: 0;
+  font-size: 13px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .apply-done {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .apply-receipt > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1px;
+  }
 }
 
 /* The ROI headline is a RATIO, sized to be read first — see RoiPanel.tsx. */
@@ -4760,23 +7844,7 @@ ul.tight {
   line-height: 1.4;
 }
 
-@media (max-width: 1040px) {
-  .cockpit.events.detail {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  /* Score above the detail on a phone, not below a very long page. */
-  .cockpit.events.detail .cockpit-side {
-    order: -1;
-  }
-  .cockpit.events.detail .card.sticky {
-    position: static;
-  }
-}
-
 @media (max-width: 640px) {
-  .cockpit.events.detail {
-    padding: 12px 12px 32px;
-  }
   .event-facts > div {
     grid-template-columns: 110px minmax(0, 1fr);
   }
@@ -5022,6 +8090,72 @@ ul.tight {
   }
   .ft-base {
     padding-bottom: 20px;
+  }
+}
+
+/* ---------- The event page in print ----------
+   A printed listing is the copy most likely to be shown to a partner or kept
+   in a folder, so it prints, but not in navy: a full-bleed dark stage wastes
+   most of a cartridge and collapses towards the gold in greyscale, exactly as
+   the tab rail already found. The poster and every figure stay.
+
+   AFTER the rules it overrides and before `pointer: coarse`, which stays last.
+   A media query adds no specificity, so position in the file is the only thing
+   breaking these ties. */
+@media print {
+  .evx {
+    padding: 0;
+    gap: 14px;
+  }
+  .evx-stage {
+    background: none;
+    color: #000;
+    box-shadow: none;
+    padding: 0 0 14px;
+    border-bottom: 1px solid #999;
+    border-radius: 0;
+  }
+  .evx-aurora,
+  .evx-cta {
+    display: none;
+  }
+  .evx-title,
+  .evx-by strong,
+  .evx-when dd {
+    color: #000;
+  }
+  .evx-summary,
+  .evx-by,
+  .evx-when dt,
+  .evx-when dd span {
+    color: #333;
+  }
+  .evx-when > div {
+    border-left-color: #999;
+  }
+  .evx-pill.gold,
+  .evx-pill.ghost,
+  .evx-pill.full {
+    background: none;
+    color: #000;
+    border: 1px solid #999;
+  }
+  .evx-poster {
+    box-shadow: none;
+  }
+  /* Sections read as a document rather than as a stack of cards. */
+  .evx-sec,
+  .evx-score,
+  .evx-embed > .card {
+    border: 0;
+    border-top: 1px solid #ccc;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 12px 0 0;
+    break-inside: avoid;
+  }
+  .evx-scored-for {
+    display: none;
   }
 }
 
@@ -5424,7 +8558,23 @@ ul.tight {
   .aipanel .ai-suggestions button,
   .aipanel .ai-log-head button,
   .aipanel .ai-form input,
-  .aipanel .ai-form button {
+  .aipanel .ai-form button,
+  /* The console's controls, at the SAME specificity as their base rules
+     (`.simconsole .sim-examples button` is 0,2,1). A bare `button` here loses,
+     because a media query contributes no specificity and being last in the
+     file only breaks ties. Sixth control to need this written out. */
+  .simconsole .sim-examples button,
+  .simconsole .sim-keep,
+  .simconsole .sim-revert,
+  .sim-baseline button,
+  /* Written at the specificity of their base rules, which are
+     `.sim-rail .field input[type="number"]` (0,2,2) and `.cost-working >
+     summary` (0,1,1). Measured on an emulated Pixel at 42px, 28px and 20px
+     against a 44px floor. Seventh control set to need this spelled out. */
+  .sim-rail .field input[type="number"],
+  .sim-rail .field input[type="text"],
+  .sim-rail .field input[type="range"],
+  .cost-working > summary {
     min-height: var(--control-lg);
   }
 

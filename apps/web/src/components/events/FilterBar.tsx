@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { listCategories, type BusinessCategory, type VendorProfile } from "@spotential/sim-engine";
@@ -74,6 +74,23 @@ export function FilterBar({
     { scope: rootRef },
   );
 
+  /**
+   * THE FIELD OWNS ITS OWN VALUE.
+   *
+   * It used to render `filters.query`, which comes from the URL — so every
+   * keystroke had to complete a round trip through `setSearchParams` before it
+   * could appear. Two keys pressed inside one commit collapsed to the last
+   * one, and typing "terang" at full speed produced "tg". On a fast idle
+   * machine the round trip usually won, which is why this looked like a flaky
+   * test for months rather than dropped keystrokes.
+   *
+   * "Debounce the fetch, never the field" was already the rule here; this is
+   * the half that was missing. The URL still updates on every keystroke and
+   * still drives the query, but the input never waits for it.
+   */
+  const [text, setText] = useTypedField(filters.query, (v) => onFilter("query", v));
+  const [budget, setBudget] = useTypedField(filters.budget, (v) => onFilter("budget", v));
+
   return (
     <div className="filterbar" ref={rootRef}>
       {/* Group one: who you are. Everything here re-scores the page. */}
@@ -106,8 +123,8 @@ export function FilterBar({
               step={100}
               inputMode="numeric"
               placeholder="Any"
-              value={filters.budget}
-              onChange={(e) => onFilter("budget", e.target.value)}
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
             />
           </div>
         </div>
@@ -129,14 +146,14 @@ export function FilterBar({
             </svg>
             <input
               id="fb-q"
-              value={filters.query}
+              value={text}
               placeholder="Event, venue or organizer"
-              onChange={(e) => onFilter("query", e.target.value)}
+              onChange={(e) => setText(e.target.value)}
             />
-            {filters.query && (
+            {text && (
               <button
                 className="fb-clear"
-                onClick={() => onFilter("query", "")}
+                onClick={() => setText("")}
                 aria-label="Clear search"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6">
@@ -179,4 +196,46 @@ export function FilterBar({
       </div>
     </div>
   );
+}
+
+/**
+ * A text field that owns its own value while still driving the URL.
+ *
+ * Both of this bar's free-text inputs rendered straight from the URL, so every
+ * keystroke had to complete a round trip through `setSearchParams` before it
+ * could appear. Two keys pressed inside one commit collapsed to the last one:
+ * typing "terang" at speed produced "tg", and typing a budget of "700"
+ * produced something that matched nothing. On an idle machine the round trip
+ * usually won, which is why both presented as flaky tests for months rather
+ * than as dropped keystrokes.
+ *
+ * "Debounce the fetch, never the field" was already the rule here. This is the
+ * half that was missing: the field updates locally and immediately, the URL
+ * still updates on every keystroke, and the query is still what waits.
+ */
+function useTypedField(
+  external: string,
+  emit: (value: string) => void,
+): [string, (value: string) => void] {
+  const [value, setValue] = useState(external);
+  /** What we last sent outward, so an echo of our own value is not adopted. */
+  const emitted = useRef(external);
+
+  useEffect(() => {
+    // A genuinely external change: a shared link, or Clear all filters.
+    // Adopting our own echo instead would clobber whatever is being typed.
+    if (external !== emitted.current) {
+      emitted.current = external;
+      setValue(external);
+    }
+  }, [external]);
+
+  return [
+    value,
+    (next: string) => {
+      setValue(next);
+      emitted.current = next;
+      emit(next);
+    },
+  ];
 }
