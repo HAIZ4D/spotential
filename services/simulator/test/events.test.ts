@@ -4,7 +4,7 @@ import { buildApp } from "../src/app.js";
 import { EventCatalogue } from "../src/events/catalogue.js";
 import { InMemoryApplicationStore } from "../src/events/store.js";
 import { parseApplyRequest } from "../src/events/apply.js";
-import { isPast } from "@spotential/sim-engine";
+import { isPast, MALAYSIAN_STATES } from "@spotential/sim-engine";
 
 /**
  * The events routes.
@@ -82,10 +82,35 @@ describe("GET /v1/events", () => {
   });
 
   it("narrows by state", async () => {
-    const res = await app.inject({ method: "GET", url: "/v1/events?state=Selangor" });
+    /**
+     * THE STATE COMES FROM THE CATALOGUE, not from a magic string.
+     *
+     * This filtered on `Selangor` and went red on 2026-11-13 with no code
+     * change: the last listable Selangor event finished on the 8th and the
+     * filter correctly matched nothing. Third time a calendar has broken this
+     * file. Picking a state that is listable today tests the FILTER rather
+     * than which events happen to be running.
+     */
+    const listable = catalogue.all().filter((e) => !isPast(e));
+    expect(listable.length, "no listable event to narrow").toBeGreaterThan(0);
+    const state = listable[0]!.state;
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/events?state=${encodeURIComponent(state)}`,
+    });
     const body = res.json();
-    expect(body.events.length).toBeGreaterThan(0);
-    for (const e of body.events) expect(e.state).toBe("Selangor");
+    expect(body.events.length).toBe(listable.filter((e) => e.state === state).length);
+    for (const e of body.events) expect(e.state).toBe(state);
+
+    // And it genuinely narrows: with one state listed, a filter that ignored
+    // the parameter would pass everything above, so a state with nothing on
+    // must come back empty.
+    const quiet = MALAYSIAN_STATES.find((s) => !listable.some((e) => e.state === s))!;
+    const none = (
+      await app.inject({ method: "GET", url: `/v1/events?state=${encodeURIComponent(quiet)}` })
+    ).json();
+    expect(none.events).toHaveLength(0);
   });
 
   it("narrows by event type", async () => {
