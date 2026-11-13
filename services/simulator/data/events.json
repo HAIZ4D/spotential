@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "generated": "2026-09-13",
-  "note": "Every listing has a real poster behind it. Dates, venue and hours come from the poster; booth pricing and slot counts are curated estimates. Applications are refused for these server-side until organizers publish their own events.",
+  "generated": "2026-10-22",
+  "note": "Every listing has a real poster behind it. Dates, venue and hours come from the poster; booth pricing and slot counts are curated estimates. Applications are stored under the vendor's verified account and passed to the organizer, with the listing source recorded on each one.",
   "events": [
     {
       "id": "evt-johor-lotus",
@@ -523,6 +523,102 @@
       "source": "seed",
       "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Booth pricing and slot counts are curated estimates rather than the organizer's published terms.",
       "reviewed": "2026-08-31"
+    },
+    {
+      "id": "evt-spooky-night-market",
+      "slug": "spooky-night-market",
+      "name": "Spooky Night Market",
+      "summary": "A ten-day Halloween night market on an open-air carpark at The Palette Danau Kota, calling for brands and creatives.",
+      "eventType": "market",
+      "venueName": "The Palette Danau Kota, outdoor open carpark",
+      "address": "8, Jalan Langkawi, Taman Danau Kota, Setapak, 53000 Kuala Lumpur",
+      "state": "W.P. Kuala Lumpur",
+      "point": {
+        "lat": 3.2054,
+        "lng": 101.7163
+      },
+      "startDate": "2026-10-16",
+      "endDate": "2026-10-25",
+      "dailyHours": "16:00 - 23:00",
+      "wantedCategories": [
+        "clothing_fashion",
+        "other_retail"
+      ],
+      "packages": [],
+      "totalSlots": 50,
+      "availableSlots": 8,
+      "expectedVisitors": null,
+      "vendorRequirements": [],
+      "organizerName": "Oh Yeah! Bazaar",
+      "source": "seed",
+      "sourceNote": "Dates, venue, opening hours and who is being recruited are taken from the event's own poster. Slot counts are curated estimates rather than the organizer's published terms. No booth price or turnout figure is published for this event, so none is shown.",
+      "reviewed": "2026-10-22"
+    },
+    {
+      "id": "evt-tjm-alamsari",
+      "slug": "temu-janji-market-alamsari",
+      "name": "Temu Janji Market",
+      "summary": "A weekend market run by Malayan Market on the grounds of the Setia Alamsari Welcome Centre, trading from late morning into the night.",
+      "eventType": "market",
+      "venueName": "Setia Alamsari Welcome Centre, outdoor grounds",
+      "address": "1-2, Jalan Alam Sari, Setia Alamsari, 43000 Kajang, Selangor",
+      "state": "Selangor",
+      "point": {
+        "lat": 2.9213,
+        "lng": 101.804
+      },
+      "startDate": "2026-10-31",
+      "endDate": "2026-11-01",
+      "dailyHours": "11:00 - 22:00",
+      "wantedCategories": [
+        "cafe_coffee_shop",
+        "bubble_tea_dessert",
+        "other_fnb",
+        "clothing_fashion",
+        "other_retail"
+      ],
+      "packages": [],
+      "totalSlots": 60,
+      "availableSlots": 15,
+      "expectedVisitors": null,
+      "vendorRequirements": [],
+      "organizerName": "Setia Alamsari x Malayan Market",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. The poster does not say who is being recruited, so the categories follow this organizer's previous Temu Janji edition, and slot counts are curated estimates. No booth price or turnout figure is published for this event, so none is shown.",
+      "reviewed": "2026-10-22"
+    },
+    {
+      "id": "evt-thrifts-drifts",
+      "slug": "thrifts-and-drifts",
+      "name": "Thrifts & Drifts",
+      "summary": "A three-day thrift and preloved market with a car culture theme at One Square, three minutes' walk from MRT Bandar Utama.",
+      "eventType": "market",
+      "venueName": "One Square @ Bandar Utama",
+      "address": "One Square, First Avenue, Bandar Utama, 47800 Petaling Jaya, Selangor",
+      "state": "Selangor",
+      "point": {
+        "lat": 3.1459,
+        "lng": 101.6173
+      },
+      "startDate": "2026-11-06",
+      "endDate": "2026-11-08",
+      "dailyHours": "12:00 - 22:00",
+      "wantedCategories": [
+        "clothing_fashion",
+        "other_retail",
+        "bubble_tea_dessert",
+        "fast_casual_takeaway",
+        "other_fnb"
+      ],
+      "packages": [],
+      "totalSlots": 80,
+      "availableSlots": 30,
+      "expectedVisitors": null,
+      "vendorRequirements": [],
+      "organizerName": "Oh Yeah! Bazaar x One Square",
+      "source": "seed",
+      "sourceNote": "Dates, venue and opening hours are taken from the event's own poster. Who is being recruited follows the poster's thrift and car culture theme, and slot counts are curated estimates rather than the organizer's published terms. No booth price or turnout figure is published for this event, so none is shown.",
+      "reviewed": "2026-10-22"
     }
   ]
 }

@@ -6,7 +6,10 @@ import heritage from "../../../img/malaysia-food-heritage.webp";
 import pestaTempatan from "../../../img/pesta-tempatan-4x4.webp";
 import retroBazaar from "../../../img/retro-bazaar.webp";
 import santaiArabia from "../../../img/santai-connect-arabia.webp";
+import spookyNight from "../../../img/spooky-night-market.webp";
 import temuJanji from "../../../img/temu-janji-market.webp";
+import temuJanjiAlamsari from "../../../img/temu-janji-market-alamsari.webp";
+import thriftsDrifts from "../../../img/thrifts-drifts.webp";
 import wanitaMendunia from "../../../img/karnival-wanita-mendunia.webp";
 import weekendRace from "../../../img/weekend-race-market.webp";
 
@@ -39,6 +42,9 @@ const POSTERS: Record<string, string> = {
   "evt-pesta-tempatan": pestaTempatan,
   "evt-retro-bazaar": retroBazaar,
   "evt-santai-arabia": santaiArabia,
+  "evt-spooky-night-market": spookyNight,
+  "evt-thrifts-drifts": thriftsDrifts,
+  "evt-tjm-alamsari": temuJanjiAlamsari,
   "evt-tjm-bayuemas": temuJanji,
   "evt-wanita-mendunia": wanitaMendunia,
   "evt-weekend-race-market": weekendRace,
@@ -65,6 +71,9 @@ const POSTER_HEIGHTS: Record<string, number> = {
   "evt-pesta-tempatan": 344,
   "evt-retro-bazaar": 558,
   "evt-santai-arabia": 625,
+  "evt-spooky-night-market": 525,
+  "evt-thrifts-drifts": 525,
+  "evt-tjm-alamsari": 525,
   "evt-tjm-bayuemas": 525,
   "evt-wanita-mendunia": 630,
   "evt-weekend-race-market": 525,
