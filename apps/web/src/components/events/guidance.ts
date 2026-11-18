@@ -61,12 +61,32 @@ export function closingHour(dailyHours: string): number | null {
   return Number.isFinite(hour) && hour >= 0 && hour <= 23 ? hour : null;
 }
 
-/** And the opening hour, which is what makes a 7am load-in worth mentioning. */
+/**
+ * And the opening hour, which is what makes a 7am load-in worth mentioning.
+ *
+ * ONLY FROM A RANGE. A poster that says "until 22:00" names a close and no
+ * open, and reading its one time as the opening hour told vendors trading
+ * started at ten at night.
+ */
 export function openingHour(dailyHours: string): number | null {
-  const first = dailyHours.match(/(\d{1,2})[:.](\d{2})/)?.[0];
-  if (!first) return null;
-  const hour = Number(first.split(/[:.]/)[0]);
+  const times = dailyHours.match(/(\d{1,2})[:.](\d{2})/g);
+  if (!times || times.length < 2) return null;
+  const hour = Number(times[0]!.split(/[:.]/)[0]);
   return Number.isFinite(hour) && hour >= 0 && hour <= 23 ? hour : null;
+}
+
+/**
+ * Hours of trading a day, or null when either end is unknown.
+ *
+ * A close EARLIER than the open is past midnight, not an error: a Raya bazaar
+ * running "16:00 - 02:00" trades ten hours, and treating it as no hours at all
+ * dropped both its hours-a-day figure and its lighting advice.
+ */
+export function tradingHours(dailyHours: string): number | null {
+  const opens = openingHour(dailyHours);
+  const closes = closingHour(dailyHours);
+  if (opens === null || closes === null || opens === closes) return null;
+  return closes > opens ? closes - opens : closes + 24 - opens;
 }
 
 /**
@@ -198,7 +218,8 @@ export function buildGuidance(
     });
   }
 
-  if (closes !== null && closes >= 19) {
+  // Past midnight counts as after dark, which a plain `closes >= 19` misses.
+  if (closes !== null && (closes >= 19 || (opens !== null && closes < opens))) {
     traits.push("Evening trade");
     doThis.push({
       title: "Bring your own light",
@@ -206,11 +227,12 @@ export function buildGuidance(
     });
   }
 
-  if (opens !== null && closes !== null && closes - opens >= 10) {
-    traits.push(`${closes - opens} hour days`);
+  const span = tradingHours(event.dailyHours);
+  if (span !== null && span >= 10) {
+    traits.push(`${span} hour days`);
     doThis.push({
       title: "Plan a relief shift",
-      detail: `Trading runs ${closes - opens} hours a day here. Nobody sells well in hour eleven, and a stall left unattended for a break is a stall that is closed.`,
+      detail: `Trading runs ${span} hours a day here. Nobody sells well in hour eleven, and a stall left unattended for a break is a stall that is closed.`,
     });
   }
 

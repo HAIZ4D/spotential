@@ -89,8 +89,10 @@ test("marks the current page for assistive tech, not only in colour", async ({ p
 
 test("keeps a nested route lit on its section", async ({ page }) => {
   // An event detail page is still Events; matching on equality alone would
-  // unlight the whole bar as soon as you opened a listing.
-  await goto(page, "/events/lapan-pagi-club");
+  // unlight the whole bar as soon as you opened a listing. The ROUTE lights the
+  // bar, not the listing, so this slug need not exist in the catalogue and
+  // retiring an event can never break it.
+  await goto(page, "/events/any-listing");
   await openIfCompact(page);
 
   await expect(page.getByRole("link", { name: "Events", exact: true })).toHaveAttribute(

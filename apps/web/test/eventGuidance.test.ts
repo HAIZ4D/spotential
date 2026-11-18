@@ -5,6 +5,7 @@ import {
   closingHour,
   looksOutdoor,
   openingHour,
+  tradingHours,
 } from "../src/components/events/guidance.js";
 
 /**
@@ -72,6 +73,29 @@ describe("reading the hours", () => {
   it("says nothing rather than guessing when the string is not a range", () => {
     expect(openingHour("all day")).toBeNull();
     expect(closingHour("TBC")).toBeNull();
+  });
+
+  it("never reads a lone closing time as the opening hour", () => {
+    // The Children's Day poster says only "until 10pm". Taking its one time as
+    // the open told vendors trading started at ten at night.
+    expect(openingHour("until 22:00")).toBeNull();
+    expect(closingHour("until 22:00")).toBe(22);
+    expect(tradingHours("until 22:00")).toBeNull();
+
+    const late = buildGuidance({ ...BASE, dailyHours: "until 22:00" }, "cafe_coffee_shop");
+    expect(late.askFirst.map((i) => i.detail).join(" ")).not.toMatch(/opens at 22/);
+    expect(titles(late.doThis)).toMatch(/bring your own light/i);
+  });
+
+  it("reads a close before the open as past midnight", () => {
+    // A Raya bazaar trading 16:00 to 02:00 is ten hours a day, not zero.
+    expect(tradingHours("16:00 - 02:00")).toBe(10);
+    expect(tradingHours("08:00 - 23:00")).toBe(15);
+
+    const bazaar = buildGuidance({ ...BASE, dailyHours: "16:00 - 02:00" }, "cafe_coffee_shop");
+    expect(bazaar.traits).toContain("Evening trade");
+    expect(bazaar.traits).toContain("10 hour days");
+    expect(titles(bazaar.doThis)).toMatch(/bring your own light/i);
   });
 });
 

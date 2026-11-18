@@ -70,8 +70,10 @@ const PUBLISHED = {
   ...SEEDED,
   // A REAL catalogue id, so `posterFor` resolves the bundled artwork and the
   // image path gets exercised. The seeded stub above deliberately keeps a
-  // made-up id so the generated-cover path is covered too.
-  id: "evt-santai-arabia",
+  // made-up id so the generated-cover path is covered too. It must name a
+  // listing that still has a poster: when that event is retired, point this at
+  // another one, or "shows a real poster" fails on a missing image.
+  id: "evt-pesta-tempatan",
   slug: "pasar-pagi-ttdi",
   name: "Pasar Pagi TTDI",
   organizerName: "TTDI Residents Association",

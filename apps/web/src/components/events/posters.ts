@@ -1,17 +1,14 @@
 import type { EventListing } from "@spotential/sim-engine";
-import hariSukan from "../../../img/hari-sukan-negara.webp";
-import lapanPagi from "../../../img/lapan-pagi.webp";
-import lotusPopFest from "../../../img/lotus-pop-fest.webp";
-import heritage from "../../../img/malaysia-food-heritage.webp";
+import childrensDay from "../../../img/childrens-day-prima-avenue.webp";
+import kandaqFest from "../../../img/kandaq-fest-kl.webp";
+import luminareRaya from "../../../img/luminare-bazaar-raya-2027.webp";
+import pestaKopiKita from "../../../img/pesta-kopi-kita-2026.webp";
+import pestaMorib from "../../../img/pesta-morib-2026.webp";
 import pestaTempatan from "../../../img/pesta-tempatan-4x4.webp";
-import retroBazaar from "../../../img/retro-bazaar.webp";
-import santaiArabia from "../../../img/santai-connect-arabia.webp";
-import spookyNight from "../../../img/spooky-night-market.webp";
-import temuJanji from "../../../img/temu-janji-market.webp";
-import temuJanjiAlamsari from "../../../img/temu-janji-market-alamsari.webp";
-import thriftsDrifts from "../../../img/thrifts-drifts.webp";
-import wanitaMendunia from "../../../img/karnival-wanita-mendunia.webp";
-import weekendRace from "../../../img/weekend-race-market.webp";
+import publikaSeoul from "../../../img/publika-seoul-street-market.webp";
+import santaiLights from "../../../img/santai-connect-festival-of-lights.webp";
+import temuJanjiArtPlay from "../../../img/temu-janji-market-art-and-play.webp";
+import temuJanjiSenjaBali from "../../../img/temu-janji-market-senja-bali.webp";
 
 /**
  * Event posters.
@@ -32,22 +29,23 @@ import weekendRace from "../../../img/weekend-race-market.webp";
  * artwork, and the honest answer to that is still not a stock photo: a generic
  * crowd shot would imply we know what the event looks like, on a page whose
  * whole argument is that its figures came from somewhere checkable.
+ *
+ * FINISHED EVENTS ARE RETIRED, poster and listing together. On 2026-11-18 the
+ * twelve that had ended left the catalogue, this map and `img/` in one change,
+ * so a poster never outlives its listing and a listing never loses its poster.
  */
 
 const POSTERS: Record<string, string> = {
-  "evt-hari-sukan-negara": hariSukan,
-  "evt-heritage-matic": heritage,
-  "evt-johor-lotus": lotusPopFest,
-  "evt-lapan-pagi": lapanPagi,
+  "evt-childrens-day-prima": childrensDay,
+  "evt-kandaq-fest": kandaqFest,
+  "evt-luminare-raya": luminareRaya,
+  "evt-pesta-kopi-kita": pestaKopiKita,
+  "evt-pesta-morib": pestaMorib,
   "evt-pesta-tempatan": pestaTempatan,
-  "evt-retro-bazaar": retroBazaar,
-  "evt-santai-arabia": santaiArabia,
-  "evt-spooky-night-market": spookyNight,
-  "evt-thrifts-drifts": thriftsDrifts,
-  "evt-tjm-alamsari": temuJanjiAlamsari,
-  "evt-tjm-bayuemas": temuJanji,
-  "evt-wanita-mendunia": wanitaMendunia,
-  "evt-weekend-race-market": weekendRace,
+  "evt-publika-seoul": publikaSeoul,
+  "evt-santai-lights": santaiLights,
+  "evt-tjm-art-play": temuJanjiArtPlay,
+  "evt-tjm-senja-bali": temuJanjiSenjaBali,
 };
 
 /**
@@ -64,19 +62,16 @@ const POSTERS: Record<string, string> = {
  * the stage jolting as it loads.
  */
 const POSTER_HEIGHTS: Record<string, number> = {
-  "evt-hari-sukan-negara": 560,
-  "evt-heritage-matic": 594,
-  "evt-johor-lotus": 629,
-  "evt-lapan-pagi": 583,
+  "evt-childrens-day-prima": 527,
+  "evt-kandaq-fest": 520,
+  "evt-luminare-raya": 244,
+  "evt-pesta-kopi-kita": 525,
+  "evt-pesta-morib": 525,
   "evt-pesta-tempatan": 344,
-  "evt-retro-bazaar": 558,
-  "evt-santai-arabia": 625,
-  "evt-spooky-night-market": 525,
-  "evt-thrifts-drifts": 525,
-  "evt-tjm-alamsari": 525,
-  "evt-tjm-bayuemas": 525,
-  "evt-wanita-mendunia": 630,
-  "evt-weekend-race-market": 525,
+  "evt-publika-seoul": 525,
+  "evt-santai-lights": 525,
+  "evt-tjm-art-play": 630,
+  "evt-tjm-senja-bali": 525,
 };
 
 export const POSTER_WIDTH = 420;

@@ -16,7 +16,7 @@ import { ScoreRing, bandFor } from "../components/analysis/ScoreRing.js";
 import { RoiPanel } from "../components/events/RoiPanel.js";
 import { ApplyPanel } from "../components/events/ApplyPanel.js";
 import { EventDoDont, EventRules } from "../components/events/EventGuidance.js";
-import { closingHour, openingHour } from "../components/events/guidance.js";
+import { tradingHours } from "../components/events/guidance.js";
 import { useFillBars, useReveal } from "../components/events/useReveal.js";
 import { formatRun } from "../components/events/EventCard.js";
 import { coverFor, posterFor, posterSizeFor } from "../components/events/posters.js";
@@ -151,9 +151,9 @@ export default function EventDetail() {
   // so a model-written sentence could contradict the number an inch away.
   const insight = score ? matchInsight(score) : null;
   const wanted = event.wantedCategories;
-  const opens = openingHour(event.dailyHours);
-  const closes = closingHour(event.dailyHours);
-  const hoursPerDay = opens !== null && closes !== null && closes > opens ? closes - opens : null;
+  // Shared with the guidance, so the tile and the advice can never disagree
+  // about a bazaar that trades past midnight.
+  const hoursPerDay = tradingHours(event.dailyHours);
 
   return (
     <>

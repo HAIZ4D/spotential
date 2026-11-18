@@ -1,10 +1,13 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterAll, describe, expect, it, vi } from "vitest";
+import type { EventListing } from "@spotential/sim-engine";
 import { buildApp } from "../src/app.js";
 import { EventCatalogue } from "../src/events/catalogue.js";
 import { InMemoryApplicationStore } from "../src/events/store.js";
 import { parseApplyRequest } from "../src/events/apply.js";
-import { isPast, MALAYSIAN_STATES } from "@spotential/sim-engine";
+import { EVENT_TYPES, isPast, MALAYSIAN_STATES } from "@spotential/sim-engine";
 
 /**
  * The events routes.
@@ -23,9 +26,82 @@ import { isPast, MALAYSIAN_STATES } from "@spotential/sim-engine";
 
 const catalogue = await EventCatalogue.load("services/simulator/data");
 
+/**
+ * A listing to drive the routes with, READ from the catalogue rather than named.
+ *
+ * Every test below used to pin `evt-lapan-pagi`, and retiring finished events
+ * (2026-11-18) deleted it out from under all of them at once. The routes are
+ * the subject, never one event, so this takes the first listing that publishes
+ * a price: the apply tests need a package to choose and a fee to record.
+ */
+const SAMPLE = catalogue.all().find((e) => e.packages.length > 0)!;
+
+/**
+ * A tiny catalogue that never ages, for the tests that need a PRICED listing
+ * on the list.
+ *
+ * The real catalogue is curated from posters and most of them publish no
+ * price, so "is a priced event listed today" is a fact about the calendar, and
+ * two tests here have already gone red on a date with no code change. Dated
+ * 2099, these test the filter and the scoring, never the month.
+ */
+function fixtureEvent(id: string, priceRm: number | null): EventListing {
+  return {
+    id,
+    slug: id,
+    name: `Fixture ${id}`,
+    summary: "Test fixture.",
+    eventType: "market",
+    venueName: "Test Hall",
+    address: "Kuala Lumpur",
+    state: "W.P. Kuala Lumpur",
+    point: { lat: 3.139, lng: 101.6869 },
+    startDate: "2099-01-10",
+    endDate: "2099-01-11",
+    dailyHours: "10:00 - 22:00",
+    wantedCategories: ["cafe_coffee_shop"],
+    packages:
+      priceRm === null
+        ? []
+        : [
+            {
+              id: "std",
+              label: "Lot",
+              priceRm,
+              sizeLabel: "3m x 3m",
+              slots: 20,
+              slotsAvailable: 5,
+              includes: [],
+            },
+          ],
+    totalSlots: 20,
+    availableSlots: 5,
+    expectedVisitors: null,
+    vendorRequirements: [],
+    organizerName: "Fixture Organizer",
+    source: "seed",
+    sourceNote: "Test fixture.",
+    reviewed: "2099-01-01",
+  };
+}
+
+const fixtureDir = mkdtempSync(join(tmpdir(), "spotential-events-"));
+writeFileSync(
+  join(fixtureDir, "events.json"),
+  JSON.stringify({
+    version: 2,
+    generated: "2099-01-01",
+    note: "Test fixture.",
+    events: [fixtureEvent("fx-cheap", 500), fixtureEvent("fx-dear", 1_200), fixtureEvent("fx-unpriced", null)],
+  }),
+);
+const fixtureApp = buildApp({ events: await EventCatalogue.load(fixtureDir) });
+
 const app = buildApp({ events: catalogue });
 afterAll(async () => {
   await app.close();
+  await fixtureApp.close();
+  rmSync(fixtureDir, { recursive: true, force: true });
 });
 
 describe("GET /v1/events", () => {
@@ -130,38 +206,27 @@ describe("GET /v1/events", () => {
 
   it("applies a real price ceiling", async () => {
     /**
-     * THE CEILING COMES FROM THE CATALOGUE, not from a magic number.
+     * AGAINST A FIXTURE THAT NEVER AGES.
      *
-     * This asserted `maxPrice=500` returned something, and it went red on
-     * 2026-09-14 with no code change: seeded events age, the last listable
-     * event under RM500 finished, and the filter correctly matched nothing.
-     * Second time a calendar has broken a test in this file, and the lesson is
-     * the one already written down: assert the invariant, never a value that
-     * only holds until a date passes.
-     *
-     * So it reads the cheapest published price that is actually listable and
-     * filters at exactly that, which tests the FILTER rather than the
-     * catalogue's current contents.
+     * This asserted `maxPrice=500` on the real catalogue and went red on
+     * 2026-09-14 when the last listable event under RM500 finished. It then
+     * read the cheapest listable price instead, which still needed SOME listed
+     * event to publish one, and the posters added on 2026-11-18 publish none,
+     * so it would have gone red the morning Pesta Tempatan ended. A test of
+     * the price filter cannot depend on what is on the calendar this month.
      */
-    const all = (await app.inject({ method: "GET", url: "/v1/events" })).json();
-    const prices: number[] = all.events
-      .flatMap((e: { packages: { priceRm: number }[] }) => e.packages.map((p) => p.priceRm))
-      .filter((n: number) => Number.isFinite(n));
-    expect(prices.length, "no listable event publishes a price").toBeGreaterThan(0);
+    const all = (await fixtureApp.inject({ method: "GET", url: "/v1/events" })).json();
+    expect(all.events).toHaveLength(3);
 
-    const ceiling = Math.min(...prices);
-    const body = (
-      await app.inject({ method: "GET", url: `/v1/events?maxPrice=${ceiling}` })
-    ).json();
+    const ids = (body: { events: { id: string }[] }) => body.events.map((e) => e.id).sort();
 
-    expect(body.events.length).toBeGreaterThan(0);
-    for (const e of body.events) {
-      const cheapest = Math.min(...e.packages.map((p: { priceRm: number }) => p.priceRm));
-      expect(cheapest).toBeLessThanOrEqual(ceiling);
-    }
+    const cheap = (await fixtureApp.inject({ method: "GET", url: "/v1/events?maxPrice=800" })).json();
+    expect(ids(cheap)).toEqual(["fx-cheap"]);
 
-    // And it genuinely narrows: an unpriced listing sorts out, never in.
-    expect(body.events.length).toBeLessThanOrEqual(all.events.length);
+    // A ceiling both priced listings clear still leaves the unpriced one out:
+    // "price on request" is not free.
+    const both = (await fixtureApp.inject({ method: "GET", url: "/v1/events?maxPrice=1200" })).json();
+    expect(ids(both)).toEqual(["fx-cheap", "fx-dear"]);
   });
 
   it("reports itself unavailable rather than serving an empty list", async () => {
@@ -177,23 +242,28 @@ describe("GET /v1/events", () => {
 
 describe("GET /v1/events/:id", () => {
   it("resolves by id and by slug alike", async () => {
-    const byId = await app.inject({ method: "GET", url: "/v1/events/evt-lapan-pagi" });
-    const bySlug = await app.inject({ method: "GET", url: "/v1/events/lapan-pagi-club" });
+    expect(SAMPLE, "no listing in the catalogue publishes a price").toBeDefined();
+    const byId = await app.inject({ method: "GET", url: `/v1/events/${SAMPLE.id}` });
+    const bySlug = await app.inject({ method: "GET", url: `/v1/events/${SAMPLE.slug}` });
 
     expect(byId.statusCode).toBe(200);
     expect(bySlug.json().event.id).toBe(byId.json().event.id);
   });
 
   it("reports the day count and the cheapest way in", async () => {
-    const body = (await app.inject({ method: "GET", url: "/v1/events/evt-lapan-pagi" })).json();
-    expect(body.days).toBe(2);
-    expect(body.entryPriceRm).toBe(380);
+    const body = (await app.inject({ method: "GET", url: `/v1/events/${SAMPLE.id}` })).json();
+
+    // Worked out here independently of the route: inclusive calendar days, and
+    // the lowest package price. Dates are ISO, so UTC midnight to UTC midnight.
+    const days = (Date.parse(SAMPLE.endDate) - Date.parse(SAMPLE.startDate)) / 86_400_000 + 1;
+    expect(body.days).toBe(days);
+    expect(body.entryPriceRm).toBe(Math.min(...SAMPLE.packages.map((p) => p.priceRm)));
   });
 
   it("returns a null catchment rather than zero when no grid is loaded", async () => {
     // Zero residents and "we did not look" are different claims, and the
     // client renders them differently.
-    const body = (await app.inject({ method: "GET", url: "/v1/events/evt-lapan-pagi" })).json();
+    const body = (await app.inject({ method: "GET", url: `/v1/events/${SAMPLE.id}` })).json();
     expect(body.venueCatchment).toBeNull();
   });
 
@@ -237,29 +307,22 @@ describe("POST /v1/events/rank", () => {
      * and very different request. An omitted budget must leave the axis
      * unavailable instead.
      */
-    const res = await app.inject({
+    /**
+     * On the fixture, because it needs a priced listing that is still listed.
+     *
+     * This used to pin `evt-lapan-pagi`, which finished on 2026-09-13 and
+     * dropped out of the listing the next morning, so `find` returned
+     * undefined. It then searched today's list for any priced event, which
+     * fails the day none is listed. The event was never the subject; the
+     * behaviour is.
+     */
+    const res = await fixtureApp.inject({
       method: "POST",
       url: "/v1/events/rank",
       payload: { vendor: { category: "cafe_coffee_shop" } },
     });
 
-    /**
-     * ANY event that has a published price, found from the catalogue.
-     *
-     * This used to pin `evt-lapan-pagi`, which finished on 2026-09-13 and
-     * dropped out of the listing the next morning, so `find` returned
-     * undefined and the test died on a property of it. The event was never the
-     * subject; the behaviour is.
-     */
-    const listing = (await app.inject({ method: "GET", url: "/v1/events" })).json();
-    const withPrice = listing.events.find(
-      (e: { packages: unknown[] }) => e.packages.length > 0,
-    ) as { id: string } | undefined;
-    expect(withPrice, "no listable event publishes a price").toBeDefined();
-
-    const priced = res
-      .json()
-      .ranked.find((r: { eventId: string }) => r.eventId === withPrice!.id);
+    const priced = res.json().ranked.find((r: { eventId: string }) => r.eventId === "fx-cheap");
     const afford = priced.score.dimensions.find(
       (d: { key: string }) => d.key === "boothAffordability",
     );
@@ -279,7 +342,7 @@ describe("discovery costs nothing", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
     await app.inject({ method: "GET", url: "/v1/events?state=Selangor" });
-    await app.inject({ method: "GET", url: "/v1/events/evt-lapan-pagi" });
+    await app.inject({ method: "GET", url: `/v1/events/${SAMPLE.id}` });
     await app.inject({
       method: "POST",
       url: "/v1/events/rank",
@@ -307,7 +370,7 @@ describe("POST /v1/events/:id/apply", () => {
   it("refuses when no auth is configured", async () => {
     const res = await app.inject({
       method: "POST",
-      url: "/v1/events/evt-lapan-pagi/apply",
+      url: `/v1/events/${SAMPLE.id}/apply`,
       payload: {},
     });
     expect(res.statusCode).toBe(503);
@@ -323,7 +386,7 @@ describe("POST /v1/events/:id/apply", () => {
     const noStore = buildApp({ events: catalogue, auth: { projectId: "spotential-app" } });
     const res = await noStore.inject({
       method: "POST",
-      url: "/v1/events/evt-lapan-pagi/apply",
+      url: `/v1/events/${SAMPLE.id}/apply`,
       payload: {},
       headers: { authorization: "Bearer nonsense" },
     });
@@ -341,7 +404,7 @@ describe("POST /v1/events/:id/apply", () => {
 
     const res = await guarded.inject({
       method: "POST",
-      url: "/v1/events/evt-lapan-pagi/apply",
+      url: `/v1/events/${SAMPLE.id}/apply`,
       payload: { uid: "someone-elses-uid", businessName: "Test" },
       headers: { authorization: "Bearer forged.token.here" },
     });
@@ -368,7 +431,7 @@ describe("POST /v1/events/:id/apply", () => {
   });
 
   const application = {
-    packageId: "std",
+    packageId: SAMPLE.packages[0]!.id,
     businessName: "Rahim Bakes",
     contactName: "Aina Rahim",
     contactEmail: "aina@example.com",
@@ -398,20 +461,20 @@ describe("POST /v1/events/:id/apply", () => {
       applicationStore: store,
     });
 
-    const seeded = catalogue.byId("evt-lapan-pagi")!;
+    const seeded = catalogue.byId(SAMPLE.id)!;
     expect(seeded.source, "fixture must be a curated listing").toBe("seed");
 
     const res = await guarded.inject({
       method: "POST",
-      url: "/v1/events/evt-lapan-pagi/apply",
-      payload: { eventId: "evt-lapan-pagi", ...application },
+      url: `/v1/events/${SAMPLE.id}/apply`,
+      payload: { eventId: SAMPLE.id, ...application },
       headers: { authorization: "Bearer stubbed" },
     });
 
     expect(res.statusCode).toBe(200);
     expect(res.json().applied).toBe(true);
 
-    const saved = await store.findForUserAndEvent("vendor-1", "evt-lapan-pagi");
+    const saved = await store.findForUserAndEvent("vendor-1", SAMPLE.id);
     expect(saved).not.toBeNull();
     expect(saved!.listingSource).toBe("seed");
     expect(saved!.boothPriceRm).toBeGreaterThan(0);
@@ -431,13 +494,13 @@ describe("POST /v1/events/:id/apply", () => {
 
     await guarded.inject({
       method: "POST",
-      url: "/v1/events/evt-lapan-pagi/apply",
-      payload: { eventId: "evt-lapan-pagi", uid: "someone-else", ...application },
+      url: `/v1/events/${SAMPLE.id}/apply`,
+      payload: { eventId: SAMPLE.id, uid: "someone-else", ...application },
       headers: { authorization: "Bearer stubbed" },
     });
 
-    expect(await store.findForUserAndEvent("someone-else", "evt-lapan-pagi")).toBeNull();
-    expect(await store.findForUserAndEvent("real-owner", "evt-lapan-pagi")).not.toBeNull();
+    expect(await store.findForUserAndEvent("someone-else", SAMPLE.id)).toBeNull();
+    expect(await store.findForUserAndEvent("real-owner", SAMPLE.id)).not.toBeNull();
     await guarded.close();
   });
 
@@ -455,8 +518,8 @@ describe("POST /v1/events/:id/apply", () => {
     for (const name of ["Rahim Bakes", "Rahim Bakes & Co"]) {
       await guarded.inject({
         method: "POST",
-        url: "/v1/events/evt-lapan-pagi/apply",
-        payload: { eventId: "evt-lapan-pagi", ...application, businessName: name },
+        url: `/v1/events/${SAMPLE.id}/apply`,
+        payload: { eventId: SAMPLE.id, ...application, businessName: name },
         headers: { authorization: "Bearer stubbed" },
       });
     }
@@ -478,8 +541,8 @@ describe("POST /v1/events/:id/apply", () => {
 
     const res = await guarded.inject({
       method: "POST",
-      url: "/v1/events/evt-lapan-pagi/apply",
-      payload: { eventId: "evt-lapan-pagi", ...application, consentToShare: false },
+      url: `/v1/events/${SAMPLE.id}/apply`,
+      payload: { eventId: SAMPLE.id, ...application, consentToShare: false },
       headers: { authorization: "Bearer stubbed" },
     });
 
@@ -496,7 +559,7 @@ describe("POST /v1/events/:id/apply", () => {
 
     const res = await guarded.inject({
       method: "POST",
-      url: "/v1/events/evt-lapan-pagi/apply",
+      url: `/v1/events/${SAMPLE.id}/apply`,
       payload: {},
     });
 
@@ -652,26 +715,32 @@ describe("the catalogue itself", () => {
   });
 
   it("keeps unstated turnout as null rather than zero", () => {
-    const unstated = catalogue.all().filter((e) => e.expectedVisitors === null);
-    expect(unstated.length).toBeGreaterThan(0);
+    /**
+     * Per listing, so it holds at any catalogue size. It also required at least
+     * one listing with no stated turnout, which was a fact about the catalogue
+     * rather than a rule, and retiring finished events (2026-11-18) left one
+     * listing that states its turnout. A 0 still fails here, which is the bug.
+     */
     for (const event of catalogue.all()) {
-      expect(event.expectedVisitors === null || event.expectedVisitors > 0).toBe(true);
+      expect(event.expectedVisitors === null || event.expectedVisitors > 0, event.id).toBe(true);
     }
   });
 
-  it("covers enough ground for the filters to mean something", () => {
+  it("uses only states and event types the filters know", () => {
     /**
-     * Four states, not the ten the catalogue once spanned.
+     * What makes a filter mean something at the data level: a listing whose
+     * state is spelled differently from DOSM's, or whose type is not one of
+     * ours, can never be matched by the control and simply vanishes from it.
      *
-     * Every listing now has a real poster behind it, and the six with no
-     * artwork were removed rather than shown as generated covers — which
-     * narrowed the spread to the Klang Valley plus Johor. That is the honest
-     * consequence of the trade, so the bar is set where the catalogue actually
-     * is rather than where it used to be; the state filter still narrows and
-     * still has something to narrow to.
+     * This used to demand four states and four event types, which is breadth
+     * rather than correctness and went red when finished events were retired
+     * and one listing remained. Breadth is a property of what is listed this
+     * month; "narrows by state" above proves the filter itself works.
      */
-    expect(new Set(catalogue.all().map((e) => e.state)).size).toBeGreaterThanOrEqual(4);
-    expect(new Set(catalogue.all().map((e) => e.eventType)).size).toBeGreaterThan(3);
+    for (const event of catalogue.all()) {
+      expect(MALAYSIAN_STATES, event.id).toContain(event.state);
+      expect(EVENT_TYPES, event.id).toContain(event.eventType);
+    }
   });
 
   it("has a poster for every seeded listing", () => {
