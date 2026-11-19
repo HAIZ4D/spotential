@@ -130,8 +130,28 @@ export interface EventListing {
   applyUrl?: string;
 
   source: EventSource;
+  /**
+   * The booth prices are the organizer's own published terms, on a curated
+   * listing. Absent means they are Spotential's estimate.
+   *
+   * `source` used to answer this by itself, so every curated listing told the
+   * vendor its fee was our estimate, including the ones copied from the
+   * organizer's own vendor call. Read it through `boothPricesArePublished`.
+   */
+  pricesPublished?: boolean;
   sourceNote: string;
   reviewed: string;
+}
+
+/**
+ * Whose booth price this is: the organizer's published fee, or our estimate.
+ *
+ * It decides what the apply form says beside the number and what the stored
+ * application records, and those are the two places a vendor agrees to a fee.
+ * An organizer-submitted listing is published by definition.
+ */
+export function boothPricesArePublished(event: EventListing): boolean {
+  return event.source === "organizer" || event.pricesPublished === true;
 }
 
 /**

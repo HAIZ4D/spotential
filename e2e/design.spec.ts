@@ -19,11 +19,32 @@ import { expect, test, type Page } from "@playwright/test";
 
 const MAPS = "https://maps.googleapis.com/**";
 
+/**
+ * `ready` is the last thing each page renders once its data is in: the score,
+ * the compare AI's question chips, the simulator's example chips.
+ *
+ * Measured at a fixed 600ms, the compare chips did not exist yet, so a 36px
+ * control under the 44px phone floor passed for weeks. Network idle alone is
+ * not enough either: the stub answers some routes 503, React Query retries
+ * those after about a second, and the network is "idle" inside that gap,
+ * before the chips appear. Proven by removing the fix: with only network
+ * idle, this still passed.
+ */
 const PAGES = [
-  { name: "analysis", url: "/analysis?lat=3.1578&lng=101.7123&q=KLCC" },
-  { name: "compare", url: "/compare?c=korean_restaurant&r=500&p=3.1478,101.6953,KL&p=3.0738,101.5183,PJ" },
-  { name: "simulator", url: "/simulator" },
+  { name: "analysis", url: "/analysis?lat=3.1578&lng=101.7123&q=KLCC", ready: ".hero-answer" },
+  {
+    name: "compare",
+    url: "/compare?c=korean_restaurant&r=500&p=3.1478,101.6953,KL&p=3.0738,101.5183,PJ",
+    ready: ".cmpai-examples button",
+  },
+  { name: "simulator", url: "/simulator", ready: ".sim-examples button" },
 ];
+
+/** The page as a reader finally sees it, not as it first paints. */
+async function settle(page: Page, ready: string) {
+  await page.locator(ready).first().waitFor();
+  await page.waitForLoadState("networkidle");
+}
 
 async function stub(page: Page) {
   await page.route(MAPS, (route) => route.abort());
@@ -72,11 +93,11 @@ async function stub(page: Page) {
  * browser actually laid out. 28px is the smallest step in the scale, so
  * anything shorter is an element that never adopted it.
  */
-for (const { name, url } of PAGES) {
+for (const { name, url, ready } of PAGES) {
   test(`${name}: every control meets the size scale`, async ({ page }, testInfo) => {
     await stub(page);
     await page.goto(url);
-    await page.waitForTimeout(600);
+    await settle(page, ready);
 
     // Coarse pointers get 44px; a desktop mouse keeps the dense scale.
     const floor = testInfo.project.name === "mobile" ? 44 : 28;
@@ -108,11 +129,11 @@ for (const { name, url } of PAGES) {
  * punctuation and stays. What must not survive is a cell or figure whose
  * entire content is a dash.
  */
-for (const { name, url } of PAGES) {
+for (const { name, url, ready } of PAGES) {
   test(`${name}: no lone dash stands in for missing data`, async ({ page }) => {
     await stub(page);
     await page.goto(url);
-    await page.waitForTimeout(600);
+    await settle(page, ready);
 
     const lone = await page.evaluate(() => {
       const bad: string[] = [];
@@ -130,7 +151,7 @@ for (const { name, url } of PAGES) {
 test("missing values say what is missing, in words", async ({ page }) => {
   await stub(page);
   await page.goto("/analysis?lat=3.8077&lng=103.3260&q=Kuantan");
-  await page.waitForTimeout(600);
+  await settle(page, ".hero-answer");
 
   // Kuantan has no rent benchmark and demographics are stubbed out, so the
   // chips have genuinely nothing to show. They should say so.

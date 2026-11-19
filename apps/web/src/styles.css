@@ -8574,7 +8574,12 @@ ul.tight {
   .sim-rail .field input[type="number"],
   .sim-rail .field input[type="text"],
   .sim-rail .field input[type="range"],
-  .cost-working > summary {
+  .cost-working > summary,
+  /* Eighth. The compare AI's question chips are `.cmpai .cmpai-examples
+     button` (0,2,1) and sat at 36px on a phone. They render after their data,
+     so a design test that measured at a fixed 600ms never saw them; a run
+     that waited for the page to settle did. */
+  .cmpai .cmpai-examples button {
     min-height: var(--control-lg);
   }
 

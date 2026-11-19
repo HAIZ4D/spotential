@@ -183,7 +183,11 @@ test("says so plainly when competitor lookup is not configured", async ({ page }
   await page.goto("/analysis?lat=3.1478&lng=101.6953");
   await openSection(page, "Competition");
 
-  await expect(page.getByText(/not configured on this deployment/)).toBeVisible();
+  // The competition note's own words. The broader /not configured on this
+  // deployment/ also matches the AI panel's 503 ("The analysis is not
+  // configured on this deployment."), so once that arrived strict mode failed:
+  // CI runs 8 and 10.
+  await expect(page.getByText(/Competitor lookup is not configured/)).toBeVisible();
 });
 
 test("a failing competitor lookup leaves the rest of the page working", async ({ page }) => {

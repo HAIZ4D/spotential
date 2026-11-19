@@ -11,6 +11,7 @@ import {
 } from "@spotential/sim-engine";
 import { CATEGORY_PRESETS, isValidLatLng, sectorOf } from "@spotential/sim-engine";
 import {
+  boothPricesArePublished,
   byStartDate,
   entryPrice,
   eventDays,
@@ -1651,6 +1652,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
         packageId: parsed.value.packageId,
         listingSource: event.source,
         boothPriceRm: chosen?.priceRm ?? cheapest,
+        boothPricePublished: boothPricesArePublished(event),
         businessName: parsed.value.businessName,
         contactName: parsed.value.contactName,
         contactEmail: parsed.value.contactEmail,

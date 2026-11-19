@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { EventListing } from "@spotential/sim-engine";
+import { boothPricesArePublished, type EventListing } from "@spotential/sim-engine";
 import {
   applyForBooth,
   getVendorAccount,
@@ -28,8 +28,10 @@ import { currentAccount, onAccountChange, signOutAccount } from "../../lib/fireb
  *   1. WHAT ACTUALLY HAPPENS NEXT. Spotential receives the application and
  *      passes it to the organizer, who replies directly. Not "the organizer
  *      has your details", which would not be true at the moment of sending.
- *   2. WHOSE PRICE THIS IS. On a curated listing the fee beside the booth is
- *      our estimate, and the vendor is agreeing to it. That belongs in the
+ *   2. WHOSE PRICE THIS IS. The fee beside the booth is either the
+ *      organizer's published price or our estimate, and the vendor is
+ *      agreeing to it. `boothPricesArePublished` decides which, because a
+ *      curated listing can carry the organizer's own fee. That belongs in the
  *      form, next to the number, not in a banner they scroll past.
  *   3. WHAT LEAVES SPOTENTIAL, AND WHEN. The consent line names the fields. It
  *      is unticked by default and the server refuses without it.
@@ -223,7 +225,10 @@ function ApplyForm({
   }
 
   const chosen = event.packages.find((p) => p.id === form.packageId) ?? null;
-  const estimated = event.source === "seed";
+  // Not `source === "seed"`: a curated listing can carry the organizer's own
+  // published fee, and calling that our estimate is the wrong claim beside the
+  // one number the vendor is agreeing to.
+  const estimated = !boothPricesArePublished(event);
   const ready =
     form.businessName.trim().length > 1 &&
     form.contactName.trim().length > 1 &&

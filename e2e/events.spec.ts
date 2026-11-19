@@ -213,7 +213,9 @@ test("says what is from the poster and what is an estimate", async ({ page }) =>
    */
   await expect(page.locator(".ev-flag")).toHaveCount(0);
   await expect(page.getByText(/curated estimates/)).toBeVisible();
-  await expect(page.getByText(/not live bookings/)).toBeVisible();
+  // It used to say "not live bookings", which stopped being true once
+  // applications sent. What it must say now is whose prices these are.
+  await expect(page.getByText(/organizer's own where they have published them/)).toBeVisible();
 });
 
 test("filters narrow the list", async ({ page }) => {
@@ -232,19 +234,20 @@ test("filters narrow the list", async ({ page }) => {
   await expect(page.locator(".evc")).toContainText("Terang Malam Market");
 });
 
-test("ranking is opt-in and reorders by fit", async ({ page }) => {
+test("ranks by fit from the start", async ({ page }) => {
   await stub(page);
   await page.goto("/events");
 
-  // No scores until the vendor asks — the page is useful without a profile.
-  await expect(page.locator(".evc-score")).toHaveCount(0);
-
   /**
-   * Ranking and the business type are ONE control now. Picking a category is
-   * what turns ranking on, because ranking without one silently scores every
-   * vendor as a cafe.
+   * Ranking is the default sort, so scores are present from the start.
+   *
+   * This test used to open by asserting NO scores, from when ranking was
+   * opt-in, and then asserted two with nothing in between. The stale half
+   * survived only because it ran before `/v1/events/rank` answered; once the
+   * page had settled it failed. Ranking and the business type are one control
+   * now, defaulting to a category, because ranking without one silently scores
+   * every vendor as a cafe.
    */
-  // Ranking is the default sort now, so scores are present from the start.
   await expect(page.locator(".evc-score")).toHaveCount(2);
   await expect(page.locator(".evc").first()).toContainText("Terang Malam Market");
   await expect(page.locator(".evc-score").first()).toContainText("82");

@@ -484,9 +484,10 @@ export default function Events() {
         )}
 
         <p className="ev-foot tiny muted">
-          Dates, venues and opening hours come from each event's own poster. Booth pricing and
-          slot counts are curated estimates, so these are not live bookings and applications open
-          when organizers publish their events here.
+          Dates, venues and opening hours come from each event's own poster. Booth prices and
+          vendor terms are the organizer's own where they have published them; anything else,
+          including slot counts, is one of our curated estimates, so confirm the fee with the
+          organizer before you pay.
         </p>
       </div>
     </>

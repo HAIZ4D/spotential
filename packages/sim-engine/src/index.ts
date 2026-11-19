@@ -124,6 +124,7 @@ export {
   EVENT_TYPES,
   EVENT_TYPE_LABELS,
   MALAYSIAN_STATES,
+  boothPricesArePublished,
   type BoothPackage,
   type EventListing,
   type EventSource,

@@ -44,6 +44,14 @@ export interface BoothApplication {
   listingSource: EventSource;
   /** The fee shown beside the booth when they applied, or null if none was. */
   boothPriceRm: number | null;
+  /**
+   * That fee was the organizer's own published price, not our estimate.
+   *
+   * `listingSource` alone stopped answering this once curated listings began
+   * carrying prices copied from the organizer's own vendor call: a `seed`
+   * listing can now quote a real fee. Said outright so nobody has to infer it.
+   */
+  boothPricePublished: boolean;
 
   businessName: string;
   contactName: string;

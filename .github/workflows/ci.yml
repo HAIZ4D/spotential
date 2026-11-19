@@ -2,13 +2,20 @@ name: CI
 
 # Job order is the point of this file (SPEC §12, plan Checkpoint 2):
 #
-#   test    golden vectors + property tests   <- GATES the deploy
-#   deploy  --no-traffic --tag=candidate      <- live but receiving nobody
-#   parity  candidate URL vs local engine     <- acceptance criterion #3
-#   promote route 100% traffic                <- only if parity passed
+#   test    golden vectors + property tests + E2E   <- GATES the deploy
+#   config  every secret and variable is present    <- GATES the deploy
+#   deploy  --no-traffic --tag=candidate            <- live but receiving nobody
+#   parity  candidate URL vs local engine           <- acceptance criterion #3
+#   promote route 100% traffic                      <- only if parity passed
+#   hosting build, verify the bundle, deploy, verify the live site
 #
 # Deploying with --no-traffic means a client/server mismatch is caught on a
 # revision no real user can reach. Cleaner than deploy-then-roll-back.
+#
+# Until 2026-11-19 none of this had ever run to the end: every one of the
+# first 13 runs failed, so every release was deployed by hand. The guards in
+# `config` and `hosting` exist because the first successful run is also the
+# first time these steps touch production.
 
 on:
   push:
@@ -17,8 +24,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# One deploy at a time, in push order. A pull request's older run is simply
+# superseded; a push to main is queued, never cancelled half-deployed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   NODE_VERSION: "22"
+  PROJECT: spotential-app
   REGION: asia-southeast1
   SERVICE: simulator
 
@@ -47,21 +61,72 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: End-to-end tests
         run: npm run test:e2e
+      # The HTML report plus the traces from the retry, so a failure here can
+      # be diagnosed from the run rather than from a one-line annotation.
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 7
+
+  # Fails in seconds, before anything is built or deployed, and names exactly
+  # what is missing. Without it a missing ALLOWED_ORIGINS deploys an EMPTY
+  # allow-list to the live service, and missing VITE_* values build a site
+  # with no map, no sign-in and no App Check token.
+  config:
+    name: Deploy configuration is complete
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every secret and variable the deploy reads is set
+        env:
+          GCP_WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER }}
+          GCP_DEPLOY_SA: ${{ secrets.GCP_DEPLOY_SA }}
+          SMOKE_KEY: ${{ secrets.SMOKE_KEY }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+          SIMULATOR_URL: ${{ vars.SIMULATOR_URL }}
+          GOOGLE_MAPS_API_KEY: ${{ vars.GOOGLE_MAPS_API_KEY }}
+          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+          FIREBASE_SENDER_ID: ${{ vars.FIREBASE_SENDER_ID }}
+          RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in GCP_WIF_PROVIDER GCP_DEPLOY_SA SMOKE_KEY ALLOWED_ORIGINS SIMULATOR_URL \
+            GOOGLE_MAPS_API_KEY FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID \
+            FIREBASE_APP_ID FIREBASE_SENDER_ID RECAPTCHA_SITE_KEY; do
+            # `:-` so an UNSET name is reported rather than tripping `set -u`.
+            if [ -z "${!name:-}" ]; then missing+=("$name"); fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing GitHub Actions configuration: ${missing[*]}. Run scripts/setup-github-ci.ps1."
+            exit 1
+          fi
+          case ",${ALLOWED_ORIGINS}," in
+            *",https://spotential-app.web.app,"*) ;;
+            *) echo "::error::ALLOWED_ORIGINS does not include https://spotential-app.web.app, so the site would be locked out of its own API."; exit 1 ;;
+          esac
+          case "$SIMULATOR_URL" in
+            https://*localhost*|https://*127.0.0.1*) echo "::error::SIMULATOR_URL points at this machine, not the deployed service."; exit 1 ;;
+            https://*) ;;
+            *) echo "::error::SIMULATOR_URL must be the deployed https:// service URL."; exit 1 ;;
+          esac
+          echo "All 12 secrets and variables are present."
 
   deploy:
     name: Deploy candidate revision
-    needs: test
+    needs: [test, config]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # Workload Identity Federation — no long-lived JSON key
+      id-token: write # Workload Identity Federation, no long-lived JSON key
     outputs:
       candidate_url: ${{ steps.deploy.outputs.candidate_url }}
       revision: ${{ steps.deploy.outputs.revision }}
@@ -70,6 +135,7 @@ jobs:
 
       - uses: google-github-actions/auth@v2
         with:
+          project_id: ${{ env.PROJECT }}
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_DEPLOY_SA }}
 
@@ -78,12 +144,32 @@ jobs:
       # NOT `gcloud run deploy --source .`. The Dockerfile lives in
       # services/simulator/ but needs the repo root as build context, and
       # --source only looks for a Dockerfile at the root of the upload.
+      #
+      # --async and a poll rather than streaming: streaming Cloud Build's logs
+      # needs project Viewer, which can read every Firestore document,
+      # vendors' applications included. The deployer is not given that.
       - name: Build image via Cloud Build
         run: |
           set -euo pipefail
-          gcloud builds submit \
+          BUILD_ID=$(gcloud builds submit \
+            --project "$PROJECT" \
             --config cloudbuild.yaml \
-            --substitutions "SHORT_SHA=${GITHUB_SHA::7}"
+            --substitutions "SHORT_SHA=${GITHUB_SHA::7}" \
+            --async \
+            --format='value(id)')
+          LOGS="https://console.cloud.google.com/cloud-build/builds/${BUILD_ID}?project=${PROJECT}"
+          echo "Cloud Build ${BUILD_ID}: ${LOGS}"
+          for _ in $(seq 1 120); do
+            STATUS=$(gcloud builds describe "$BUILD_ID" --project "$PROJECT" --format='value(status)')
+            case "$STATUS" in
+              SUCCESS) echo "Build succeeded."; exit 0 ;;
+              FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                echo "::error::Cloud Build finished ${STATUS}. Logs: ${LOGS}"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Cloud Build was still running after 20 minutes. Logs: ${LOGS}"
+          exit 1
 
       - name: Deploy with no traffic
         id: deploy
@@ -91,11 +177,13 @@ jobs:
           set -euo pipefail
           SHORT_SHA="${GITHUB_SHA::7}"
           REVISION_TAG="candidate-${SHORT_SHA}"
-          IMAGE="${REGION}-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/spotential/${SERVICE}:${SHORT_SHA}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/spotential/${SERVICE}:${SHORT_SHA}"
 
           # --update-env-vars needs a custom delimiter because the origin list
-          # itself contains commas.
+          # itself contains commas. The `config` job has already checked it
+          # is set, because an empty value here would blank CORS in production.
           gcloud run deploy "$SERVICE" \
+            --project "$PROJECT" \
             --image "$IMAGE" \
             --region "$REGION" \
             --platform managed \
@@ -111,8 +199,13 @@ jobs:
             --no-traffic
 
           CANDIDATE_URL=$(gcloud run services describe "$SERVICE" \
+            --project "$PROJECT" \
             --region "$REGION" \
-            --format="value(status.traffic.filter(tag:'$REVISION_TAG').url)" | head -n1)
+            --format=json | jq -r --arg tag "$REVISION_TAG" '.status.traffic[] | select(.tag == $tag) | .url' | head -n1)
+          if [ -z "$CANDIDATE_URL" ] || [ "$CANDIDATE_URL" = "null" ]; then
+            echo "::error::Deployed, but no URL is published for tag ${REVISION_TAG}."
+            exit 1
+          fi
 
           echo "candidate_url=$CANDIDATE_URL" >> "$GITHUB_OUTPUT"
           echo "revision=$REVISION_TAG" >> "$GITHUB_OUTPUT"
@@ -129,7 +222,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
-      # SMOKE_KEY bypasses App Check ONLY — never the quota or the spend
+      # SMOKE_KEY bypasses App Check ONLY, never the quota or the spend
       # ceiling. CI is not a browser on an allowed domain, so it cannot satisfy
       # App Check, but the deployed cache assertions are worth keeping.
       - name: Every golden vector must match the deployed service exactly
@@ -148,14 +241,30 @@ jobs:
     steps:
       - uses: google-github-actions/auth@v2
         with:
+          project_id: ${{ env.PROJECT }}
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_DEPLOY_SA }}
       - uses: google-github-actions/setup-gcloud@v2
       - name: Route all traffic to the verified revision
         run: |
+          set -euo pipefail
           gcloud run services update-traffic "$SERVICE" \
+            --project "$PROJECT" \
             --region "$REGION" \
             --to-tags "${{ needs.deploy.outputs.revision }}=100"
+      # Every deploy adds a candidate-* tag, and each tag keeps a public URL
+      # pointing at an old revision. Keep only the one now serving.
+      - name: Retire older candidate tags
+        run: |
+          set -euo pipefail
+          CURRENT="${{ needs.deploy.outputs.revision }}"
+          OLD=$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" --format=json \
+            | jq -r --arg current "$CURRENT" '[.status.traffic[] | select(.tag != null and (.tag | startswith("candidate-")) and .tag != $current) | .tag] | unique | join(",")')
+          if [ -n "$OLD" ]; then
+            gcloud run services update-traffic "$SERVICE" --project "$PROJECT" --region "$REGION" --remove-tags "$OLD"
+          else
+            echo "No older candidate tags."
+          fi
 
   hosting:
     name: Deploy web app to Firebase Hosting
@@ -190,10 +299,50 @@ jobs:
           VITE_RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
         run: npm run build --workspace @spotential/web
 
+      # A bundle missing its configuration builds cleanly and deploys happily,
+      # then shows a dead map and 401s every App Check'd route in production.
+      - name: The bundle carries its configuration
+        env:
+          SIMULATOR_URL: ${{ vars.SIMULATOR_URL }}
+          RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
+        run: |
+          set -euo pipefail
+          BUNDLE=$(cat apps/web/dist/assets/*.js)
+          need() {
+            if ! grep -qF -- "$2" <<<"$BUNDLE"; then
+              echo "::error::The web bundle is missing $1."; exit 1
+            fi
+          }
+          need "the API host" "${SIMULATOR_URL#https://}"
+          need "the Firebase config" "firebaseapp.com"
+          need "the reCAPTCHA site key" "$RECAPTCHA_SITE_KEY"
+          grep -qE 'AIza[0-9A-Za-z_-]{20,}' <<<"$BUNDLE" || { echo "::error::The web bundle has no Maps API key."; exit 1; }
+          if grep -qF 'localhost:8080' <<<"$BUNDLE"; then
+            echo "::error::The web bundle still points at localhost:8080."; exit 1
+          fi
+          echo "Bundle verified."
+
       - uses: google-github-actions/auth@v2
         with:
+          project_id: ${{ env.PROJECT }}
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_DEPLOY_SA }}
 
+      # firebase-tools by its PACKAGE name, pinned. A bare `npx firebase`
+      # resolves to the `firebase` SDK this repo depends on, which has no
+      # executable, and fails on any machine without a global install.
       - name: Deploy hosting
-        run: npx firebase deploy --only hosting --project spotential-app --non-interactive
+        run: npx --yes firebase-tools@15.9.1 deploy --only hosting --project "$PROJECT" --non-interactive
+
+      - name: The live site serves this build
+        run: |
+          set -euo pipefail
+          EXPECTED=$(grep -oE 'assets/index-[^"]+\.js' apps/web/dist/index.html | head -n1)
+          LIVE=""
+          for _ in $(seq 1 12); do
+            LIVE=$(curl -fsS -H 'Cache-Control: no-cache' https://spotential-app.web.app/ | grep -oE 'assets/index-[^"]+\.js' | head -n1 || true)
+            if [ "$LIVE" = "$EXPECTED" ]; then echo "Live site serves $EXPECTED."; exit 0; fi
+            sleep 5
+          done
+          echo "::error::The live site serves ${LIVE:-nothing} rather than ${EXPECTED}."
+          exit 1

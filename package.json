@@ -16,6 +16,7 @@
     "test:parity": "vitest run --config vitest.parity.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:settled": "node scripts/e2e-settled.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev:service": "npm run dev --workspace @spotential/simulator-service",
     "build:service": "npm run build --workspace @spotential/simulator-service",

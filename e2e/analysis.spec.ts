@@ -204,8 +204,18 @@ test.describe("the demand layer", () => {
 
     // No map means no surface to draw on, so the control must not be there.
     await expect(page.getByRole("button", { name: /^Demand$/ })).toHaveCount(0);
-    // And the analysis itself is unaffected — that separation is the point.
-    await expect(page.getByText(/comparison aid, not a forecast/)).toBeVisible();
+    /**
+     * And the analysis itself is unaffected, which is the point: so look for
+     * the SCORE's caveat, scoped to the hero.
+     *
+     * This used to search the whole page, and the footer prints the same
+     * sentence on every route. On a fast machine the assertion ran before the
+     * competitor answer landed, matched only the footer and passed without
+     * ever looking at the analysis. On CI's slower runner the score was
+     * already there, both matched, and strict mode failed every run from #3 to
+     * #13. Scoped, it waits for the score and asserts what it claims.
+     */
+    await expect(page.locator(".hero").getByText(/comparison aid, not a forecast/)).toBeVisible();
   });
 
   test("never describes a surface that is not on screen", async ({ page }) => {
@@ -334,8 +344,11 @@ test.describe("the demand layer", () => {
      * the code, because the guard is about what actually goes out.
      */
     const calls: string[] = [];
+    const gapRequests = new Set<string>();
     await page.route("**/v1/**", async (route) => {
-      calls.push(new URL(route.request().url()).pathname);
+      const path = new URL(route.request().url()).pathname;
+      calls.push(path);
+      if (path.includes("opportunity-gaps")) gapRequests.add(route.request().postData() ?? "");
       await route.abort();
     });
     await page.route(MAPS, (route) => route.abort());
@@ -346,7 +359,13 @@ test.describe("the demand layer", () => {
 
     // Whatever else the page fetches, the grid route is free and the paid
     // ones must not be reached on the layer's behalf.
-    expect(calls.filter((c) => c.includes("opportunity-gaps")).length).toBeLessThanOrEqual(1);
+    //
+    // DISTINCT requests, not raw calls. Every route here is aborted, so React
+    // Query's `retry: 1` sends the same gaps request again about a second
+    // later; counting raw calls made this pass only when the test finished
+    // first, and a settled run failed it with 2. In production the request
+    // succeeds and is made once.
+    expect(gapRequests.size).toBeLessThanOrEqual(1);
     expect(calls.some((c) => c.includes("/v1/location/ask"))).toBe(false);
     expect(calls.some((c) => c.includes("/v1/report"))).toBe(false);
   });

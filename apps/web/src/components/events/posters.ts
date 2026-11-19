@@ -7,6 +7,7 @@ import pestaMorib from "../../../img/pesta-morib-2026.webp";
 import pestaTempatan from "../../../img/pesta-tempatan-4x4.webp";
 import publikaSeoul from "../../../img/publika-seoul-street-market.webp";
 import santaiLights from "../../../img/santai-connect-festival-of-lights.webp";
+import terangMalam from "../../../img/terang-malam-market-subang-parade.webp";
 import temuJanjiArtPlay from "../../../img/temu-janji-market-art-and-play.webp";
 import temuJanjiSenjaBali from "../../../img/temu-janji-market-senja-bali.webp";
 
@@ -44,6 +45,7 @@ const POSTERS: Record<string, string> = {
   "evt-pesta-tempatan": pestaTempatan,
   "evt-publika-seoul": publikaSeoul,
   "evt-santai-lights": santaiLights,
+  "evt-terang-malam-subang": terangMalam,
   "evt-tjm-art-play": temuJanjiArtPlay,
   "evt-tjm-senja-bali": temuJanjiSenjaBali,
 };
@@ -70,6 +72,7 @@ const POSTER_HEIGHTS: Record<string, number> = {
   "evt-pesta-tempatan": 344,
   "evt-publika-seoul": 525,
   "evt-santai-lights": 525,
+  "evt-terang-malam-subang": 630,
   "evt-tjm-art-play": 630,
   "evt-tjm-senja-bali": 525,
 };

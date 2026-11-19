@@ -7,7 +7,12 @@ import { buildApp } from "../src/app.js";
 import { EventCatalogue } from "../src/events/catalogue.js";
 import { InMemoryApplicationStore } from "../src/events/store.js";
 import { parseApplyRequest } from "../src/events/apply.js";
-import { EVENT_TYPES, isPast, MALAYSIAN_STATES } from "@spotential/sim-engine";
+import {
+  boothPricesArePublished,
+  EVENT_TYPES,
+  isPast,
+  MALAYSIAN_STATES,
+} from "@spotential/sim-engine";
 
 /**
  * The events routes.
@@ -45,7 +50,11 @@ const SAMPLE = catalogue.all().find((e) => e.packages.length > 0)!;
  * two tests here have already gone red on a date with no code change. Dated
  * 2099, these test the filter and the scoring, never the month.
  */
-function fixtureEvent(id: string, priceRm: number | null): EventListing {
+function fixtureEvent(
+  id: string,
+  priceRm: number | null,
+  extra: Partial<EventListing> = {},
+): EventListing {
   return {
     id,
     slug: id,
@@ -82,6 +91,7 @@ function fixtureEvent(id: string, priceRm: number | null): EventListing {
     source: "seed",
     sourceNote: "Test fixture.",
     reviewed: "2099-01-01",
+    ...extra,
   };
 }
 
@@ -92,10 +102,16 @@ writeFileSync(
     version: 2,
     generated: "2099-01-01",
     note: "Test fixture.",
-    events: [fixtureEvent("fx-cheap", 500), fixtureEvent("fx-dear", 1_200), fixtureEvent("fx-unpriced", null)],
+    events: [
+      fixtureEvent("fx-cheap", 500),
+      // The organizer's own published fee on a curated listing.
+      fixtureEvent("fx-dear", 1_200, { pricesPublished: true }),
+      fixtureEvent("fx-unpriced", null),
+    ],
   }),
 );
-const fixtureApp = buildApp({ events: await EventCatalogue.load(fixtureDir) });
+const fixtureCatalogue = await EventCatalogue.load(fixtureDir);
+const fixtureApp = buildApp({ events: fixtureCatalogue });
 
 const app = buildApp({ events: catalogue });
 afterAll(async () => {
@@ -478,10 +494,52 @@ describe("POST /v1/events/:id/apply", () => {
     expect(saved).not.toBeNull();
     expect(saved!.listingSource).toBe("seed");
     expect(saved!.boothPriceRm).toBeGreaterThan(0);
+    expect(saved!.boothPricePublished).toBe(boothPricesArePublished(seeded));
     // From the TOKEN, never the body. The whole security of the route.
     expect(saved!.uid).toBe("vendor-1");
     expect(saved!.boothActivation).toContain("tastings");
     await guarded.close();
+  });
+
+  it("records whether the fee was the organizer's published price or our estimate", async () => {
+    /**
+     * `listingSource` used to answer this alone. Curated listings now carry
+     * prices copied from the organizer's own vendor call, so a `seed` listing
+     * can quote a real fee, and the record has to say which kind the vendor
+     * agreed to rather than leave whoever forwards it to guess.
+     */
+    const store = new InMemoryApplicationStore();
+    const guarded = buildApp({
+      events: fixtureCatalogue,
+      authVerifier: asVendor() as never,
+      applicationStore: store,
+    });
+
+    for (const eventId of ["fx-cheap", "fx-dear"]) {
+      const res = await guarded.inject({
+        method: "POST",
+        url: `/v1/events/${eventId}/apply`,
+        payload: { eventId, ...application, packageId: "std" },
+        headers: { authorization: "Bearer stubbed" },
+      });
+      expect(res.statusCode, eventId).toBe(200);
+    }
+
+    const estimated = await store.findForUserAndEvent("vendor-1", "fx-cheap");
+    const published = await store.findForUserAndEvent("vendor-1", "fx-dear");
+    expect(estimated!.listingSource).toBe("seed");
+    expect(estimated!.boothPricePublished).toBe(false);
+    expect(published!.listingSource).toBe("seed");
+    expect(published!.boothPricePublished).toBe(true);
+    expect(published!.boothPriceRm).toBe(1_200);
+    await guarded.close();
+  });
+
+  it("treats an organizer's listing as published and a bare curated one as estimated", () => {
+    const base = fixtureEvent("fx-any", 500);
+    expect(boothPricesArePublished(base)).toBe(false);
+    expect(boothPricesArePublished({ ...base, pricesPublished: true })).toBe(true);
+    expect(boothPricesArePublished({ ...base, source: "organizer" })).toBe(true);
   });
 
   it("takes the uid from the token even when the body supplies a different one", async () => {

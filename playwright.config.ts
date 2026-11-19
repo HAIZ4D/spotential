@@ -21,7 +21,12 @@ export default defineConfig({
   forbidOnly: !!process.env["CI"],
   retries: process.env["CI"] ? 1 : 0,
   workers: 1,
-  reporter: process.env["CI"] ? [["github"], ["list"]] : [["list"]],
+  // The HTML report is what CI uploads when E2E fails, traces included. It was
+  // missing, so the upload step found nothing and every failed run left only
+  // a one-line annotation to diagnose from.
+  reporter: process.env["CI"]
+    ? [["github"], ["list"], ["html", { open: "never" }]]
+    : [["list"]],
 
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
